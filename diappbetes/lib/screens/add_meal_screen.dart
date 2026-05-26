@@ -238,6 +238,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
       backgroundColor: AppColors.blanco,
       appBar: AppBar(
         backgroundColor: AppColors.azulFondo,
+        automaticallyImplyLeading: false,
         title: const Text(
           'DiAppBetes',
           style: TextStyle(

@@ -71,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: AppColors.blanco,
       appBar: AppBar(
         backgroundColor: AppColors.azulFondo,
+        automaticallyImplyLeading: false,
         title: const Text(
           'DiAppBetes',
           style: TextStyle(
