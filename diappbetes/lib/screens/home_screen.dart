@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/tir_progress_ring.dart';
 
-// ---------------------------------------------------------------------------
-// Modelos de datos (equivalentes a los servicios Angular — hardcodeados por ahora)
-// ---------------------------------------------------------------------------
 class Profile {
   final String id;
   final String username;
@@ -23,9 +20,6 @@ class Profile {
   });
 }
 
-// ---------------------------------------------------------------------------
-// HomeScreen
-// ---------------------------------------------------------------------------
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -34,7 +28,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // ---- Estado (equivalente a las variables del componente Angular) --------
   Profile profile = const Profile(
     id: '1',
     username: 'Guillermo',
@@ -44,40 +37,27 @@ class _HomeScreenState extends State<HomeScreen> {
     role: 'user',
   );
 
-  // TODO: reemplazar con llamada a GlucoseService.getLatestGlucose()
+  // TODO: reemplazar con GlucoseService.getLatestGlucose()
   String lastGlucoseReading = '112 mg/dL — 10:30';
 
-  // TODO: reemplazar con llamada a MealCountService.getTodayMealCount()
+  // TODO: reemplazar con MealCountService.getTodayMealCount()
   int todayMealCount = 3;
 
-  // TODO: reemplazar con llamada a TirService.getTir()
+  // TODO: reemplazar con TirService.getTir()
   int tirPercentage = 72;
 
-  // TODO: reemplazar con llamada a TipService.getRandomTip()
+  // TODO: reemplazar con TipService.getRandomTip()
   String tipContent =
       'Mantén un horario regular de comidas para ayudar a estabilizar tus niveles de glucosa a lo largo del día.';
 
-  // ---- Índice del tab seleccionado (0=Historial, 1=Home, 2=Comida) -------
   int _selectedTab = 1;
 
-  // ---- Lógica de color TIR (portada 1:1 desde Angular) -------------------
-  Color get _tirColor {
-    if (tirPercentage < 33) return AppColors.rojoSuave;
-    if (tirPercentage <= 77) return AppColors.ambarSuave;
-    return AppColors.verdesuave;
-  }
-
-  // ---- Navegación del bottom bar -----------------------------------------
   void _onTabTapped(int index) {
     if (index == _selectedTab) return;
     setState(() => _selectedTab = index);
-
     switch (index) {
       case 0:
         Navigator.pushNamed(context, '/historial');
-        break;
-      case 1:
-        // Ya estamos en home
         break;
       case 2:
         Navigator.pushNamed(context, '/add-meal');
@@ -85,14 +65,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // =========================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.blanco,
-      // ------------------------------------------------------------------ //
-      // AppBar  (equivalente al ion-toolbar)
-      // ------------------------------------------------------------------ //
       appBar: AppBar(
         backgroundColor: AppColors.azulFondo,
         title: const Text(
@@ -111,72 +87,63 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
         elevation: 2,
       ),
-
-      // ------------------------------------------------------------------ //
-      // Body  (equivalente al ion-content con .content-container)
-      // ------------------------------------------------------------------ //
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Profile card ──────────────────────────────────────────── //
+            const SizedBox(height: 14),
+
+            // ── Profile ───────────────────────────────────────────────── //
             _buildProfileCard(),
 
             // ── Divider ───────────────────────────────────────────────── //
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 28),
+              padding: EdgeInsets.symmetric(vertical: 12),
               child: Divider(color: AppColors.grisDivider, thickness: 2),
             ),
 
-            // ── Tarjeta TIR + Última lectura ──────────────────────────── //
-            _buildTirCard(),
-            const SizedBox(height: 12),
+            // ── Tarjeta 1: Tiempo en Rango (solo el anillo) ───────────── //
+            SizedBox(height: 340, child: _buildTirCard()),
+            const SizedBox(height: 10),
 
-            // ── Tarjeta comidas de hoy ─────────────────────────────────── //
-            _buildMealsCard(),
-            const SizedBox(height: 12),
+            // ── Tarjeta 2: Última lectura de glucosa ──────────────────── //
+            /*Expanded(flex: 2, child: _buildGlucosaCard()),
+            const SizedBox(height: 10),*/
 
-            // ── Tarjeta consejo del día ────────────────────────────────── //
-            _buildTipCard(),
+            // ── Tarjeta 3: Comidas de hoy ─────────────────────────────── //
+            SizedBox(height: 100, child: _buildMealsCard()),
+            const SizedBox(height: 10),
+
+            // ── Tarjeta 4: Consejo del día ────────────────────────────── //
+            SizedBox(height: 140, child: _buildTipCard()),
+            const SizedBox(height: 12),
           ],
         ),
       ),
-
-      // ------------------------------------------------------------------ //
-      // BottomNavigationBar  (equivalente al ion-tab-bar)
-      // ------------------------------------------------------------------ //
       bottomNavigationBar: _buildBottomBar(),
     );
   }
 
-  // =========================================================================
-  // Widgets auxiliares
-  // =========================================================================
-
-  /// Profile card — equivalente a .profile-card
+  // ── Profile ──────────────────────────────────────────────────────────── //
   Widget _buildProfileCard() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
-          width: 54,
-          height: 54,
+          width: 64,
+          height: 64,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(color: AppColors.azulFondo, width: 3),
           ),
-          child: const Icon(
-            Icons.person,
-            size: 30,
-            color: AppColors.azulFondo,
-          ),
+          child: const Icon(Icons.person, size: 48, color: AppColors.azulFondo),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
         Text(
           profile.username,
           style: const TextStyle(
-            fontSize: 28,
+            fontSize: 32,
             fontWeight: FontWeight.bold,
             color: AppColors.azulFondo,
           ),
@@ -185,41 +152,73 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Tarjeta TIR — equivalente a .card con .circular-progress + .titulo-glucemia
+  // ── Tarjeta 1: solo Tiempo en Rango + anillo ─────────────────────────── //
   Widget _buildTirCard() {
     return _Card(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text(
             'Tiempo en Rango',
             style: TextStyle(
-              fontSize: 22,
+              fontSize: 26,
               fontWeight: FontWeight.bold,
               color: AppColors.azulFondo,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
-
-          // Anillo de progreso circular
+          const SizedBox(height: 30),
           TirProgressRing(percentage: tirPercentage),
-
-          const SizedBox(height: 16),
-
-          // Última lectura glucemia
+          const SizedBox(height: 30),
           Row(
             children: [
-              const Icon(
-                Icons.water_drop_outlined,
-                size: 22,
-                color: AppColors.azulFondo,
-              ),
-              const SizedBox(width: 6),
-              const Text(
+            const Icon(Icons.water_drop_outlined,
+                  size: 22, color: AppColors.azulFondo),
+              SizedBox(width: 6),
+              Text(
                 'Última Lectura',
                 style: TextStyle(
-                  fontSize: 17,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.azulFondo,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const SizedBox(height: 6),
+              Text(
+                lastGlucoseReading,
+                style: const TextStyle(
+                  fontSize: 20,
+                  color: AppColors.grisTexto,
+                ),
+              ),
+            ],
+            )
+        ],
+      ),
+    );
+  }
+
+  // ── Tarjeta 2: Última Lectura (separada) ──────────────────────────────── //
+  /*Widget _buildGlucosaCard() {
+    return _Card(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.water_drop_outlined,
+                  size: 20, color: AppColors.azulFondo),
+              SizedBox(width: 6),
+              Text(
+                'Última Lectura',
+                style: TextStyle(
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: AppColors.azulFondo,
                 ),
@@ -230,44 +229,42 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             lastGlucoseReading,
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: 18,
               color: AppColors.grisTexto,
             ),
           ),
         ],
       ),
     );
-  }
+  }*/
 
-  /// Tarjeta comidas — equivalente a .card con .titulo-comida + .meals-count
+  // ── Tarjeta 3: Comidas ────────────────────────────────────────────────── //
   Widget _buildMealsCard() {
     return _Card(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: const [
-              Icon(
-                Icons.restaurant_outlined,
-                size: 22,
-                color: AppColors.azulFondo,
-              ),
+              Icon(Icons.restaurant_outlined,
+                  size: 22, color: AppColors.azulFondo),
               SizedBox(width: 6),
               Text(
                 'Comidas de hoy',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppColors.azulFondo,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Text(
             '$todayMealCount',
             style: const TextStyle(
-              fontSize: 36,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
               color: AppColors.grisTexto,
             ),
@@ -277,45 +274,45 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Tarjeta consejo del día — equivalente a .card con .tip-day
+  // ── Tarjeta 4: Consejo ────────────────────────────────────────────────── //
   Widget _buildTipCard() {
     return _Card(
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: const [
-              Icon(
-                Icons.lightbulb_outline,
-                size: 22,
-                color: AppColors.azulFondo,
-              ),
+              Icon(Icons.lightbulb_outline,
+                  size: 22, color: AppColors.azulFondo),
               SizedBox(width: 6),
               Text(
                 'Consejo de salud',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppColors.azulFondo,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Text(
             tipContent,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 16,
               color: AppColors.grisTexto,
-              height: 1.5,
+              height: 1.4,
             ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
 
-  /// BottomNavigationBar — equivalente al ion-tab-bar
+  // ── Bottom bar ────────────────────────────────────────────────────────── //
   Widget _buildBottomBar() {
     return Container(
       decoration: const BoxDecoration(
@@ -353,19 +350,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// ============================================================================
-// Widget reutilizable _Card  (equivalente a .card en SCSS)
-// ============================================================================
+// ── _Card reutilizable ───────────────────────────────────────────────────── //
 class _Card extends StatelessWidget {
   final Widget child;
-
   const _Card({required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(24),
