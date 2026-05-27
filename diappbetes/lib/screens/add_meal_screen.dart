@@ -1,5 +1,7 @@
+import 'package:diappbetes/screens/add_food_detail_modal.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'add_food_modal.dart';
 
 // ---------------------------------------------------------------------------
 // Modelos (hardcodeados — TODO: conectar con backend)
@@ -122,24 +124,66 @@ class _AddMealScreenState extends State<AddMealScreen> {
     setState(() => addedFoods.removeAt(index));
   }
 
-  // ── Editar alimento (placeholder — TODO: abrir modal edición) ─────────── //
+  // ── Editar alimento — abre AddFoodDetailsModal en modo edición ─────────── //
   void _editFood(int index) {
-    // TODO: abrir AddFoodDetailsModal con addedFoods[index]
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Editar: ${addedFoods[index].name}'),
-        duration: const Duration(seconds: 1),
+    final food = addedFoods[index];
+    final asFoodObj = Food(
+      id: food.id,
+      name: food.name,
+      category: food.category,
+      carbsPer100g: food.carbsPer100g,
+      caloriesPer100g: food.caloriesPer100g,
+    );
+    showDialog(
+      context: context,
+      builder: (_) => AddFoodDetailsModal(
+        selectedFood: asFoodObj,
+        isEditMode: true,
+        initialQuantity: food.quantityGrams,
+        initialRaciones: food.calculatedRations,
+        initialHc: food.calculatedHc,
+        initialCalories: food.calculatedCalories,
+        onConfirm: (data) {
+          setState(() {
+            addedFoods[index] = AddedFood(
+              id: data['id'],
+              name: data['name'],
+              category: data['category'],
+              carbsPer100g: (data['carbs_per_100g'] as num).toDouble(),
+              caloriesPer100g: (data['calories_per_100g'] as num).toDouble(),
+              quantityGrams: (data['quantity_grams'] as num).toDouble(),
+              calculatedHc: (data['calculated_hc'] as num).toDouble(),
+              calculatedCalories: (data['calculated_calories'] as num).toDouble(),
+              calculatedRations: (data['calculated_rations'] as num).toDouble(),
+            );
+          });
+        },
       ),
     );
   }
 
-  // ── Añadir alimento (placeholder — TODO: abrir AddFoodModal) ──────────── //
+  // ── Añadir alimento — abre AddFoodModal como bottom sheet ───────────── //
   void _openAddFoodModal() {
-    // TODO: abrir AddFoodModalComponent y añadir el resultado a addedFoods
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Abrir modal de búsqueda de alimentos'),
-        duration: Duration(seconds: 1),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddFoodModal(
+        onFoodAdded: (data) {
+          setState(() {
+            addedFoods.add(AddedFood(
+              id: data['id'],
+              name: data['name'],
+              category: data['category'],
+              carbsPer100g: (data['carbs_per_100g'] as num).toDouble(),
+              caloriesPer100g: (data['calories_per_100g'] as num).toDouble(),
+              quantityGrams: (data['quantity_grams'] as num).toDouble(),
+              calculatedHc: (data['calculated_hc'] as num).toDouble(),
+              calculatedCalories: (data['calculated_calories'] as num).toDouble(),
+              calculatedRations: (data['calculated_rations'] as num).toDouble(),
+            ));
+          });
+        },
       ),
     );
   }
@@ -238,7 +282,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
       backgroundColor: AppColors.blanco,
       appBar: AppBar(
         backgroundColor: AppColors.azulFondo,
-        automaticallyImplyLeading: false,
         title: const Text(
           'DiAppBetes',
           style: TextStyle(
