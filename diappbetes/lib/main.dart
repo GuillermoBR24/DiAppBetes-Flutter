@@ -1,4 +1,6 @@
 import 'package:diappbetes/screens/add_meal_screen.dart';
+import 'package:diappbetes/screens/auth_screen.dart';
+import 'package:diappbetes/screens/login_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:diappbetes/screens/historial_screen.dart';
 import 'package:diappbetes/screens/settings_screen.dart';
@@ -20,23 +22,23 @@ class DiAppBetes extends StatelessWidget {
       title: 'DiAppBetes',
       theme: AppTheme.theme,
       debugShowCheckedModeBanner: false,
-      initialRoute: '/home',
+      initialRoute: '/auth',
 
       localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate, // ✅ Necesario para DatePicker y otros widgets Material
-        GlobalWidgetsLocalizations.delegate,  // ✅ Necesario para widgets básicos
-        GlobalCupertinoLocalizations.delegate, // ✅ Necesario para widgets iOS
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [
         Locale('es', 'ES'), // Español
         Locale('en', 'US'), // Inglés (fallback)
       ],
-      locale: const Locale('es', 'ES'), // 👈 Idioma por defecto
+      locale: const Locale('es', 'ES'),
       
       routes: {
+        '/auth':      (context) => const AuthScreen(),
         '/home': (context) => const HomeScreen(),
-        // TODO: añadir el resto de pantallas conforme se migren:
-        // '/login':          (context) => const LoginScreen(),
+        '/login':          (context) => const LoginScreen(),
         // '/register':       (context) => const RegisterScreen(),
         '/historial':      (context) => const HistorialScreen(),
         '/add-meal':       (context) => const AddMealScreen(),
