@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "439550150635",
+    "project_id": "diappbetes-4ce0f",
+    "storage_bucket": "diappbetes-4ce0f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:439550150635:android:f0a4908c7558f2487b7bae",
+        "android_client_info": {
+          "package_name": "com.example.diappbetes"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA20pmaHKywPW2FjhUZynP9Y-Kcr2dLRoI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
