@@ -66,12 +66,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _errorPersonal = '';
   String _errorDiabetes = '';
 
-  // ── Controllers ────────────────────────────────────────────────────────── //
-  late TextEditingController _usernameCtrl;
-  late TextEditingController _emailCtrl;
-  late TextEditingController _birthDateCtrl;
-  late TextEditingController _phoneCtrl;
-  late TextEditingController _fsiCtrl;
+  // ── Controllers (NULLABLE para evitar errores después de dispose) ─────── //
+  TextEditingController? _usernameCtrl;
+  TextEditingController? _emailCtrl;
+  TextEditingController? _birthDateCtrl;
+  TextEditingController? _phoneCtrl;
+  TextEditingController? _fsiCtrl;
 
   @override
   void initState() {
@@ -86,19 +86,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
-    _usernameCtrl.dispose();
-    _emailCtrl.dispose();
-    _birthDateCtrl.dispose();
-    _phoneCtrl.dispose();
-    _fsiCtrl.dispose();
+    _usernameCtrl?.dispose();
+    _emailCtrl?.dispose();
+    _birthDateCtrl?.dispose();
+    _phoneCtrl?.dispose();
+    _fsiCtrl?.dispose();
     super.dispose();
+  }
+
+  // ── Helpers seguros para controllers ──────────────────────────────────── //
+  String? _safeText(TextEditingController? ctrl) {
+    try {
+      return ctrl?.text;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _safeSetText(TextEditingController? ctrl, String value) {
+    try {
+      if (ctrl != null) {
+        ctrl.text = value;
+      }
+    } catch (_) {}
   }
 
   // ── Cargar datos desde Firestore ─────────────────────────────────────── //
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _loadingProfile = true);
+    
     try {
-      // Debug: Verificar usuario actual
       final user = _authService.currentUser;
       print('🔍 Usuario actual: ${user?.uid}');
       print('🔍 Email: ${user?.email}');
@@ -126,7 +144,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _phone     = profile['phone']?.toString() ?? '';
         _role      = profile['role']?.toString() ?? 'usuario';
         
-        // Manejo seguro del campo fsi
         final fsiValue = profile['fsi'];
         if (fsiValue is num) {
           _fsi = fsiValue.toDouble();
@@ -136,11 +153,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _fsi = 0;
         }
 
-        _usernameCtrl.text  = _username;
-        _emailCtrl.text     = _email;
-        _birthDateCtrl.text = _birthDate;
-        _phoneCtrl.text     = _phone;
-        _fsiCtrl.text       = _fsi.toString();
+        _safeSetText(_usernameCtrl, _username);
+        _safeSetText(_emailCtrl, _email);
+        _safeSetText(_birthDateCtrl, _birthDate);
+        _safeSetText(_phoneCtrl, _phone);
+        _safeSetText(_fsiCtrl, _fsi.toString());
 
         _hcRatios = ratios.map((r) => HcRatio(
           id:         r['id']?.toString() ?? '',
@@ -171,12 +188,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Guardar info personal ─────────────────────────────────────────────── //
   Future<void> _savePersonalInfo() async {
+    if (!mounted) return;
     setState(() => _errorPersonal = '');
 
-    if (_usernameCtrl.text.trim().isEmpty ||
-        _emailCtrl.text.trim().isEmpty    ||
-        _birthDateCtrl.text.trim().isEmpty ||
-        _phoneCtrl.text.trim().isEmpty) {
+    final usernameVal = _safeText(_usernameCtrl)?.trim() ?? '';
+    final emailVal = _safeText(_emailCtrl)?.trim() ?? '';
+    final birthDateVal = _safeText(_birthDateCtrl)?.trim() ?? '';
+    final phoneVal = _safeText(_phoneCtrl)?.trim() ?? '';
+
+    if (usernameVal.isEmpty || emailVal.isEmpty || birthDateVal.isEmpty || phoneVal.isEmpty) {
       setState(() => _errorPersonal = 'Todos los campos son obligatorios');
       return;
     }
@@ -184,23 +204,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _savingPersonal = true);
     try {
       await _profileService.updatePersonalInfo(
-        username:  _usernameCtrl.text.trim(),
-        email:     _emailCtrl.text.trim(),
-        birthDate: _birthDateCtrl.text.trim(),
-        phone:     _phoneCtrl.text.trim(),
+        username:  usernameVal,
+        email:     emailVal,
+        birthDate: birthDateVal,
+        phone:     phoneVal,
       );
       setState(() {
-        _username  = _usernameCtrl.text.trim();
-        _email     = _emailCtrl.text.trim();
-        _birthDate = _birthDateCtrl.text.trim();
-        _phone     = _phoneCtrl.text.trim();
+        _username  = usernameVal;
+        _email     = emailVal;
+        _birthDate = birthDateVal;
+        _phone     = phoneVal;
         _editingPersonal = false;
       });
       _showSnack('Perfil actualizado');
     } on FirebaseAuthException catch (e) {
-      setState(() => _errorPersonal = AuthService.translateError(e));
+      if (mounted) setState(() => _errorPersonal = AuthService.translateError(e));
     } catch (e) {
-      setState(() => _errorPersonal = 'Error al guardar. Inténtalo de nuevo.');
+      if (mounted) setState(() => _errorPersonal = 'Error al guardar. Inténtalo de nuevo.');
     } finally {
       if (mounted) setState(() => _savingPersonal = false);
     }
@@ -208,8 +228,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Guardar gestión diabetes ──────────────────────────────────────────── //
   Future<void> _saveDiabetes() async {
+    if (!mounted) return;
     setState(() => _errorDiabetes = '');
-    final fsiVal = double.tryParse(_fsiCtrl.text);
+    final fsiVal = double.tryParse(_safeText(_fsiCtrl) ?? '');
 
     if (fsiVal == null || fsiVal <= 0) {
       setState(() => _errorDiabetes = 'El FSI debe ser mayor que 0');
@@ -226,7 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       });
       _showSnack('Datos de diabetes actualizados');
     } catch (e) {
-      setState(() => _errorDiabetes = 'Error al guardar. Inténtalo de nuevo.');
+      if (mounted) setState(() => _errorDiabetes = 'Error al guardar. Inténtalo de nuevo.');
     } finally {
       if (mounted) setState(() => _savingDiabetes = false);
     }
@@ -234,50 +255,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Cerrar sesión ─────────────────────────────────────────────────────── //
   Future<void> _logout() async {
+    if (!mounted) return;
     final ok = await _confirm(
       title: 'Cierre de Sesión',
       message: '¿Estás seguro de cerrar sesión?',
       confirmText: 'Cerrar Sesión',
       confirmColor: AppColors.rojoSuave,
     );
-    if (!ok) return;
+    if (!ok || !mounted) return;
     await _authService.logout();
     if (mounted) Navigator.pushReplacementNamed(context, '/auth');
   }
 
   // ── Eliminar cuenta ───────────────────────────────────────────────────── //
   Future<void> _deleteAccount() async {
+    if (!mounted) return;
+    
     final ok = await _confirm(
       title: '¿Eliminar cuenta?',
       message: 'Esta acción es irreversible.\nSe eliminarán todos tus datos permanentemente.',
       confirmText: 'Eliminar',
       confirmColor: AppColors.rojoSuave,
     );
-    if (!ok) return;
+    if (!ok || !mounted) return;
 
-    // Pedir contraseña para reautenticar (Firebase lo requiere para delete)
     final password = await _askPassword();
-    if (password == null || password.isEmpty) return;
+    if (password == null || password.isEmpty || !mounted) return;
 
     try {
-      // Reautenticar antes de eliminar (requisito de Firebase)
+      final user = _authService.currentUser;
+      if (user?.email == null) {
+        throw Exception('Email no disponible');
+      }
+      
       final credential = EmailAuthProvider.credential(
-        email: _authService.currentUser!.email!,
+        email: user!.email!,
         password: password,
       );
-      await _authService.currentUser!.reauthenticateWithCredential(credential);
-
+      await user.reauthenticateWithCredential(credential);
       await _profileService.deleteAccount();
-      if (mounted) Navigator.pushReplacementNamed(context, '/auth');
+
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const Scaffold(body: Center(child: Text('Redirigiendo...')))),
+          (route) => false,
+        );
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/auth');
+        }
+      }
     } on FirebaseAuthException catch (e) {
-      _showSnack(AuthService.translateError(e), isError: true);
+      if (mounted) _showSnack(AuthService.translateError(e), isError: true);
     } catch (e) {
-      _showSnack('Error al eliminar la cuenta.', isError: true);
+      if (mounted) _showSnack('Error: ${e.toString()}', isError: true);
     }
   }
 
   // ── Añadir tramo HC ───────────────────────────────────────────────────── //
   void _addHcRatio() {
+    if (!mounted) return;
     setState(() {
       if (_hcRatios.isEmpty) {
         _hcRatios.add(HcRatio(startTime: '00:00', endTime: '23:59', ratioValue: 10.0));
@@ -295,6 +333,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _removeHcRatio(int index) {
+    if (!mounted) return;
     if (_hcRatios.length <= 1) return;
     setState(() {
       _hcRatios.removeAt(index);
@@ -323,8 +362,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String confirmText,
     Color confirmColor = AppColors.azulFondo,
   }) async {
+    if (!mounted) return false;
     final result = await showDialog<bool>(
       context: context,
+      barrierDismissible: true,
       builder: (_) => AlertDialog(
         title: Text(title,
             style: const TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.bold)),
@@ -347,26 +388,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<String?> _askPassword() async {
     final ctrl = TextEditingController();
     bool obscure = true;
-    final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
+    
+    try {
+      final result = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
           title: const Text('Confirmar contraseña',
               style: TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.bold)),
-          content: TextField(
-            controller: ctrl,
-            obscureText: obscure,
-            decoration: InputDecoration(
-              labelText: 'Contraseña actual',
-              labelStyle: const TextStyle(color: AppColors.grisTexto),
-              enabledBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.grisDivider)),
-              focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.azulFondo)),
-              suffixIcon: IconButton(
-                icon: Icon(obscure ? Icons.visibility_off : Icons.visibility,
-                    color: AppColors.grisTexto, size: 20),
-                onPressed: () => setS(() => obscure = !obscure),
+          content: StatefulBuilder(
+            builder: (ctx, setS) => TextField(
+              controller: ctrl,
+              obscureText: obscure,
+              autofocus: true,
+              onSubmitted: (val) => Navigator.pop(ctx, val),
+              decoration: InputDecoration(
+                labelText: 'Contraseña actual',
+                labelStyle: const TextStyle(color: AppColors.grisTexto),
+                enabledBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.grisDivider)),
+                focusedBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: AppColors.azulFondo)),
+                suffixIcon: IconButton(
+                  icon: Icon(obscure ? Icons.visibility_off : Icons.visibility,
+                      color: AppColors.grisTexto, size: 20),
+                  onPressed: () => setS(() => obscure = !obscure),
+                ),
               ),
             ),
           ),
@@ -382,17 +429,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
-      ),
-    );
-    ctrl.dispose();
-    return result;
+      );
+      return result;
+    } finally {
+      ctrl.dispose();
+    }
   }
 
   void _showSnack(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: isError ? AppColors.rojoSuave : AppColors.verdesuave,
-    ));
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? AppColors.rojoSuave : AppColors.verdesuave,
+        duration: const Duration(seconds: 3),
+      ));
+    });
   }
 
   // =========================================================================
@@ -482,7 +535,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Botón cerrar sesión
           OutlinedButton.icon(
             onPressed: _logout,
             icon: const Icon(Icons.logout, color: AppColors.rojoSuave, size: 20),
@@ -496,7 +548,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 8),
 
-          // Eliminar cuenta
           Center(
             child: GestureDetector(
               onTap: _deleteAccount,
@@ -525,19 +576,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _editingPersonal
                   ? Row(
                       children: [
-                        // Cancelar
                         IconButton(
                           icon: const Icon(Icons.close, color: AppColors.grisTexto),
-                          onPressed: () => setState(() {
-                            _editingPersonal = false;
-                            _errorPersonal = '';
-                            _usernameCtrl.text  = _username;
-                            _emailCtrl.text     = _email;
-                            _birthDateCtrl.text = _birthDate;
-                            _phoneCtrl.text     = _phone;
-                          }),
+                          onPressed: () {
+                            if (!mounted) return;
+                            setState(() {
+                              _editingPersonal = false;
+                              _errorPersonal = '';
+                              _safeSetText(_usernameCtrl, _username);
+                              _safeSetText(_emailCtrl, _email);
+                              _safeSetText(_birthDateCtrl, _birthDate);
+                              _safeSetText(_phoneCtrl, _phone);
+                            });
+                          },
                         ),
-                        // Guardar
                         _savingPersonal
                             ? const SizedBox(width: 24, height: 24,
                                 child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.azulFondo))
@@ -549,7 +601,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     )
                   : IconButton(
                       icon: const Icon(Icons.edit, color: AppColors.azulFondo),
-                      onPressed: () => setState(() => _editingPersonal = true),
+                      onPressed: () {
+                        if (!mounted) return;
+                        setState(() => _editingPersonal = true);
+                      },
                     ),
             ],
           ),
@@ -589,11 +644,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.close, color: AppColors.grisTexto),
-                          onPressed: () => setState(() {
-                            _editingDiabetes = false;
-                            _errorDiabetes = '';
-                            _fsiCtrl.text = _fsi.toString();
-                          }),
+                          onPressed: () {
+                            if (!mounted) return;
+                            setState(() {
+                              _editingDiabetes = false;
+                              _errorDiabetes = '';
+                              _safeSetText(_fsiCtrl, _fsi.toString());
+                            });
+                          },
                         ),
                         _savingDiabetes
                             ? const SizedBox(width: 24, height: 24,
@@ -606,7 +664,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     )
                   : IconButton(
                       icon: const Icon(Icons.edit, color: AppColors.azulFondo),
-                      onPressed: () => setState(() => _editingDiabetes = true),
+                      onPressed: () {
+                        if (!mounted) return;
+                        setState(() => _editingDiabetes = true);
+                      },
                     ),
             ],
           ),
@@ -621,7 +682,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildField('FSI (mg/dl x Unidad)', _fsiCtrl, _editingDiabetes, TextInputType.number),
           const SizedBox(height: 16),
 
-          // ── Sección Ratio HC ────────────────────────────────────────── //
           const Text('Ratio HC',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
           const SizedBox(height: 10),
@@ -657,13 +717,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Row(
         children: [
           _timeField(ratio.startTime, editable: timeEdit,
-              onChanged: (v) => setState(() => ratio.startTime = v)),
+              onChanged: (v) {
+                if (!mounted) return;
+                setState(() => ratio.startTime = v);
+              }),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 4),
             child: Text(' - ', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.grisTexto)),
           ),
           _timeField(ratio.endTime, editable: timeEdit,
-              onChanged: (v) => setState(() => ratio.endTime = v)),
+              onChanged: (v) {
+                if (!mounted) return;
+                setState(() => ratio.endTime = v);
+              }),
           const SizedBox(width: 8),
           SizedBox(
             width: 60,
@@ -674,7 +740,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 13, color: AppColors.grisTexto),
               decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.zero),
-              onChanged: (v) { final val = double.tryParse(v); if (val != null) setState(() => ratio.ratioValue = val); },
+              onChanged: (v) {
+                if (!mounted) return;
+                final val = double.tryParse(v);
+                if (val != null) {
+                  setState(() => ratio.ratioValue = val);
+                }
+              },
             ),
           ),
           const Text('g/U', style: TextStyle(fontSize: 12, color: AppColors.grisTexto)),
@@ -709,13 +781,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ── Campo de texto reutilizable ──────────────────────────────────────── //
-  Widget _buildField(String label, TextEditingController ctrl, bool enabled,
+  Widget _buildField(String label, TextEditingController? ctrl, bool enabled,
       TextInputType type, {String? hint}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
         controller: ctrl,
-        enabled: enabled,
+        enabled: enabled && ctrl != null,
         keyboardType: type,
         style: TextStyle(fontSize: 15,
             color: enabled ? AppColors.grisTexto : AppColors.grisTexto.withOpacity(0.7)),
