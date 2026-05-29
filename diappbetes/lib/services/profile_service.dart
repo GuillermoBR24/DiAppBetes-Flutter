@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class ProfileService {
   static final ProfileService _instance = ProfileService._internal();
@@ -39,6 +40,30 @@ class ProfileService {
     
     print('✅ Perfil encontrado');
     return doc.data();
+  }
+
+  Future<void> ensureProfileExists() async {
+    final uid = _uid;
+    if (uid == null) return;
+ 
+    final user = _auth.currentUser!;
+    debugPrint('🔧 ProfileService.ensureProfileExists: creando perfil para uid=$uid');
+ 
+    await _db.collection('profiles').doc(uid).set({
+      'id':             uid,
+      'username':       user.displayName ?? user.email?.split('@').first ?? 'usuario',
+      'email':          user.email ?? '',
+      'phone':          '',
+      'birth_date':     '',
+      'role':           'usuario',
+      'fsi':            50.0,
+      'avatar_url':     null,
+      'email_verified': user.emailVerified,
+      'created_at':     FieldValue.serverTimestamp(),
+      'updated_at':     FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true)); // merge: true para no sobreescribir si ya existe parcialmente
+ 
+    debugPrint('✅ ProfileService.ensureProfileExists: perfil creado/actualizado');
   }
 
   // ── Stream en tiempo real (para escuchar cambios) ─────────────────────── //
