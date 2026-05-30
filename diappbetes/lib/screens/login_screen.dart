@@ -34,15 +34,24 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { _error = ''; _loading = true; });
 
     try {
+      print('🔍 Intentando login con: ${_identifierController.text.trim()}');
+      
       await _authService.login(
         identifier: _identifierController.text.trim(),
         password:   _passwordController.text,
       );
+      
       if (mounted) Navigator.pushReplacementNamed(context, '/home');
+      
     } on FirebaseAuthException catch (e) {
+      print('❌ FirebaseAuthException: ${e.code} - ${e.message}');
       setState(() => _error = AuthService.translateError(e));
-    } catch (e) {
-      setState(() => _error = 'Error inesperado. Inténtalo de nuevo.');
+      
+    } catch (e, stackTrace) {
+      print('❌ ERROR GENERAL: $e');
+      print('📋 STACK TRACE: $stackTrace');
+      setState(() => _error = 'Error: ${e.toString()}');
+      
     } finally {
       if (mounted) setState(() => _loading = false);
     }

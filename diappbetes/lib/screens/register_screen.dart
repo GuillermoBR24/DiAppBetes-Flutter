@@ -13,6 +13,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController    = TextEditingController();
   final _passwordController = TextEditingController();
+  final _birthDateController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final _authService = AuthService();
 
@@ -25,6 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _birthDateController.dispose();
     super.dispose();
   }
 
@@ -36,10 +38,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       await _authService.register(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+        email:      _emailController.text.trim(),
+        password:   _passwordController.text,
+        birthDate:  _birthDateController.text.trim(),
       );
-      // Registro OK → mostrar pantalla de verificación
       if (mounted) setState(() => _registered = true);
     } on FirebaseAuthException catch (e) {
       setState(() => _error = AuthService.translateError(e));
@@ -47,6 +49,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _error = 'Error inesperado. Inténtalo de nuevo.');
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _selectBirthDate() async {
+    final now = DateTime.now();
+    final minDate = DateTime(1900, 1, 1);
+    final maxDate = now.subtract(const Duration(days: 365 * 12)); // Mínimo 12 años
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: maxDate,
+      firstDate: minDate,
+      lastDate: maxDate,
+      locale: const Locale('es', 'ES'), // ← Para mostrar en español
+      helpText: 'Selecciona tu fecha de nacimiento',
+    );
+
+    if (picked != null && mounted) {
+      // Formato YYYY-MM-DD (compatible con Firestore)
+      setState(() {
+        _birthDateController.text = picked.toIso8601String().split('T').first;
+      });
     }
   }
 
@@ -176,6 +200,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 if (v.length < 6) return 'Mínimo 6 caracteres';
                 return null;
               },
+            ),
+            const SizedBox(height: 16),
+
+            TextFormField(
+              controller: _birthDateController,
+              readOnly: true, // ← Solo se puede seleccionar con el picker
+              style: const TextStyle(color: AppColors.grisTexto, fontSize: 15),
+              decoration: _inputDeco('Fecha de nacimiento').copyWith(
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.calendar_today, color: AppColors.grisTexto, size: 20),
+                  onPressed: _selectBirthDate,
+                ),
+                hintText: 'YYYY-MM-DD',
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return 'Campo obligatorio';
+                // Validar formato básico YYYY-MM-DD
+                if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(v)) {
+                  return 'Formato: YYYY-MM-DD';
+                }
+                return null;
+              },
+              onTap: _selectBirthDate, // ← Abrir picker al tocar el campo
             ),
 
             if (_error.isNotEmpty) ...[

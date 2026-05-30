@@ -6,18 +6,35 @@ class TirService {
   factory TirService() => _instance;
   TirService._internal();
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final _db   = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
 
   String? get _uid => _auth.currentUser?.uid;
 
-  // Calcula el % de lecturas de glucosa en rango (70-180 mg/dL) en los últimos 7 días
-  // Equivalente a TirService.getTir() de Angular
-  // Rango estándar internacional: 70–180 mg/dL
+  // ── % lecturas en rango 70–180 mg/dL (últimos 7 días) ────────────────── //
+  // Además extrae el dato de glucemia de las comidas si no hay lecturas
+  // separadas, para que el TIR funcione aunque el usuario solo use add_meal
   Future<int> getTirPercentage() async {
     if (_uid == null) return 0;
+
+    final since = DateTime.now().subtract(const Duration(days: 7));
+
+    // 1. Intenta leer glucose_readings (lecturas independientes)
+    final readings = await _readingsInRange(since);
+
+    // 2. Si no hay lecturas, usa los glucose_level de las comidas como fuente
+    final levels = readings.isNotEmpty
+        ? readings
+        : await _levelsFromMeals(since);
+
+    if (levels.isEmpty) return 0;
+
+    final inRange = levels.where((v) => v >= 70 && v <= 180).length;
+    return ((inRange / levels.length) * 100).round();
+  }
+
+  Future<List<double>> _readingsInRange(DateTime since) async {
     try {
-      final since = DateTime.now().subtract(const Duration(days: 7));
       final snap = await _db
           .collection('glucose_readings')
           .where('user_id', isEqualTo: _uid)
@@ -25,17 +42,45 @@ class TirService {
               isGreaterThanOrEqualTo: Timestamp.fromDate(since))
           .get();
 
-      if (snap.docs.isEmpty) return 0;
-
-      int inRange = 0;
-      for (final doc in snap.docs) {
-        final level = (doc.data()['glucose_level'] as num?)?.toDouble() ?? 0;
-        if (level >= 70 && level <= 180) inRange++;
-      }
-
-      return ((inRange / snap.docs.length) * 100).round();
+      return snap.docs
+          .map((d) => (d.data()['glucose_level'] as num?)?.toDouble() ?? 0.0)
+          .where((v) => v > 0)
+          .toList();
     } catch (_) {
-      return 0;
+      // Fallback sin filtro de fecha si falta índice
+      try {
+        final snap = await _db
+            .collection('glucose_readings')
+            .where('user_id', isEqualTo: _uid)
+            .get();
+
+        return snap.docs.where((d) {
+          final ts = d.data()['reading_time'] as Timestamp?;
+          return ts != null && ts.toDate().isAfter(since);
+        }).map((d) => (d.data()['glucose_level'] as num?)?.toDouble() ?? 0.0)
+            .where((v) => v > 0)
+            .toList();
+      } catch (_) {
+        return [];
+      }
+    }
+  }
+
+  Future<List<double>> _levelsFromMeals(DateTime since) async {
+    try {
+      final snap = await _db
+          .collection('meals')
+          .where('user_id', isEqualTo: _uid)
+          .get();
+
+      return snap.docs.where((d) {
+        final ts = d.data()['created_at'] as Timestamp?;
+        return ts != null && ts.toDate().isAfter(since);
+      }).map((d) => (d.data()['glucose_level'] as num?)?.toDouble() ?? 0.0)
+          .where((v) => v > 0)
+          .toList();
+    } catch (_) {
+      return [];
     }
   }
 }

@@ -32,3 +32,4 @@ flutter:
   assets:
     - assets/LogoDiAppBetes.png
     - assets/TickContaseñaCambiada.png
+    - assets/favicon.png

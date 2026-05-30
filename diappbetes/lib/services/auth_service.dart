@@ -24,6 +24,7 @@ class AuthService {
     required String email,
     required String password,
     String username = '',
+    String birthDate = '',
   }) async {
     final credential = await _auth.createUserWithEmailAndPassword(
       email: email,
@@ -35,15 +36,13 @@ class AuthService {
 
     // Crear perfil en Firestore (inactivo hasta verificar)
     final uid = credential.user!.uid;
-    final resolvedUsername =
-        username.isNotEmpty ? username : email.split('@').first;
+    final resolvedUsername = username.isNotEmpty ? username : email.split('@').first;
 
     await _db.collection('profiles').doc(uid).set({
       'id':           uid,
-      'username':     resolvedUsername,
+      'username':     resolvedUsername.toLowerCase(),
       'email':        email,
-      'phone':        '',
-      'birth_date':   null,
+      'birth_date':     birthDate.isEmpty ? null : birthDate,
       'role':         'usuario',
       'fsi':          50.0,
       'avatar_url':   null,
@@ -66,21 +65,37 @@ class AuthService {
 
     // Si es username (sin @), buscar email en Firestore
     if (!identifier.contains('@')) {
-      final query = await _db
-          .collection('profiles')
-          .where('username', isEqualTo: identifier)
-          .limit(1)
-          .get();
+      print('🔎 Buscando usuario: $identifier');
+      
+      try {
+        final query = await _db
+            .collection('profiles')
+            .where('username', isEqualTo: identifier.toLowerCase())
+            .limit(1)
+            .get();
 
-      if (query.docs.isEmpty) {
-        throw FirebaseAuthException(
-          code: 'user-not-found',
-          message: 'No se encontró ningún usuario con ese nombre.',
-        );
+        print('📄 Documentos encontrados: ${query.docs.length}');
+        
+        if (query.docs.isEmpty) {
+          print('❌ No se encontró el usuario en Firestore');
+          throw FirebaseAuthException(
+            code: 'user-not-found',
+            message: 'No se encontró ningún usuario con ese nombre.',
+          );
+        }
+        
+        final userData = query.docs.first.data();
+        print('✅ Usuario encontrado: ${userData['email']}');
+        email = userData['email'] as String;
+        
+      } catch (e) {
+        print('❌ Error buscando en Firestore: $e');
+        rethrow;
       }
-      email = query.docs.first.data()['email'] as String;
     }
 
+    print('🔑 Intentando login con email: $email');
+    
     final credential = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
@@ -91,7 +106,6 @@ class AuthService {
     final freshUser = _auth.currentUser!;
 
     if (!freshUser.emailVerified) {
-      // Cierra sesión y lanza error personalizado
       await _auth.signOut();
       throw FirebaseAuthException(
         code: 'email-not-verified',
@@ -99,7 +113,6 @@ class AuthService {
       );
     }
 
-    // Actualiza el flag en Firestore
     await _db.collection('profiles').doc(freshUser.uid).update({
       'email_verified': true,
       'updated_at': FieldValue.serverTimestamp(),

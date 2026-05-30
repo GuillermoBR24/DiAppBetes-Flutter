@@ -6,30 +6,46 @@ class MealService {
   factory MealService() => _instance;
   MealService._internal();
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final _db   = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
 
   String? get _uid => _auth.currentUser?.uid;
 
-  // Número de comidas registradas hoy
-  // Equivalente a MealCountService.getTodayMealCount() de Angular
+  // ── Comidas registradas HOY ───────────────────────────────────────────── //
+  // Usa el campo created_at que graba meal_create_service
   Future<int> getTodayMealCount() async {
     if (_uid == null) return 0;
-    try {
-      final now   = DateTime.now();
-      final start = DateTime(now.year, now.month, now.day);
-      final end   = start.add(const Duration(days: 1));
 
+    final now   = DateTime.now();
+    final start = DateTime(now.year, now.month, now.day);
+    final end   = start.add(const Duration(days: 1));
+
+    try {
+      // Query con índice compuesto (user_id + created_at)
       final snap = await _db
           .collection('meals')
           .where('user_id', isEqualTo: _uid)
           .where('created_at', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
           .where('created_at', isLessThan: Timestamp.fromDate(end))
           .get();
-
       return snap.docs.length;
     } catch (_) {
-      return 0;
+      // Fallback sin rango de fechas si falta índice — filtra en cliente
+      try {
+        final snap = await _db
+            .collection('meals')
+            .where('user_id', isEqualTo: _uid)
+            .get();
+
+        return snap.docs.where((doc) {
+          final ts = doc.data()['created_at'] as Timestamp?;
+          if (ts == null) return false;
+          final dt = ts.toDate();
+          return dt.isAfter(start) && dt.isBefore(end);
+        }).length;
+      } catch (_) {
+        return 0;
+      }
     }
   }
 }

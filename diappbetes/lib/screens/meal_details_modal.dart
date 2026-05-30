@@ -1,488 +1,212 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/history_service.dart';
+import 'add_food_modal.dart' show categoryBg, categoryText;
 
-// ───────────────────────────────────────────────────────────────────────────
-// Modelo de Alimento (hardcodeado)
-// ───────────────────────────────────────────────────────────────────────────
-class FoodItem {
-  final String id;
-  final String name;
-  final String category;
-  final double quantityGrams;
-  final double calculatedHc;
-  final int calculatedCalories;
-  final double calculatedRations;
-
-  const FoodItem({
-    required this.id,
-    required this.name,
-    required this.category,
-    required this.quantityGrams,
-    required this.calculatedHc,
-    required this.calculatedCalories,
-    required this.calculatedRations,
-  });
+// ---------------------------------------------------------------------------
+// Colores por tipo de comida (equivalente a getMealBgColor / getMealTextColor)
+// ---------------------------------------------------------------------------
+Color mealBg(String type) {
+  const map = {
+    'desayuno': Color(0xFFFFF9C4),
+    'almuerzo': Color(0xFFE8F5E9),
+    'comida':   Color(0xFFE3F2FD),
+    'merienda': Color(0xFFFCE4EC),
+    'cena':     Color(0xFFEDE7F6),
+  };
+  return map[type.toLowerCase()] ?? const Color(0xFFF5F5F5);
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-// Modelo de Comida extendido para el modal
-// ───────────────────────────────────────────────────────────────────────────
-class MealDetail {
-  final String id;
-  final String mealType;
-  final double totalHc;
-  final int totalCalories;
-  final double totalRations;
-  final DateTime createdAt;
-  final double? glucoseLevel;
-  final double? totalInsulin;
-  final List<FoodItem> foods;
-
-  const MealDetail({
-    required this.id,
-    required this.mealType,
-    required this.totalHc,
-    required this.totalCalories,
-    required this.totalRations,
-    required this.createdAt,
-    this.glucoseLevel,
-    this.totalInsulin,
-    required this.foods,
-  });
+Color mealFg(String type) {
+  const map = {
+    'desayuno': Color(0xFFF9A825),
+    'almuerzo': Color(0xFF2E7D32),
+    'comida':   Color(0xFF1565C0),
+    'merienda': Color(0xFFAD1457),
+    'cena':     Color(0xFF4527A0),
+  };
+  return map[type.toLowerCase()] ?? AppColors.azulFondo;
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-// Función para mostrar el modal (llamar desde HistorialScreen)
-// ───────────────────────────────────────────────────────────────────────────
-Future<void> showMealDetailsModal(BuildContext context, MealDetail meal) async {
-  await showDialog(
-    context: context,
-    builder: (context) => MealDetailsModal(meal: meal),
-    barrierDismissible: true, // Permitir cerrar tocando fuera
-  );
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-// Widget del Modal
-// ───────────────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// MealDetailsModal
+// ---------------------------------------------------------------------------
 class MealDetailsModal extends StatelessWidget {
-  final MealDetail meal;
+  final MealDTO meal;
 
   const MealDetailsModal({super.key, required this.meal});
 
+  // ── Helpers de formato (equivalente a formatMealTimeOnly / DateOnly) ─── //
+  String _timeOnly(DateTime dt) =>
+      '${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}';
+
+  String _dateOnly(DateTime dt) {
+    const meses = ['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    return '${dt.day} ${meses[dt.month]}, ${dt.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bg = mealBg(meal.mealType);
+    final fg = mealFg(meal.mealType);
+
     return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.blanco,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // ── Header ─────────────────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.azulFondo,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Header ────────────────────────────────────────────────── //
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: const BoxDecoration(
+              color: AppColors.azulFondo,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text('Detalles de la Comida',
+                      style: TextStyle(color: AppColors.blanco, fontSize: 17, fontWeight: FontWeight.bold)),
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.blanco),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Cuerpo scrollable ──────────────────────────────────────── //
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Detalles de la Comida',
-                    style: TextStyle(
-                      color: AppColors.blanco,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  // ── Fila tipo comida ─────────────────────────────── //
+                  _row(
+                    label: 'Tipo',
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+                      child: Text(
+                        meal.mealType[0].toUpperCase() + meal.mealType.substring(1),
+                        style: TextStyle(color: fg, fontWeight: FontWeight.bold, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.blanco),
-                    onPressed: () => Navigator.pop(context),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+
+                  // ── Fecha y hora ─────────────────────────────────── //
+                  _row(
+                    label: 'Fecha y hora',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(_timeOnly(meal.createdAt),
+                            style: const TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.bold, fontSize: 15)),
+                        Text(_dateOnly(meal.createdAt),
+                            style: const TextStyle(color: AppColors.grisTexto, fontSize: 12)),
+                      ],
+                    ),
                   ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Divider(color: AppColors.grisDivider, thickness: 2),
+                  ),
+
+                  // ── Macros ───────────────────────────────────────── //
+                  _row(label: 'HC Totales',
+                      child: Text('${meal.totalHc.toStringAsFixed(1)}g',
+                          style: TextStyle(color: AppColors.verdesuave, fontWeight: FontWeight.bold, fontSize: 15))),
+
+                  _row(label: 'Calorías',
+                      child: Text('${meal.totalCalories.toStringAsFixed(0)} cal',
+                          style: const TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.bold, fontSize: 15))),
+
+                  _row(label: 'Raciones',
+                      child: Text('${meal.totalRations.toStringAsFixed(1)} R',
+                          style: const TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.bold, fontSize: 15))),
+
+                  _row(label: 'Glucemia',
+                      child: Text(
+                        meal.glucoseLevel > 0 ? '${meal.glucoseLevel.toStringAsFixed(0)} mg/dL' : 'No registrada',
+                        style: const TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.bold, fontSize: 15),
+                      )),
+
+                  _row(label: 'U. Insulina',
+                      child: Text('${meal.totalInsulin.toStringAsFixed(1)} U',
+                          style: const TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.bold, fontSize: 15))),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Divider(color: AppColors.grisDivider, thickness: 2),
+                  ),
+
+                  // ── Lista de alimentos ────────────────────────────── //
+                  Text('Alimentos (${meal.foods.length})',
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+                  const SizedBox(height: 10),
+
+                  if (meal.foods.isEmpty)
+                    const Center(
+                      child: Text('Sin alimentos registrados',
+                          style: TextStyle(color: AppColors.grisTexto, fontSize: 13)),
+                    )
+                  else
+                    ...meal.foods.map((food) => _buildFoodItem(food)),
                 ],
               ),
             ),
-
-            // ── Contenido scrollable ───────────────────────────────────────
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-
-                    // Card de detalles
-                    _buildDetailsCard(context),
-                    const SizedBox(height: 16),
-
-                    // Lista de alimentos
-                    _buildFoodsList(context),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  // ── Card: Detalles principales ──────────────────────────────────────────
-  Widget _buildDetailsCard(BuildContext context) {
+  // ── Fila label/value ─────────────────────────────────────────────────── //
+  Widget _row({required String label, required Widget child}) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label,
+            style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.grisTexto, fontSize: 14)),
+        child,
+      ],
+    ),
+  );
+
+  // ── Item de alimento ─────────────────────────────────────────────────── //
+  Widget _buildFoodItem(MealFoodDTO food) {
+    final bg = categoryBg(food.category);
+    final fg = categoryText(food.category);
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4)),
-        ],
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: fg.withOpacity(0.3)),
       ),
       child: Column(
-        children: [
-          // Tipo de comida (con badge coloreado)
-          _buildDetailRow(
-            label: 'Tipo',
-            value: _capitalize(meal.mealType),
-            isBadge: true,
-            badgeBgColor: _getMealBgColor(meal.mealType),
-            badgeTextColor: _getMealTextColor(meal.mealType),
-          ),
-
-          // Fecha y hora
-          _buildDetailRow(
-            label: 'Fecha y hora',
-            value: _formatMealTimeOnly(meal.createdAt),
-            valueSub: _formatMealDateOnly(meal.createdAt),
-          ),
-
-          // Divider
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(color: AppColors.grisDivider, thickness: 2),
-          ),
-
-          // HC Totales
-          _buildDetailRow(
-            label: 'HC Totales',
-            value: '${meal.totalHc.toStringAsFixed(1)}g',
-            isHcValue: true,
-          ),
-
-          // Calorías
-          _buildDetailRow(
-            label: 'Calorías',
-            value: '${meal.totalCalories} cal',
-          ),
-
-          // Raciones
-          _buildDetailRow(
-            label: 'Raciones',
-            value: '${meal.totalRations.toStringAsFixed(1)} R',
-          ),
-
-          // Glucemia
-          _buildDetailRow(
-            label: 'Glucemia',
-            value: meal.glucoseLevel != null 
-                ? '${meal.glucoseLevel!.toStringAsFixed(0)} mg/dl' 
-                : 'No registrada',
-          ),
-
-          // Unidades de Insulina
-          _buildDetailRow(
-            label: 'U. Insulina',
-            value: meal.totalInsulin != null 
-                ? '${meal.totalInsulin!.toStringAsFixed(1)} U' 
-                : 'No definido',
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Fila de detalle reutilizable ────────────────────────────────────────
-  Widget _buildDetailRow({
-    required String label,
-    required String value,
-    String? valueSub,
-    bool isHcValue = false,
-    bool isBadge = false,
-    Color? badgeBgColor,
-    Color? badgeTextColor,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: AppColors.grisTexto,
-              fontSize: 14,
-            ),
-          ),
-          if (isBadge)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: badgeBgColor ?? AppColors.cardBackground,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: badgeTextColor ?? AppColors.azulFondo, width: 1),
-              ),
-              child: Text(
-                value,
-                style: TextStyle(
-                  color: badgeTextColor ?? AppColors.azulFondo,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ),
-            )
-          else if (valueSub != null)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: AppColors.azulFondo,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
-                Text(
-                  valueSub,
-                  style: TextStyle(
-                    color: AppColors.grisTexto,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            )
-          else
-            Text(
-              value,
-              style: TextStyle(
-                color: isHcValue ? AppColors.verdesuave : AppColors.azulFondo,
-                fontWeight: isHcValue ? FontWeight.bold : FontWeight.normal,
-                fontSize: 15,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // ── Lista de alimentos ──────────────────────────────────────────────────
-  Widget _buildFoodsList(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Alimentos (${meal.foods.length})',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.azulFondo,
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (meal.foods.isEmpty)
-          Center(
-            child: Text(
-              'No hay alimentos registrados.',
-              style: TextStyle(fontSize: 14, color: AppColors.grisTexto),
-            ),
-          )
-        else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: meal.foods.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, index) => _buildFoodItem(meal.foods[index]),
-          ),
-      ],
-    );
-  }
-
-  // ── Item individual de alimento ─────────────────────────────────────────
-  Widget _buildFoodItem(FoodItem food) {
-    final bgColor = _getCategoryBgColor(food.category);
-    final textColor = _getCategoryTextColor(food.category);
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: textColor, width: 1),
-      ),
-      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Ícono de alimento
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: textColor.withOpacity(0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.restaurant_menu_outlined,
-              size: 20,
-              color: textColor,
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Info del alimento
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  food.name,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 4,
-                  children: [
-                    _buildFoodDetail('Cantidad', '${food.quantityGrams.toStringAsFixed(0)}g'),
-                    _buildFoodDetail('HC', '${food.calculatedHc.toStringAsFixed(1)}g'),
-                    _buildFoodDetail('Calorías', '${food.calculatedCalories}'),
-                    _buildFoodDetail('Raciones', '${food.calculatedRations.toStringAsFixed(1)} R'),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          Text(food.name,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: fg)),
+          const SizedBox(height: 4),
+          Text('Cantidad: ${food.quantityGrams.toStringAsFixed(0)}g',
+              style: const TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+          Text('HC: ${food.calculatedHc.toStringAsFixed(1)}g  •  '
+              'Cal: ${food.calculatedCalories.toStringAsFixed(0)}  •  '
+              'Rac: ${food.calculatedRations.toStringAsFixed(1)} R',
+              style: const TextStyle(fontSize: 12, color: AppColors.grisTexto)),
         ],
       ),
     );
-  }
-
-  Widget _buildFoodDetail(String label, String value) {
-    return RichText(
-      text: TextSpan(
-        style: TextStyle(fontSize: 12, color: AppColors.grisTexto),
-        children: [
-          TextSpan(text: '$label: ', style: const TextStyle(fontWeight: FontWeight.w500)),
-          TextSpan(text: value, style: TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-
-  // ── Helpers de colores y formato ────────────────────────────────────────
-  Color _getMealBgColor(String mealType) {
-    switch (mealType.toLowerCase()) {
-      case 'desayuno': return AppColors.desayunoFondo;
-      case 'almuerzo': return AppColors.almuerzoFondo;
-      case 'comida':   return AppColors.comidaFondo;
-      case 'merienda': return AppColors.meriendaFondo;
-      case 'cena':     return AppColors.cenaFondo;
-      default:         return AppColors.cardBackground;
-    }
-  }
-
-  Color _getMealTextColor(String mealType) {
-    switch (mealType.toLowerCase()) {
-      case 'desayuno': return AppColors.desayunoTexto;
-      case 'almuerzo': return AppColors.almuerzoTexto;
-      case 'comida':   return AppColors.comidaTexto;
-      case 'merienda': return AppColors.meriendaTexto;
-      case 'cena':     return AppColors.cenaTexto;
-      default:         return AppColors.azulFondo;
-    }
-  }
-
-  Color _getCategoryBgColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'frutas': return AppColors.frutasFondo;
-      case 'carnes': return AppColors.carnesFondo;
-      case 'pescados': return AppColors.pescadosFondo;
-      case 'mariscos': return AppColors.mariscosFondo;
-      case 'verduras': return AppColors.verdurasFondo;
-      case 'lacteos': return AppColors.lacteosFondo;
-      case 'cereales': return AppColors.cerealesFondo;
-      case 'bolleria': return AppColors.bolleriaFondo;
-      case 'dulces': return AppColors.dulcesFondo;
-      case 'bebidas': return AppColors.bebidasFondo;
-      case 'legumbres': return AppColors.legumbresFondo;
-      case 'frutos_secos': return AppColors.frutosSecosFondo;
-      case 'plato': return AppColors.platoFondo;
-      default: return AppColors.frutasFondo;
-    }
-  }
-
-  Color _getCategoryTextColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'frutas': return AppColors.frutasTexto;
-      case 'carnes': return AppColors.carnesTexto;
-      case 'pescados': return AppColors.pescadosTexto;
-      case 'mariscos': return AppColors.mariscosTexto;
-      case 'verduras': return AppColors.verdurasTexto;
-      case 'lacteos': return AppColors.lacteosTexto;
-      case 'cereales': return AppColors.cerealesTexto;
-      case 'bolleria': return AppColors.bolleriaTexto;
-      case 'dulces': return AppColors.dulcesTexto;
-      case 'bebidas': return AppColors.bebidasTexto;
-      case 'legumbres': return AppColors.legumbresTexto;
-      case 'frutos_secos': return AppColors.frutosSecosTexto;
-      case 'plato': return AppColors.platoTexto;
-      default: return AppColors.frutasTexto;
-    }
-  }
-
-  String _formatMealDateOnly(DateTime date) {
-    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 
-                    'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-    final month = months[date.month - 1];
-    return '${date.day} $month, ${date.year}';
-  }
-
-  String _formatMealTimeOnly(DateTime date) {
-    final hours = date.hour.toString().padLeft(2, '0');
-    final minutes = date.minute.toString().padLeft(2, '0');
-    return '$hours:$minutes';
-  }
-
-  String _capitalize(String text) {
-    if (text.isEmpty) return text;
-    return text[0].toUpperCase() + text.substring(1);
-  }
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-// Extensión para capitalizar (si no la tienes ya en otro archivo)
-// ───────────────────────────────────────────────────────────────────────────
-extension StringExtension on String {
-  String capitalize() {
-    if (isEmpty) return this;
-    return this[0].toUpperCase() + substring(1);
   }
 }

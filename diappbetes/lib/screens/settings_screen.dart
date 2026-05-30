@@ -52,7 +52,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _username  = '';
   String _email     = '';
   String _birthDate = '';
-  String _phone     = '';
   String _role      = '';
   double _fsi       = 0;
 
@@ -70,7 +69,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   TextEditingController? _usernameCtrl;
   TextEditingController? _emailCtrl;
   TextEditingController? _birthDateCtrl;
-  TextEditingController? _phoneCtrl;
   TextEditingController? _fsiCtrl;
 
   @override
@@ -79,7 +77,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _usernameCtrl  = TextEditingController();
     _emailCtrl     = TextEditingController();
     _birthDateCtrl = TextEditingController();
-    _phoneCtrl     = TextEditingController();
     _fsiCtrl       = TextEditingController();
     _loadData();
   }
@@ -89,7 +86,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _usernameCtrl?.dispose();
     _emailCtrl?.dispose();
     _birthDateCtrl?.dispose();
-    _phoneCtrl?.dispose();
     _fsiCtrl?.dispose();
     super.dispose();
   }
@@ -141,7 +137,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _username  = profile['username']?.toString() ?? '';
         _email     = profile['email']?.toString() ?? '';
         _birthDate = profile['birth_date']?.toString() ?? '';
-        _phone     = profile['phone']?.toString() ?? '';
         _role      = profile['role']?.toString() ?? 'usuario';
         
         final fsiValue = profile['fsi'];
@@ -156,7 +151,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _safeSetText(_usernameCtrl, _username);
         _safeSetText(_emailCtrl, _email);
         _safeSetText(_birthDateCtrl, _birthDate);
-        _safeSetText(_phoneCtrl, _phone);
         _safeSetText(_fsiCtrl, _fsi.toString());
 
         _hcRatios = ratios.map((r) => HcRatio(
@@ -194,9 +188,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final usernameVal = _safeText(_usernameCtrl)?.trim() ?? '';
     final emailVal = _safeText(_emailCtrl)?.trim() ?? '';
     final birthDateVal = _safeText(_birthDateCtrl)?.trim() ?? '';
-    final phoneVal = _safeText(_phoneCtrl)?.trim() ?? '';
 
-    if (usernameVal.isEmpty || emailVal.isEmpty || birthDateVal.isEmpty || phoneVal.isEmpty) {
+    if (usernameVal.isEmpty || emailVal.isEmpty || birthDateVal.isEmpty) {
       setState(() => _errorPersonal = 'Todos los campos son obligatorios');
       return;
     }
@@ -207,13 +200,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         username:  usernameVal,
         email:     emailVal,
         birthDate: birthDateVal,
-        phone:     phoneVal,
       );
       setState(() {
         _username  = usernameVal;
         _email     = emailVal;
         _birthDate = birthDateVal;
-        _phone     = phoneVal;
         _editingPersonal = false;
       });
       _showSnack('Perfil actualizado');
@@ -454,13 +445,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: AppColors.blanco,
       appBar: AppBar(
+        automaticallyImplyLeading: false,  // ← Evita que Flutter agregue su propia flecha
         backgroundColor: AppColors.azulFondo,
+        titleSpacing: 0, // ← Elimina margen izquierdo por defecto para alinear logo
+        
+        // ← Flecha de retroceso personalizada (BLANCA)
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.blanco),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('DiAppBetes',
-            style: TextStyle(color: AppColors.blanco, fontWeight: FontWeight.bold)),
+        
+        // ← Logo + Título
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Fondo blanco + Logo
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: AppColors.blanco,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/favicon.png',
+                  width: 42,
+                  height: 42,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => 
+                      const Icon(Icons.image_not_supported, color: AppColors.azulFondo, size: 20),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12), // ← Espacio entre logo y texto
+            // Título
+            const Text('DiAppBetes',
+                style: TextStyle(
+                  color: AppColors.blanco, 
+                  fontWeight: FontWeight.bold, 
+                  fontSize: 20
+                )),
+          ],
+        ),
+        
+        // ← Acciones (ícono de settings)
         actions: [
           IconButton(
             icon: const Icon(Icons.settings, color: AppColors.blanco),
@@ -586,7 +623,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               _safeSetText(_usernameCtrl, _username);
                               _safeSetText(_emailCtrl, _email);
                               _safeSetText(_birthDateCtrl, _birthDate);
-                              _safeSetText(_phoneCtrl, _phone);
                             });
                           },
                         ),
@@ -620,7 +656,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildField('Email',          _emailCtrl,    _editingPersonal, TextInputType.emailAddress),
           _buildField('Fecha de nacimiento', _birthDateCtrl, _editingPersonal, TextInputType.datetime,
               hint: 'YYYY-MM-DD'),
-          _buildField('Teléfono',       _phoneCtrl,    _editingPersonal, TextInputType.phone),
         ],
       ),
     );

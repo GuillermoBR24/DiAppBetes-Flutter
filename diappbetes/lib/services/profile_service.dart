@@ -53,7 +53,6 @@ class ProfileService {
       'id':             uid,
       'username':       user.displayName ?? user.email?.split('@').first ?? 'usuario',
       'email':          user.email ?? '',
-      'phone':          '',
       'birth_date':     '',
       'role':           'usuario',
       'fsi':            50.0,
@@ -76,7 +75,6 @@ class ProfileService {
     required String username,
     required String email,
     required String birthDate,
-    required String phone,
   }) async {
     if (_uid == null) return;
 
@@ -90,7 +88,6 @@ class ProfileService {
       'username':   username,
       'email':      email,
       'birth_date': birthDate,
-      'phone':      phone,
       'updated_at': FieldValue.serverTimestamp(),
     });
   }

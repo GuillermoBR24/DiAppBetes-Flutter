@@ -6,13 +6,13 @@ class GlucoseService {
   factory GlucoseService() => _instance;
   GlucoseService._internal();
 
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final _db   = FirebaseFirestore.instance;
+  final _auth = FirebaseAuth.instance;
 
   String? get _uid => _auth.currentUser?.uid;
 
-  // Última lectura de glucosa del usuario
-  // Equivalente a GlucoseService.getLatestGlucose() de Angular
+  // ── Última lectura de glucosa ─────────────────────────────────────────── //
+  // Lee directamente de glucose_readings ordenado por reading_time desc
   Future<String> getLatestGlucoseFormatted() async {
     if (_uid == null) return 'Sin lecturas';
     try {
@@ -25,19 +25,46 @@ class GlucoseService {
 
       if (snap.docs.isEmpty) return 'Sin lecturas recientes';
 
-      final data = snap.docs.first.data();
-      final level = data['glucose_level'];
-      final time  = (data['reading_time'] as Timestamp?)?.toDate();
+      final data  = snap.docs.first.data();
+      final level = (data['glucose_level'] as num?)?.toStringAsFixed(0) ?? '—';
+      final ts    = data['reading_time'] as Timestamp?;
+      final time  = ts?.toDate();
 
-      final timeStr = time != null
-          ? '${time.hour.toString().padLeft(2,'0')}:${time.minute.toString().padLeft(2,'0')}'
-          : '';
+      if (time == null) return '$level mg/dL';
 
-      return timeStr.isNotEmpty
-          ? '${level ?? '—'} mg/dL — $timeStr'
-          : '${level ?? '—'} mg/dL';
-    } catch (_) {
-      return 'Sin lecturas recientes';
+      final h = time.hour.toString().padLeft(2, '0');
+      final m = time.minute.toString().padLeft(2, '0');
+      return '$level mg/dL — $h:$m';
+    } catch (e) {
+      // Si falta el índice compuesto, intenta sin orderBy como fallback
+      try {
+        final snap = await _db
+            .collection('glucose_readings')
+            .where('user_id', isEqualTo: _uid)
+            .get();
+
+        if (snap.docs.isEmpty) return 'Sin lecturas recientes';
+
+        // Ordena en cliente
+        final docs = snap.docs.toList()
+          ..sort((a, b) {
+            final ta = a.data()['reading_time'] as Timestamp?;
+            final tb = b.data()['reading_time'] as Timestamp?;
+            if (ta == null || tb == null) return 0;
+            return tb.compareTo(ta);
+          });
+
+        final data  = docs.first.data();
+        final level = (data['glucose_level'] as num?)?.toStringAsFixed(0) ?? '—';
+        final ts    = data['reading_time'] as Timestamp?;
+        final time  = ts?.toDate();
+        if (time == null) return '$level mg/dL';
+        final h = time.hour.toString().padLeft(2, '0');
+        final m = time.minute.toString().padLeft(2, '0');
+        return '$level mg/dL — $h:$m';
+      } catch (_) {
+        return 'Sin lecturas recientes';
+      }
     }
   }
 }

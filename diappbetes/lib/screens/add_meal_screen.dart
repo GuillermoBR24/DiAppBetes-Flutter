@@ -225,9 +225,50 @@ class _AddMealScreenState extends State<AddMealScreen> {
     return Scaffold(
       backgroundColor: AppColors.blanco,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: AppColors.azulFondo,
-        title: const Text('DiAppBetes',
-            style: TextStyle(color: AppColors.blanco, fontWeight: FontWeight.bold, fontSize: 20)),
+        titleSpacing: 0, // ← Elimina margen izquierdo por defecto
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(width: 16), // ← Margen izquierdo opcional
+            // Fondo blanco + Logo
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: AppColors.blanco,
+                borderRadius: BorderRadius.circular(8), // ← Bordes redondeados
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/favicon.png',
+                  width: 42,
+                  height: 42,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => 
+                      const Icon(Icons.image_not_supported, color: AppColors.azulFondo, size: 20),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12), // ← Espacio logo-texto
+            // Título
+            const Text('DiAppBetes',
+                style: TextStyle(
+                  color: AppColors.blanco, 
+                  fontWeight: FontWeight.bold, 
+                  fontSize: 20
+                )),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings, color: AppColors.blanco),

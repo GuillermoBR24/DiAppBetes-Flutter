@@ -1,60 +1,11 @@
-import 'package:diappbetes/screens/meal_details_modal.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/history_service.dart';
+import 'meal_details_modal.dart';
 
-// ───────────────────────────────────────────────────────────────────────────
-// Modelo de Comida (hardcodeado)
-// ───────────────────────────────────────────────────────────────────────────
-class Meal {
-  final String id;
-  final String mealType; // desayuno, almuerzo, comida, merienda, cena
-  final double totalHc;
-  final int totalCalories;
-  final double totalRations;
-  final List<String> foods;
-  final DateTime createdAt;
-
-  const Meal({
-    required this.id,
-    required this.mealType,
-    required this.totalHc,
-    required this.totalCalories,
-    required this.totalRations,
-    required this.foods,
-    required this.createdAt,
-  });
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-// Estadísticas diarias
-// ───────────────────────────────────────────────────────────────────────────
-class DailyStats {
-  final double totalHc;
-  final int totalCalories;
-  final double totalRations;
-  final double avgHc;
-  final int totalMealsDay;
-
-  const DailyStats({
-    required this.totalHc,
-    required this.totalCalories,
-    required this.totalRations,
-    required this.avgHc,
-    required this.totalMealsDay,
-  });
-
-  static const empty = DailyStats(
-    totalHc: 0,
-    totalCalories: 0,
-    totalRations: 0,
-    avgHc: 0,
-    totalMealsDay: 0,
-  );
-}
-
-// ───────────────────────────────────────────────────────────────────────────
-// Pantalla de Historial
-// ───────────────────────────────────────────────────────────────────────────
+// ---------------------------------------------------------------------------
+// HistorialScreen — equivalente a HistorialPage de Angular/Ionic
+// ---------------------------------------------------------------------------
 class HistorialScreen extends StatefulWidget {
   const HistorialScreen({super.key});
 
@@ -63,266 +14,143 @@ class HistorialScreen extends StatefulWidget {
 }
 
 class _HistorialScreenState extends State<HistorialScreen> {
-  // ── Estado ──────────────────────────────────────────────────────────────
-  DateTime _selectedDate = DateTime.now();
-  String _selectedMealType = 'todas';
-  List<Meal> _allMeals = [];
-  List<Meal> _filteredMeals = [];
-  DailyStats _dailyStats = DailyStats.empty;
-  int _selectedTab = 0; // Historial seleccionado por defecto
+  final _historyService = HistoryService();
 
-  // ── Datos hardcodeados (simulando respuesta del backend) ─────────────────
-  static final List<Meal> _hardcodedMeals = [
-    Meal(
-      id: '1',
-      mealType: 'desayuno',
-      totalHc: 45.5,
-      totalCalories: 320,
-      totalRations: 3.0,
-      foods: ['Pan integral', 'Aceite de oliva', 'Tomate'],
-      createdAt: DateTime(2024, 5, 27, 8, 30),
-    ),
-    Meal(
-      id: '2',
-      mealType: 'almuerzo',
-      totalHc: 28.2,
-      totalCalories: 180,
-      totalRations: 2.0,
-      foods: ['Manzana', 'Yogur natural'],
-      createdAt: DateTime(2024, 5, 27, 11, 15),
-    ),
-    Meal(
-      id: '3',
-      mealType: 'comida',
-      totalHc: 62.8,
-      totalCalories: 540,
-      totalRations: 4.5,
-      foods: ['Arroz integral', 'Pechuga de pollo', 'Ensalada', 'Aceite'],
-      createdAt: DateTime(2024, 5, 27, 14, 0),
-    ),
-    Meal(
-      id: '4',
-      mealType: 'merienda',
-      totalHc: 15.0,
-      totalCalories: 95,
-      totalRations: 1.0,
-      foods: ['Puñado de almendras'],
-      createdAt: DateTime(2024, 5, 27, 17, 30),
-    ),
-    Meal(
-      id: '5',
-      mealType: 'cena',
-      totalHc: 38.4,
-      totalCalories: 410,
-      totalRations: 2.5,
-      foods: ['Salmón', 'Brócoli al vapor', 'Quinoa'],
-      createdAt: DateTime(2024, 5, 27, 20, 45),
-    ),
-  ];
+  List<MealDTO> _allMeals      = [];
+  List<MealDTO> _filteredMeals = [];
+  bool          _loading       = true;
+
+  DateTime _selectedDate   = DateTime.now();
+  String   _selectedType   = 'todas';
+  int      _selectedTab    = 0;
+
+  // ── Estadísticas del día ──────────────────────────────────────────────── //
+  double _totalHc       = 0;
+  double _totalCalories = 0;
+  double _avgHc         = 0;
+  int    _totalMeals    = 0;
 
   @override
   void initState() {
     super.initState();
-    _allMeals = _hardcodedMeals;
-    _filterMealsByDate();
+    _loadMeals();
   }
 
-  // ── Lógica de filtrado y estadísticas ───────────────────────────────────
-  void _filterMealsByDate() {
-    final selectedDateString = _formatDateToISO(_selectedDate);
-    
-    var filtered = _allMeals.where((meal) {
-      final mealDateString = _formatDateToISO(meal.createdAt);
-      return mealDateString == selectedDateString;
-    }).toList();
+  // ── Cargar comidas desde Firestore ────────────────────────────────────── //
+  Future<void> _loadMeals() async {
+    if (!mounted) return;
+    setState(() => _loading = true);
+    try {
+      final meals = await _historyService.getMeals();
+      if (!mounted) return;
+      setState(() {
+        _allMeals = meals;
+        _loading  = false;
+      });
+      _applyFilters();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Error al cargar: ${e.toString()}'),
+          backgroundColor: AppColors.rojoSuave,
+        ));
+      }
+    }
+  }
 
-    if (_selectedMealType != 'todas') {
-      filtered = filtered
-          .where((meal) => meal.mealType.toLowerCase() == _selectedMealType.toLowerCase())
-          .toList();
+  // ── Filtrar por fecha + tipo (equivalente a filterMealsByDate()) ──────── //
+  void _applyFilters() {
+    final dateStr = _isoDate(_selectedDate);
+
+    var filtered = _allMeals.where((m) => _isoDate(m.createdAt) == dateStr).toList();
+
+    if (_selectedType != 'todas') {
+      filtered = filtered.where((m) => m.mealType.toLowerCase() == _selectedType).toList();
     }
 
     setState(() {
       _filteredMeals = filtered;
-      _calculateDailyStats();
+      _calcStats(filtered);
     });
   }
 
-  void _calculateDailyStats() {
-    if (_filteredMeals.isEmpty) {
-      setState(() => _dailyStats = DailyStats.empty);
+  // ── Calcular estadísticas del día ─────────────────────────────────────── //
+  void _calcStats(List<MealDTO> meals) {
+    if (meals.isEmpty) {
+      _totalMeals = 0;
       return;
     }
-
-    double totalHc = 0;
-    int totalCalories = 0;
-    double totalRations = 0;
-
-    for (final meal in _filteredMeals) {
-      totalHc += meal.totalHc;
-      totalCalories += meal.totalCalories;
-      totalRations += meal.totalRations;
+    double hc = 0, cal = 0;
+    for (final m in meals) {
+      hc  += m.totalHc;
+      cal += m.totalCalories;
     }
-
-    final avgHc = totalHc / _filteredMeals.length;
-
-    setState(() {
-      _dailyStats = DailyStats(
-        totalHc: double.parse(totalHc.toStringAsFixed(1)),
-        totalCalories: totalCalories,
-        totalRations: double.parse(totalRations.toStringAsFixed(1)),
-        avgHc: double.parse(avgHc.toStringAsFixed(1)),
-        totalMealsDay: _filteredMeals.length,
-      );
-    });
+    _totalHc       = double.parse(hc.toStringAsFixed(1));
+    _totalCalories = double.parse(cal.toStringAsFixed(0));
+    _avgHc         = double.parse((hc / meals.length).toStringAsFixed(1));
+    _totalMeals    = meals.length;
   }
 
-  // ── Formateadores de fecha ──────────────────────────────────────────────
-  String _formatDateToISO(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-  }
-
-  String _formatMealDate(DateTime date) {
-    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-    final month = months[date.month - 1];
-    final hours = date.hour.toString().padLeft(2, '0');
-    final minutes = date.minute.toString().padLeft(2, '0');
-    return '${date.day} $month, ${date.year} a las $hours:$minutes';
-  }
-
-  String _getTodayDateLabel(DateTime date) {
-    // Días de la semana en español
-    const weekdays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    // Meses en español
-    const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
-                    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-    
-    final weekday = weekdays[date.weekday - 1]; // weekday: 1=Lunes, 7=Domingo
-    final day = date.day;
-    final month = months[date.month - 1];
-    
-    return StringExtension('$weekday, $day de $month').capitalize();
-  }
-
-  // ── Colores dinámicos por tipo de comida ────────────────────────────────
-  Color _getMealBgColor(String mealType) {
-    switch (mealType.toLowerCase()) {
-      case 'desayuno': return AppColors.desayunoFondo;
-      case 'almuerzo': return AppColors.almuerzoFondo;
-      case 'comida':   return AppColors.comidaFondo;
-      case 'merienda': return AppColors.meriendaFondo;
-      case 'cena':     return AppColors.cenaFondo;
-      default:         return AppColors.cardBackground;
-    }
-  }
-
-  Color _getMealTextColor(String mealType) {
-    switch (mealType.toLowerCase()) {
-      case 'desayuno': return AppColors.desayunoTexto;
-      case 'almuerzo': return AppColors.almuerzoTexto;
-      case 'comida':   return AppColors.comidaTexto;
-      case 'merienda': return AppColors.meriendaTexto;
-      case 'cena':     return AppColors.cenaTexto;
-      default:         return AppColors.azulFondo;
-    }
-  }
-
-  // ── Helpers UI ──────────────────────────────────────────────────────────
-  String _capitalize(String text) {
-    if (text.isEmpty) return text;
-    return text[0].toUpperCase() + text.substring(1);
-  }
-
-  Future<void> _showDatePicker() async {
+  // ── Selector de fecha con CalendarDatePicker ──────────────────────────── //
+  Future<void> _openCalendar() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
       firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      locale: const Locale('es', 'ES'),
+      lastDate: DateTime.now(),
+      locale: const Locale('es'),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppColors.azulFondo,
+            onPrimary: AppColors.blanco,
+            surface: AppColors.blanco,
+          ),
+        ),
+        child: child!,
+      ),
     );
-    if (picked != null && picked != _selectedDate) {
+    if (picked != null && mounted) {
       setState(() => _selectedDate = picked);
-      _filterMealsByDate();
+      _applyFilters();
     }
   }
 
-  void _onTabTapped(int index) {
-    if (index == _selectedTab) return;
-    setState(() => _selectedTab = index);
-    switch (index) {
-      case 1: Navigator.pushNamed(context, '/home'); break;
-      case 2: Navigator.pushNamed(context, '/add-meal'); break;
-    }
-  }
-
-  void _openMealDetails(Meal meal) {
-    final mealDetail = MealDetail(
-      id: meal.id,
-      mealType: meal.mealType,
-      totalHc: meal.totalHc,
-      totalCalories: meal.totalCalories,
-      totalRations: meal.totalRations,
-      createdAt: meal.createdAt,
-      glucoseLevel: 112.0, // Hardcodeado
-      totalInsulin: 4.5,   // Hardcodeado
-      foods: _getHardcodedFoods(meal.mealType),
+  // ── Abrir modal de detalles ────────────────────────────────────────────── //
+  void _openMealDetails(MealDTO meal) {
+    showDialog(
+      context: context,
+      builder: (_) => MealDetailsModal(meal: meal),
     );
-
-    showMealDetailsModal(context, mealDetail);
   }
 
-  List<FoodItem> _getHardcodedFoods(String mealType) {
-  switch (mealType.toLowerCase()) {
-    case 'desayuno':
-      return const [
-        FoodItem(id: '1', name: 'Pan integral', category: 'cereales', 
-                 quantityGrams: 60, calculatedHc: 30.0, calculatedCalories: 160, calculatedRations: 2.0),
-        FoodItem(id: '2', name: 'Aceite de oliva', category: 'verduras', 
-                 quantityGrams: 10, calculatedHc: 0, calculatedCalories: 90, calculatedRations: 0),
-        FoodItem(id: '3', name: 'Tomate', category: 'verduras', 
-                 quantityGrams: 100, calculatedHc: 4.5, calculatedCalories: 20, calculatedRations: 0.3),
-      ];
-    case 'almuerzo':
-      return const [
-        FoodItem(id: '4', name: 'Manzana', category: 'frutas', 
-                 quantityGrams: 150, calculatedHc: 18.0, calculatedCalories: 80, calculatedRations: 1.2),
-        FoodItem(id: '5', name: 'Yogur natural', category: 'lacteos', 
-                 quantityGrams: 125, calculatedHc: 6.0, calculatedCalories: 70, calculatedRations: 0.4),
-      ];
-    case 'comida':
-      return const [
-        FoodItem(id: '6', name: 'Arroz integral', category: 'cereales', 
-                 quantityGrams: 80, calculatedHc: 24.0, calculatedCalories: 110, calculatedRations: 1.6),
-        FoodItem(id: '7', name: 'Pechuga de pollo', category: 'carnes', 
-                 quantityGrams: 120, calculatedHc: 0, calculatedCalories: 165, calculatedRations: 0),
-        FoodItem(id: '8', name: 'Ensalada mixta', category: 'verduras', 
-                 quantityGrams: 150, calculatedHc: 8.0, calculatedCalories: 45, calculatedRations: 0.5),
-        FoodItem(id: '9', name: 'Aceite de oliva', category: 'verduras', 
-                 quantityGrams: 15, calculatedHc: 0, calculatedCalories: 135, calculatedRations: 0),
-      ];
-    case 'merienda':
-      return const [
-        FoodItem(id: '10', name: 'Almendras', category: 'frutos_secos', 
-                 quantityGrams: 30, calculatedHc: 3.0, calculatedCalories: 180, calculatedRations: 0.2),
-      ];
-    case 'cena':
-      return const [
-        FoodItem(id: '11', name: 'Salmón', category: 'pescados', 
-                 quantityGrams: 150, calculatedHc: 0, calculatedCalories: 280, calculatedRations: 0),
-        FoodItem(id: '12', name: 'Brócoli al vapor', category: 'verduras', 
-                 quantityGrams: 200, calculatedHc: 12.0, calculatedCalories: 70, calculatedRations: 0.8),
-        FoodItem(id: '13', name: 'Quinoa', category: 'cereales', 
-                 quantityGrams: 60, calculatedHc: 22.0, calculatedCalories: 120, calculatedRations: 1.5),
-      ];
-    default:
-      return const [];
-  }
-}
+  // ── Helpers ──────────────────────────────────────────────────────────── //
+  String _isoDate(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // BUILD
-  // ─────────────────────────────────────────────────────────────────────────
+  String _dateLabel(DateTime d) {
+    const dias  = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
+    const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    final wd = d.weekday - 1;
+    return '${dias[wd]}, ${d.day} de ${meses[d.month - 1]}';
+  }
+
+  String _formatMealDate(DateTime dt) {
+    const meses = ['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    final h = dt.hour.toString().padLeft(2,'0');
+    final m = dt.minute.toString().padLeft(2,'0');
+    return '${dt.day} ${meses[dt.month]}, ${dt.year} a las $h:$m';
+  }
+
+  void _onTabTapped(int i) {
+    if (i == _selectedTab) return;
+    setState(() => _selectedTab = i);
+    if (i == 1) Navigator.pushReplacementNamed(context, '/home');
+    if (i == 2) Navigator.pushNamed(context, '/add-meal');
+  }
+
+  // =========================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -330,13 +158,47 @@ class _HistorialScreenState extends State<HistorialScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.azulFondo,
         automaticallyImplyLeading: false,
-        title: const Text(
-          'DiAppBetes',
-          style: TextStyle(
-            color: AppColors.blanco,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+        titleSpacing: 0, // ← Elimina margen izquierdo por defecto
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(width: 16), // ← Margen izquierdo opcional
+            // Fondo blanco + Logo
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: AppColors.blanco,
+                borderRadius: BorderRadius.circular(8), // ← Bordes redondeados
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.asset(
+                  'assets/favicon.png',
+                  width: 42,
+                  height: 42,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => 
+                      const Icon(Icons.image_not_supported, color: AppColors.azulFondo, size: 20),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12), // ← Espacio logo-texto
+            // Título
+            const Text('DiAppBetes',
+                style: TextStyle(
+                  color: AppColors.blanco, 
+                  fontWeight: FontWeight.bold, 
+                  fontSize: 20
+                )),
+          ],
         ),
         actions: [
           IconButton(
@@ -344,244 +206,200 @@ class _HistorialScreenState extends State<HistorialScreen> {
             onPressed: () => Navigator.pushNamed(context, '/settings'),
           ),
         ],
-        elevation: 2,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      'Mis Comidas',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.azulFondo,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: _showDatePicker,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE3F2FD),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        _getTodayDateLabel(_selectedDate),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: AppColors.azulFondo,
-                          fontWeight: FontWeight.w500,
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: AppColors.azulFondo))
+          : RefreshIndicator(
+              color: AppColors.azulFondo,
+              onRefresh: _loadMeals,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Mis Comidas',
+                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+                    const SizedBox(height: 10),
+
+                    // ── Selector de fecha ────────────────────────────── //
+                    GestureDetector(
+                      onTap: _openCalendar,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE3F2FD),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.calendar_today, size: 18, color: AppColors.azulFondo),
+                            const SizedBox(width: 8),
+                            Text(
+                              _dateLabel(_selectedDate),
+                              style: const TextStyle(color: AppColors.azulFondo, fontSize: 15, fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.arrow_drop_down, color: AppColors.azulFondo),
+                          ],
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildMealsCard(),
-                  const SizedBox(height: 16),
-                  _buildStatsCard(),
-                  const SizedBox(height: 60),
-                ],
+                    const SizedBox(height: 12),
+
+                    // ── Tarjeta comidas ─────────────────────────────── //
+                    _buildMealsCard(),
+                    const SizedBox(height: 12),
+
+                    // ── Tarjeta estadísticas ────────────────────────── //
+                    _buildStatsCard(),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      ),
       bottomNavigationBar: _buildBottomBar(),
     );
   }
 
-  // ── Card: Lista de comidas ──────────────────────────────────────────────
+  // ── Tarjeta comidas ───────────────────────────────────────────────────── //
   Widget _buildMealsCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4)),
-        ],
-      ),
+    const tipos = ['todas','desayuno','almuerzo','comida','merienda','cena'];
+
+    return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Comidas (${_filteredMeals.length})',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.azulFondo,
+          // Header con contador
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Comidas (${_filteredMeals.length})',
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Filtro por tipo
+          DropdownButtonFormField<String>(
+            value: _selectedType,
+            style: const TextStyle(color: AppColors.grisTexto, fontSize: 14),
+            decoration: const InputDecoration(
+              labelText: 'Filtrar por tipo',
+              labelStyle: TextStyle(color: AppColors.grisTexto, fontSize: 13),
+              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
+              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
             ),
+            items: tipos.map((t) => DropdownMenuItem(
+              value: t,
+              child: Text(t[0].toUpperCase() + t.substring(1),
+                  style: const TextStyle(color: AppColors.grisTexto)),
+            )).toList(),
+            onChanged: (v) { setState(() => _selectedType = v ?? 'todas'); _applyFilters(); },
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              border: Border.all(color: AppColors.grisDivider),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _selectedMealType,
-                isExpanded: true,
-                dropdownColor: AppColors.blanco,
-                items: const [
-                  DropdownMenuItem(value: 'todas', child: Text('Todas')),
-                  DropdownMenuItem(value: 'desayuno', child: Text('Desayuno')),
-                  DropdownMenuItem(value: 'almuerzo', child: Text('Almuerzo')),
-                  DropdownMenuItem(value: 'comida', child: Text('Comida')),
-                  DropdownMenuItem(value: 'merienda', child: Text('Merienda')),
-                  DropdownMenuItem(value: 'cena', child: Text('Cena')),
-                ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => _selectedMealType = value);
-                    _filterMealsByDate();
-                  }
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
+
+          // Lista de comidas
           if (_filteredMeals.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Center(
-                child: Text(
-                  'No se han registrado comidas aún.',
-                  style: TextStyle(fontSize: 16, color: AppColors.grisTexto),
-                ),
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Text('No se han registrado comidas aún.',
+                    style: TextStyle(color: AppColors.grisTexto, fontSize: 14)),
               ),
             )
           else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _filteredMeals.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, index) => _buildMealItem(_filteredMeals[index], index),
-            ),
+            ..._filteredMeals.asMap().entries.map((e) => _buildMealItem(e.key, e.value)),
         ],
       ),
     );
   }
 
-  // ── Item individual de comida ───────────────────────────────────────────
-  Widget _buildMealItem(Meal meal, int index) {
-    final bgColor = _getMealBgColor(meal.mealType);
-    final textColor = _getMealTextColor(meal.mealType);
-    final mealTypeName = _capitalize(meal.mealType);
+  // ── Item de comida (equivalente al .meal-item del HTML) ──────────────── //
+  Widget _buildMealItem(int i, MealDTO meal) {
+    final bg = mealBg(meal.mealType);
+    final fg = mealFg(meal.mealType);
 
     return GestureDetector(
       onTap: () => _openMealDetails(meal),
       child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: bgColor,
+          color: bg,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: textColor, width: 1),
+          border: Border.all(color: fg.withOpacity(0.4)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header: nombre tipo + HC
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '$mealTypeName ${index + 1}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
+                  '${meal.mealType[0].toUpperCase()}${meal.mealType.substring(1)} ${i + 1}',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: fg),
                 ),
                 Column(
-                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      '${meal.totalHc.toStringAsFixed(1)}g',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.verdesuave,
-                      ),
-                    ),
-                    Text('HC', style: TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+                    Text('${meal.totalHc.toStringAsFixed(1)}g',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: fg)),
+                    const Text('HC', style: TextStyle(fontSize: 11, color: AppColors.grisTexto)),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.access_time_outlined, size: 18, color: AppColors.grisTexto),
-                const SizedBox(width: 4),
-                Text(
-                  _formatMealDate(meal.createdAt),
-                  style: TextStyle(fontSize: 13, color: AppColors.grisTexto),
-                ),
-              ],
-            ),
             const SizedBox(height: 6),
-            Row(
-              children: [
-                Text('${meal.totalCalories} cal', style: TextStyle(fontSize: 13, color: AppColors.grisTexto)),
-                const SizedBox(width: 12),
-                Text('${meal.foods.length} alimentos', style: TextStyle(fontSize: 13, color: AppColors.grisTexto)),
-                const SizedBox(width: 12),
-                Text('${meal.totalRations.toStringAsFixed(1)} raciones', style: TextStyle(fontSize: 13, color: AppColors.grisTexto)),
-              ],
-            ),
+
+            // Fecha
+            Row(children: [
+              const Icon(Icons.access_time, size: 14, color: AppColors.grisTexto),
+              const SizedBox(width: 4),
+              Text(_formatMealDate(meal.createdAt),
+                  style: const TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+            ]),
+            const SizedBox(height: 4),
+
+            // Detalles
+            Row(children: [
+              Text('${meal.totalCalories.toStringAsFixed(0)} cal',
+                  style: const TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+              const SizedBox(width: 10),
+              Text('${meal.foods.length} alimentos',
+                  style: const TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+              const SizedBox(width: 10),
+              Text('${meal.totalRations.toStringAsFixed(1)} raciones',
+                  style: const TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+            ]),
           ],
         ),
       ),
     );
   }
 
-  // ── Card: Estadísticas ──────────────────────────────────────────────────
+  // ── Tarjeta estadísticas ──────────────────────────────────────────────── //
   Widget _buildStatsCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4)),
-        ],
-      ),
+    return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Estadísticas',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.azulFondo,
-            ),
-          ),
-          const SizedBox(height: 12),
+          const Text('Estadísticas',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+          const SizedBox(height: 14),
           GridView.count(
+            crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 2.2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 2.4,
             children: [
-              _buildStatItem(icon: Icons.restaurant, label: 'Comidas Totales', value: _dailyStats.totalMealsDay.toString()),
-              _buildStatItem(icon: Icons.water_drop_outlined, label: 'HC Totales', value: '${_dailyStats.totalHc}g'),
-              _buildStatItem(icon: Icons.flash_on, label: 'Calorías Totales', value: _dailyStats.totalCalories.toString()),
-              _buildStatItem(icon: Icons.analytics_outlined, label: 'HC Media', value: '${_dailyStats.avgHc}g'),
+              _statItem(Icons.restaurant,    'Comidas Totales', '$_totalMeals'),
+              _statItem(Icons.fastfood,       'HC Totales',      '${_totalHc}g'),
+              _statItem(Icons.bolt,           'Calorías',        '${_totalCalories.toStringAsFixed(0)}'),
+              _statItem(Icons.analytics,      'HC Media',        '${_avgHc}g'),
             ],
           ),
         ],
@@ -589,34 +407,33 @@ class _HistorialScreenState extends State<HistorialScreen> {
     );
   }
 
-  Widget _buildStatItem({required IconData icon, required String label, required String value}) {
+  Widget _statItem(IconData icon, String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFF8F9FA),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        children: [
-          Icon(icon, size: 28, color: AppColors.azulFondo),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: TextStyle(fontSize: 12, color: AppColors.grisTexto), maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
-                Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
-              ],
-            ),
+      child: Row(children: [
+        Icon(icon, size: 26, color: AppColors.azulFondo),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 10, color: AppColors.grisTexto)),
+              Text(value,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.azulFondo),
+                  overflow: TextOverflow.ellipsis),
+            ],
           ),
-        ],
-      ),
+        ),
+      ]),
     );
   }
 
-  // ── Bottom Navigation Bar ───────────────────────────────────────────────
+  // ── Bottom bar ────────────────────────────────────────────────────────── //
   Widget _buildBottomBar() {
     return Container(
       decoration: const BoxDecoration(
@@ -630,8 +447,8 @@ class _HistorialScreenState extends State<HistorialScreen> {
         currentIndex: _selectedTab,
         onTap: _onTabTapped,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.refresh), label: 'Historial'),
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.refresh),    label: 'Historial'),
+          BottomNavigationBarItem(icon: Icon(Icons.home),       label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.restaurant), label: 'Comida'),
         ],
       ),
@@ -639,12 +456,17 @@ class _HistorialScreenState extends State<HistorialScreen> {
   }
 }
 
-// ───────────────────────────────────────────────────────────────────────────
-// Extensión para capitalizar strings (helper)
-// ───────────────────────────────────────────────────────────────────────────
-extension StringExtension on String {
-  String capitalize() {
-    if (isEmpty) return this;
-    return this[0].toUpperCase() + substring(1);
-  }
+// ── _Card ────────────────────────────────────────────────────────────────── //
+class _Card extends StatelessWidget {
+  final Widget child;
+  const _Card({required this.child});
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity, padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: AppColors.cardBackground, borderRadius: BorderRadius.circular(24),
+      boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4))],
+    ),
+    child: child,
+  );
 }
