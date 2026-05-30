@@ -71,16 +71,19 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       if (!mounted) return;
 
       // Perfil — auto-reparación si no existe
-      final profile = results[0] as Map<String, dynamic>?;
+      var profile = results[0] as Map<String, dynamic>?;
       if (profile == null) {
         await _profileService.ensureProfileExists();
-        final repaired = await _profileService.getMyProfile();
-        if (mounted) _username = repaired?['username'] ?? _authService.currentUser?.email?.split('@').first ?? '';
-      } else {
-        _username = profile['username'] ?? '';
+        profile = await _profileService.getMyProfile();
       }
 
+      // Username siempre desde Firestore, con fallback al email de Auth
+      final username = (profile?['username'] as String?)?.isNotEmpty == true
+          ? profile!['username'] as String
+          : (_authService.currentUser?.email?.split('@').first ?? '');
+
       setState(() {
+        _username           = username;
         _lastGlucoseReading = results[1] as String;
         _todayMealCount     = results[2] as int;
         _tirPercentage      = results[3] as int;
