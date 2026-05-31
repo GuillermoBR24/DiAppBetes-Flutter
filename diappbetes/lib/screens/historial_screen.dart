@@ -204,12 +204,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
                 )),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: AppColors.blanco),
-            onPressed: () => Navigator.pushNamed(context, '/settings'),
-          ),
-        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppColors.azulFondo))

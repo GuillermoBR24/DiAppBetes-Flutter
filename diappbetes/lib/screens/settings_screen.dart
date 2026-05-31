@@ -89,7 +89,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _username  = '';
   String _email     = '';
   String _birthDate = '';
-  String _role      = 'usuario';
+  String _role      = 'Usuario';
   double _fsi       = 50.0;
 
   List<HcRatio> _hcRatios = [];
@@ -142,7 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _username  = profile['username']?.toString() ?? '';
         _email     = profile['email']?.toString() ?? '';
         _birthDate = profile['birth_date']?.toString() ?? '';
-        _role      = profile['role']?.toString() ?? 'usuario';
+        _role      = profile['role']?.toString() ?? 'Usuario';
         _fsi       = (profile['fsi'] as num?)?.toDouble() ?? 50.0;
 
         _set(_usernameCtrl,  _username);
@@ -470,9 +470,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         title: const Text('DiAppBetes',
             style: TextStyle(color: AppColors.blanco, fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(icon: const Icon(Icons.settings, color: AppColors.blanco), onPressed: () {}),
-        ],
       ),
       body: _loadingProfile
           ? const Center(child: CircularProgressIndicator(color: AppColors.azulFondo))
@@ -605,11 +602,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         )),
     ]),
   );
-
-  bool get _coversFullDay {
-    if (_hcRatios.isEmpty) return false;
-    return _hcRatios.first.startMins == 0 && _hcRatios.last.endMins == 1440;
-  }
 
   // ── Fila de un tramo HC ──────────────────────────────────────────────── //
   Widget _buildHcRow(int i, HcRatio ratio) {

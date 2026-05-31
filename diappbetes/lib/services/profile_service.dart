@@ -51,10 +51,10 @@ class ProfileService {
  
     await _db.collection('profiles').doc(uid).set({
       'id':             uid,
-      'username':       user.displayName ?? user.email?.split('@').first ?? 'usuario',
+      'username':       user.displayName ?? user.email?.split('@').first ?? 'Usuario',
       'email':          user.email ?? '',
       'birth_date':     '',
-      'role':           'usuario',
+      'role':           'Usuario',
       'fsi':            50.0,
       'avatar_url':     null,
       'email_verified': user.emailVerified,

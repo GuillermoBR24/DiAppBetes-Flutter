@@ -271,12 +271,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 )),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: AppColors.blanco),
-            onPressed: () => Navigator.pushNamed(context, '/settings'),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),

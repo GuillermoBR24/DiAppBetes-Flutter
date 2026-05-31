@@ -236,12 +236,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 )),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: AppColors.blanco),
-            onPressed: () => Navigator.pushNamed(context, '/settings'),
-          ),
-        ],
       ),
       body: Stack(
         children: [

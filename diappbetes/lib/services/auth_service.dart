@@ -43,7 +43,7 @@ class AuthService {
       'username':     resolvedUsername.toLowerCase(),
       'email':        email,
       'birth_date':     birthDate.isEmpty ? null : birthDate,
-      'role':         'usuario',
+      'role':         'Usuario',
       'fsi':          50.0,
       'avatar_url':   null,
       'email_verified': false,
