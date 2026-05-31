@@ -1,8 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.CAMERA" />
     <application
-        android:label="diappbetes"
-        android:name="${applicationName}"
+        android:label="DiAppBetes"
+        android:name="DiAppBetes"
         android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"

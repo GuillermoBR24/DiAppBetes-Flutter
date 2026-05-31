@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Colores principales (equivalentes a las CSS variables de Ionic)
-  static const Color azulFondo = Color.fromARGB(255, 26, 58, 110);       // --azul-fondo
+  static const Color azulFondo = Color.fromRGBO(26, 58, 110, 1);       // --azul-fondo
   static const Color blanco = Color(0xFFFFFFFF);           // --blanco
   static const Color grisDivider = Color(0xFFE0E0E0);      // --gris-divider
   static const Color grisTexto = Color(0xFF666666);        // --gris-texto
