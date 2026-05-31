@@ -6,6 +6,7 @@ import 'package:diappbetes/screens/login_screen.dart';
 import 'package:diappbetes/screens/password_changed_screen.dart';
 import 'package:diappbetes/screens/register_screen.dart';
 import 'package:diappbetes/screens/remember_password_screen.dart';
+import 'package:diappbetes/screens/scanner_screen.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:diappbetes/screens/historial_screen.dart';
 import 'package:diappbetes/screens/settings_screen.dart';
@@ -44,16 +45,17 @@ class DiAppBetes extends StatelessWidget {
       locale: const Locale('es', 'ES'),
       
       routes: {
-        '/auth':      (context) => const AuthScreen(),
-        '/home': (context) => const HomeScreen(),
-        '/login':          (context) => const LoginScreen(),
-        '/register':       (context) => const RegisterScreen(),
-        '/historial':      (context) => const HistorialScreen(),
-        '/add-meal':       (context) => const AddMealScreen(),
-        '/settings':       (context) => const SettingsScreen(),
-        '/code-verify':    (context) => const CodeVerificationScreen(),
-        '/password-changed':(context) => const PasswordChangedScreen(),
+        '/auth':             (context) => const AuthScreen(),
+        '/home':             (context) => const HomeScreen(),
+        '/login':            (context) => const LoginScreen(),
+        '/register':         (context) => const RegisterScreen(),
+        '/historial':        (context) => const HistorialScreen(),
+        '/add-meal':         (context) => const AddMealScreen(),
+        '/settings':         (context) => const SettingsScreen(),
+        '/code-verify':      (context) => const CodeVerificationScreen(),
+        '/password-changed': (context) => const PasswordChangedScreen(),
         '/remember-password':(context) => const RememberPasswordScreen(),
+        '/scanner':          (context) => const ScannerScreen(),
       },
     );
   }

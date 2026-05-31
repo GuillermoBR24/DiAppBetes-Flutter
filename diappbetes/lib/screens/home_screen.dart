@@ -127,8 +127,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (index == _selectedTab) return;
     setState(() => _selectedTab = index);
     switch (index) {
-      case 0: Navigator.pushNamed(context, '/historial'); break;
-      case 2: Navigator.pushNamed(context, '/add-meal'); break;
+      case 0: Navigator.pushReplacementNamed(context, '/historial'); break;
+      case 2: Navigator.pushReplacementNamed(context, '/scanner'); break;
+      case 3: Navigator.pushReplacementNamed(context, '/add-meal'); break;
     }
   }
 
@@ -359,9 +360,10 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _selectedTab,
         onTap: _onTabTapped,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.refresh),    label: 'Historial'),
-          BottomNavigationBarItem(icon: Icon(Icons.home),       label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.restaurant), label: 'Comida'),
+          BottomNavigationBarItem(icon: Icon(Icons.refresh),         label: 'Historial'),
+          BottomNavigationBarItem(icon: Icon(Icons.home),            label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Escáner'),
+          BottomNavigationBarItem(icon: Icon(Icons.restaurant),      label: 'Comida'),
         ],
       ),
     );

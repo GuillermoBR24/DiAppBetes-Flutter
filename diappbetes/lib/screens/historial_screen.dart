@@ -146,8 +146,11 @@ class _HistorialScreenState extends State<HistorialScreen> {
   void _onTabTapped(int i) {
     if (i == _selectedTab) return;
     setState(() => _selectedTab = i);
-    if (i == 1) Navigator.pushReplacementNamed(context, '/home');
-    if (i == 2) Navigator.pushNamed(context, '/add-meal');
+    switch (i) {
+      case 1: Navigator.pushReplacementNamed(context, '/home'); break;
+      case 2: Navigator.pushReplacementNamed(context, '/scanner'); break;
+      case 3: Navigator.pushReplacementNamed(context, '/add-meal'); break;
+    }
   }
 
   // =========================================================================
@@ -156,20 +159,21 @@ class _HistorialScreenState extends State<HistorialScreen> {
     return Scaffold(
       backgroundColor: AppColors.blanco,
       appBar: AppBar(
-        backgroundColor: AppColors.azulFondo,
         automaticallyImplyLeading: false,
-        titleSpacing: 0, // ← Elimina margen izquierdo por defecto
+        backgroundColor: AppColors.azulFondo,
+        titleSpacing: 0, // ← Elimina el margen izquierdo por defecto del AppBar
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(width: 16), // ← Margen izquierdo opcional
-            // Fondo blanco + Logo
+            const SizedBox(width: 16), // ← Margen izquierdo opcional para separar del borde
+            // Fondo blanco con bordes redondeados + Logo
             Container(
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: AppColors.blanco,
-                borderRadius: BorderRadius.circular(8), // ← Bordes redondeados
+                color: AppColors.blanco, // ← Fondo blanco
+                borderRadius: BorderRadius.circular(8), // ← Bordes circulares (ajusta el valor)
+                // Opcional: sombra sutil para profundidad
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -179,7 +183,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(8), // ← Recorta la imagen a los bordes redondeados
                 child: Image.asset(
                   'assets/favicon.png',
                   width: 42,
@@ -190,7 +194,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12), // ← Espacio logo-texto
+            const SizedBox(width: 12), // ← Espacio entre logo y texto
             // Título
             const Text('DiAppBetes',
                 style: TextStyle(
@@ -447,9 +451,10 @@ class _HistorialScreenState extends State<HistorialScreen> {
         currentIndex: _selectedTab,
         onTap: _onTabTapped,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.refresh),    label: 'Historial'),
-          BottomNavigationBarItem(icon: Icon(Icons.home),       label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.restaurant), label: 'Comida'),
+          BottomNavigationBarItem(icon: Icon(Icons.refresh),         label: 'Historial'),
+          BottomNavigationBarItem(icon: Icon(Icons.home),            label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Escáner'),
+          BottomNavigationBarItem(icon: Icon(Icons.restaurant),      label: 'Comida'),
         ],
       ),
     );
