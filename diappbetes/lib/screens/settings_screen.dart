@@ -427,6 +427,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+    // ── Abrir DatePicker para fecha de nacimiento ───────────────────────────── //
+  Future<void> _openBirthDatePicker() async {
+    // Parsear fecha actual si existe
+    DateTime? initialDate;
+    final currentText = _safeText(_birthDateCtrl)?.trim() ?? '';
+    if (currentText.isNotEmpty && currentText.length >= 10) {
+      try {
+        final parts = currentText.split('-');
+        if (parts.length == 3) {
+          initialDate = DateTime(
+            int.parse(parts[0]),
+            int.parse(parts[1]),
+            int.parse(parts[2]),
+          );
+        }
+      } catch (_) {}
+    }
+    initialDate ??= DateTime.now().subtract(const Duration(days: 365 * 20)); // Default: ~20 años
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      locale: const Locale('es'),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppColors.azulFondo,
+            onPrimary: AppColors.blanco,
+            surface: AppColors.blanco,
+            onSurface: AppColors.grisTexto,
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(foregroundColor: AppColors.azulFondo),
+          ),
+        ),
+        child: child!,
+      ),
+    );
+
+    if (picked != null && mounted) {
+      final formatted = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+      setState(() {
+        _safeSetText(_birthDateCtrl, formatted);
+        _birthDate = formatted; // Actualizar también el estado para consistencia
+      });
+    }
+  }
+
   void _showSnack(String msg, {bool isError = false}) {
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -654,8 +704,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           _buildField('Nombre Usuario', _usernameCtrl, _editingPersonal, TextInputType.text),
           _buildField('Email',          _emailCtrl,    _editingPersonal, TextInputType.emailAddress),
-          _buildField('Fecha de nacimiento', _birthDateCtrl, _editingPersonal, TextInputType.datetime,
-              hint: 'YYYY-MM-DD'),
+          _buildField(
+            'Fecha de nacimiento', 
+            _birthDateCtrl, 
+            _editingPersonal, 
+            TextInputType.datetime,
+            hint: 'YYYY-MM-DD',
+            onTap: _editingPersonal ? _openBirthDatePicker : null, // ← Solo abrir picker si está en modo edición
+          ),
         ],
       ),
     );
@@ -815,24 +871,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Campo de texto reutilizable ──────────────────────────────────────── //
+  // ── Campo de texto reutilizable (actualizado con onTap) ──────────────────── //
   Widget _buildField(String label, TextEditingController? ctrl, bool enabled,
-      TextInputType type, {String? hint}) {
+      TextInputType type, {String? hint, VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: TextField(
-        controller: ctrl,
-        enabled: enabled && ctrl != null,
-        keyboardType: type,
-        style: TextStyle(fontSize: 15,
-            color: enabled ? AppColors.grisTexto : AppColors.grisTexto.withOpacity(0.7)),
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          labelStyle: const TextStyle(color: AppColors.grisTexto, fontSize: 13),
-          enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
-          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
-          disabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
+      child: GestureDetector(
+        onTap: enabled ? onTap : null, // Solo permitir tap si está habilitado
+        child: AbsorbPointer(
+          absorbing: onTap != null && enabled, // Evitar que abra el teclado si hay onTap
+          child: TextField(
+            controller: ctrl,
+            enabled: enabled && ctrl != null && onTap == null, // Deshabilitar si es fecha con picker
+            keyboardType: type,
+            style: TextStyle(fontSize: 15,
+                color: enabled ? AppColors.grisTexto : AppColors.grisTexto.withOpacity(0.7)),
+            decoration: InputDecoration(
+              labelText: label,
+              hintText: hint,
+              labelStyle: const TextStyle(color: AppColors.grisTexto, fontSize: 13),
+              enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
+              focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
+              disabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
+              suffixIcon: onTap != null && enabled
+                  ? const Icon(Icons.calendar_today, color: AppColors.azulFondo, size: 20)
+                  : null,
+            ),
+            readOnly: onTap != null && enabled, // Importante: evitar teclado en campos con picker
+          ),
         ),
       ),
     );
