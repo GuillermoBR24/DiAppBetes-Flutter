@@ -477,6 +477,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // ── Abrir TimePicker para horas ────────────────────────────────────────── //
+  Future<void> _openTimePicker({
+    required String currentTime,
+    required ValueChanged<String> onTimeSelected,
+  }) async {
+    // Parsear hora actual (formato HH:mm)
+    TimeOfDay? initialTime;
+    try {
+      final parts = currentTime.split(':');
+      if (parts.length == 2) {
+        initialTime = TimeOfDay(
+          hour: int.parse(parts[0]),
+          minute: int.parse(parts[1]),
+        );
+      }
+    } catch (_) {}
+    initialTime ??= TimeOfDay.now();
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: AppColors.azulFondo,
+            onPrimary: AppColors.blanco,
+            surface: AppColors.blanco,
+            onSurface: AppColors.grisTexto,
+          ),
+          timePickerTheme: TimePickerThemeData(
+            backgroundColor: AppColors.blanco,
+            hourMinuteTextColor: AppColors.grisTexto,
+            dialTextColor: AppColors.azulFondo,
+            dayPeriodTextColor: AppColors.grisTexto,
+            dialHandColor: AppColors.azulFondo,
+            entryModeIconColor: AppColors.azulFondo,
+          ),
+          textButtonTheme: TextButtonThemeData(
+            style: TextButton.styleFrom(foregroundColor: AppColors.azulFondo),
+          ),
+        ),
+        
+        child: MediaQuery(
+          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+          child: child!,
+        ),
+      ),
+    );
+
+    if (picked != null && mounted) {
+      final formatted = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      onTimeSelected(formatted);
+    }
+  }
+
   void _showSnack(String msg, {bool isError = false}) {
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -808,19 +863,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Row(
         children: [
           _timeField(ratio.startTime, editable: timeEdit,
-              onChanged: (v) {
-                if (!mounted) return;
+            onChanged: (v) {
+              if (!mounted) return;
+              // Si la nueva hora es mayor que endTime, ajustar endTime también
+              if (_toMins(v) > _toMins(ratio.endTime)) {
+                setState(() {
+                  ratio.startTime = v;
+                  ratio.endTime = v; // O podrías añadir +1 hora: _fromMins(_toMins(v) + 60)
+                });
+              } else {
                 setState(() => ratio.startTime = v);
-              }),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4),
-            child: Text(' - ', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.grisTexto)),
-          ),
+              }
+            }),
+
+          // Para endTime: validar que no sea menor que startTime  
           _timeField(ratio.endTime, editable: timeEdit,
-              onChanged: (v) {
-                if (!mounted) return;
+            onChanged: (v) {
+              if (!mounted) return;
+              // Si la nueva hora es menor que startTime, ajustar startTime también
+              if (_toMins(v) < _toMins(ratio.startTime)) {
+                setState(() {
+                  ratio.endTime = v;
+                  ratio.startTime = v; // O podrías restar -1 hora: _fromMins(_toMins(v) - 60)
+                });
+              } else {
                 setState(() => ratio.endTime = v);
-              }),
+              }
+            }),
           const SizedBox(width: 8),
           SizedBox(
             width: 60,
@@ -853,22 +922,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _timeField(String time, {bool editable = false, required ValueChanged<String> onChanged}) {
-    if (!editable) return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Text(time, style: const TextStyle(fontSize: 13, color: AppColors.grisTexto)),
-    );
-    return SizedBox(
-      width: 58,
-      child: TextFormField(
-        initialValue: time,
-        keyboardType: TextInputType.datetime,
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 13, color: AppColors.grisTexto),
-        decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.zero),
-        onChanged: onChanged,
+  // ── Campo de hora con TimePicker ───────────────────────────────────────── //
+  Widget _timeField(String time, {
+    required bool editable,
+    required ValueChanged<String> onChanged,
+  }) {
+    // Si no está en modo edición, mostrar solo texto
+    if (!editable) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Text(time, style: const TextStyle(fontSize: 13, color: AppColors.grisTexto)),
+      );
+    }
+
+    // En modo edición: mostrar campo tappable con icono de reloj
+    return GestureDetector(
+      onTap: () => _openTimePicker(
+        currentTime: time,
+        onTimeSelected: (newTime) {
+          if (mounted) {
+            // Validar que la hora sea válida antes de actualizar
+            if (_isValidTime(newTime)) {
+              onChanged(newTime);
+            }
+          }
+        },
+      ),
+      child: Container(
+        width: 58,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: AppColors.grisDivider, width: 1)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(time, style: const TextStyle(fontSize: 13, color: AppColors.grisTexto)),
+            const SizedBox(width: 2),
+            const Icon(Icons.access_time, size: 14, color: AppColors.azulFondo),
+          ],
+        ),
       ),
     );
+  }
+
+  // ── Helper para validar formato de hora HH:mm ──────────────────────────── //
+  bool _isValidTime(String time) {
+    try {
+      final parts = time.split(':');
+      if (parts.length != 2) return false;
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
+    } catch (_) {
+      return false;
+    }
   }
 
   // ── Campo de texto reutilizable (actualizado con onTap) ──────────────────── //
