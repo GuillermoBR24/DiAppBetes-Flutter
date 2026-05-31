@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/food_service.dart';
 import '../services/meal_create_service.dart';
+import '../utils/admin_nav_helper.dart';
 import 'add_food_modal.dart';
 import 'add_meal_summary_modal.dart';
 
@@ -55,7 +56,10 @@ class _AddMealScreenState extends State<AddMealScreen> {
 
   List<AddedFood> _addedFoods = [];
   bool _saving = false;
-  int  _selectedTab = 3;
+  
+  // ── Estado para navegación con AdminNavHelper ────────────────────────── //
+  int _selectedTab = 3;
+  bool _isAdmin = false;
 
   final _glucemiaCtrl = TextEditingController();
 
@@ -64,12 +68,25 @@ class _AddMealScreenState extends State<AddMealScreen> {
     super.initState();
     _setNow();
     _loadUserData();
+    _checkAdminRole();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkAdminRole();
   }
 
   @override
   void dispose() {
     _glucemiaCtrl.dispose();
     super.dispose();
+  }
+
+  // ── Verificar rol de administrador ───────────────────────────────────── //
+  Future<void> _checkAdminRole() async {
+    final isAdmin = await AdminNavHelper.getIsAdmin();
+    if (mounted) setState(() => _isAdmin = isAdmin);
   }
 
   // ── Cargar ratio HC actual y FSI del usuario ──────────────────────────── //
@@ -212,12 +229,22 @@ class _AddMealScreenState extends State<AddMealScreen> {
     }
   }
 
+  // ── Manejo de tabs con AdminNavHelper ────────────────────────────────── //
   void _onTabTapped(int index) {
-    if (index == _selectedTab) return;
-    setState(() => _selectedTab = index);
-    if (index == 0) Navigator.pushNamed(context, '/historial');
-    if (index == 1) Navigator.pushNamed(context, '/home');
-    if (index == 2) Navigator.pushNamed(context, '/scanner');
+    AdminNavHelper.handleTabTap(
+      context: context,
+      index: index,
+      isAdmin: _isAdmin,
+      onValidTap: (validIndex) {
+        setState(() => _selectedTab = validIndex);
+        switch (validIndex) {
+          case 0: Navigator.pushReplacementNamed(context, '/historial'); break;
+          case 1: Navigator.pushReplacementNamed(context, '/home'); break;
+          case 2: Navigator.pushReplacementNamed(context, '/scanner'); break;
+          // case 3 (Add Meal) no hace nada, ya está aquí
+        }
+      },
+    );
   }
 
   // =========================================================================
@@ -228,19 +255,17 @@ class _AddMealScreenState extends State<AddMealScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: AppColors.azulFondo,
-        titleSpacing: 0, // ← Elimina el margen izquierdo por defecto del AppBar
+        titleSpacing: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(width: 16), // ← Margen izquierdo opcional para separar del borde
-            // Fondo blanco con bordes redondeados + Logo
+            const SizedBox(width: 16),
             Container(
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: AppColors.blanco, // ← Fondo blanco
-                borderRadius: BorderRadius.circular(8), // ← Bordes circulares (ajusta el valor)
-                // Opcional: sombra sutil para profundidad
+                color: AppColors.blanco,
+                borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -250,7 +275,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8), // ← Recorta la imagen a los bordes redondeados
+                borderRadius: BorderRadius.circular(8),
                 child: Image.asset(
                   'assets/favicon.png',
                   width: 42,
@@ -261,8 +286,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12), // ← Espacio entre logo y texto
-            // Título
+            const SizedBox(width: 12),
             const Text('DiAppBetes',
                 style: TextStyle(
                   color: AppColors.blanco, 
@@ -271,6 +295,30 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 )),
           ],
         ),
+        actions: [
+          // Badge de Admin en AppBar
+          if (_isAdmin)
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.blanco,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.admin_panel_settings, color: AppColors.azulFondo, size: 14),
+                  SizedBox(width: 4),
+                  Text('Admin', 
+                      style: TextStyle(
+                        color: AppColors.azulFondo, 
+                        fontSize: 11, 
+                        fontWeight: FontWeight.w600,
+                      )),
+                ],
+              ),
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -300,7 +348,12 @@ class _AddMealScreenState extends State<AddMealScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomBar(),
+      bottomNavigationBar: AdminNavHelper.buildBottomBar(
+        context: context,
+        currentIndex: _selectedTab,
+        onTap: _onTabTapped,
+        isAdmin: _isAdmin,
+      ),
     );
   }
 
@@ -472,28 +525,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
       Text(label, style: const TextStyle(fontSize: 11, color: AppColors.grisTexto)),
     ],
   );
-
-  Widget _buildBottomBar() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.blanco,
-        boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, -2))],
-      ),
-      child: BottomNavigationBar(
-        backgroundColor: AppColors.blanco,
-        selectedItemColor: AppColors.fondoAzulClaroActivo,
-        unselectedItemColor: AppColors.azulFondo,
-        currentIndex: _selectedTab,
-        onTap: _onTabTapped,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.refresh),         label: 'Historial'),
-          BottomNavigationBarItem(icon: Icon(Icons.home),            label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Escáner'),
-          BottomNavigationBarItem(icon: Icon(Icons.restaurant),      label: 'Comida'),
-        ],
-      ),
-    );
-  }
 }
 
 class _Card extends StatelessWidget {

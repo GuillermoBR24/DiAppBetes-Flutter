@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme/app_theme.dart';
+import '../utils/admin_nav_helper.dart';
 
 // ---------------------------------------------------------------------------
 // Modelo del producto escaneado
@@ -69,15 +70,36 @@ class _ScannerScreenState extends State<ScannerScreen> {
     facing: CameraFacing.back,
   );
 
-  bool _scanning    = true;   // cámara activa
-  bool _loading     = false;  // consultando API
-  String? _lastCode;          // evita procesar el mismo código dos veces
-  int _selectedTab  = 2;      // escáner = posición central en el futuro
+  bool _scanning    = true;
+  bool _loading     = false;
+  String? _lastCode;
+  
+  // ── Estado para navegación con AdminNavHelper ────────────────────────── //
+  int _selectedTab  = 2;
+  bool _isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAdminRole();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkAdminRole();
+  }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  // ── Verificar rol de administrador ───────────────────────────────────── //
+  Future<void> _checkAdminRole() async {
+    final isAdmin = await AdminNavHelper.getIsAdmin();
+    if (mounted) setState(() => _isAdmin = isAdmin);
   }
 
   // ── Código detectado → buscar en OpenFoodFacts ───────────────────────── //
@@ -86,7 +108,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     if (barcode == null || barcode == _lastCode || _loading) return;
 
     _lastCode = barcode;
-    await _controller.stop(); // pausa la cámara
+    await _controller.stop();
     setState(() { _scanning = false; _loading = true; });
 
     try {
@@ -120,7 +142,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
     if (response.statusCode != 200) return null;
     final json = jsonDecode(response.body) as Map<String, dynamic>;
-    if (json['status'] != 1) return null; // producto no encontrado
+    if (json['status'] != 1) return null;
 
     return ScannedProduct.fromOpenFoodFacts(barcode, json);
   }
@@ -175,14 +197,21 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
   }
 
+  // ── Manejo de tabs con AdminNavHelper ────────────────────────────────── //
   void _onTabTapped(int index) {
-    if (index == _selectedTab) return;
-    setState(() => _selectedTab = index);
-    switch (index) {
-      case 0: Navigator.pushReplacementNamed(context, '/historial'); break;
-      case 1: Navigator.pushReplacementNamed(context, '/home'); break;
-      case 3: Navigator.pushNamed(context, '/add-meal'); break;
-    }
+    AdminNavHelper.handleTabTap(
+      context: context,
+      index: index,
+      isAdmin: _isAdmin,
+      onValidTap: (validIndex) {
+        setState(() => _selectedTab = validIndex);
+        switch (validIndex) {
+          case 0: Navigator.pushReplacementNamed(context, '/historial'); break;
+          case 1: Navigator.pushReplacementNamed(context, '/home'); break;
+          case 3: Navigator.pushReplacementNamed(context, '/add-meal'); break;
+        }
+      },
+    );
   }
 
   // =========================================================================
@@ -193,19 +222,17 @@ class _ScannerScreenState extends State<ScannerScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: AppColors.azulFondo,
-        titleSpacing: 0, // ← Elimina el margen izquierdo por defecto del AppBar
+        titleSpacing: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(width: 16), // ← Margen izquierdo opcional para separar del borde
-            // Fondo blanco con bordes redondeados + Logo
+            const SizedBox(width: 16),
             Container(
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: AppColors.blanco, // ← Fondo blanco
-                borderRadius: BorderRadius.circular(8), // ← Bordes circulares (ajusta el valor)
-                // Opcional: sombra sutil para profundidad
+                color: AppColors.blanco,
+                borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -215,7 +242,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8), // ← Recorta la imagen a los bordes redondeados
+                borderRadius: BorderRadius.circular(8),
                 child: Image.asset(
                   'assets/favicon.png',
                   width: 42,
@@ -226,8 +253,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12), // ← Espacio entre logo y texto
-            // Título
+            const SizedBox(width: 12),
             const Text('DiAppBetes',
                 style: TextStyle(
                   color: AppColors.blanco, 
@@ -236,20 +262,39 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 )),
           ],
         ),
+        actions: [
+          // Badge de Admin en AppBar
+          if (_isAdmin)
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.blanco,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.admin_panel_settings, color: AppColors.azulFondo, size: 14),
+                  SizedBox(width: 4),
+                  Text('Admin', 
+                      style: TextStyle(
+                        color: AppColors.azulFondo, 
+                        fontSize: 11, 
+                        fontWeight: FontWeight.w600,
+                      )),
+                ],
+              ),
+            ),
+        ],
       ),
       body: Stack(
         children: [
-          // ── Cámara ─────────────────────────────────────────────────── //
           if (_scanning)
             MobileScanner(
               controller: _controller,
               onDetect: _onBarcodeDetected,
             ),
-
-          // ── Overlay con guía de escaneo ─────────────────────────────── //
           if (_scanning) _buildScanOverlay(),
-
-          // ── Spinner mientras carga la API ─────────────────────────── //
           if (_loading)
             Container(
               color: Colors.black54,
@@ -267,7 +312,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
             ),
         ],
       ),
-      bottomNavigationBar: _buildBottomBar(),
+      bottomNavigationBar: AdminNavHelper.buildBottomBar(
+        context: context,
+        currentIndex: _selectedTab,
+        onTap: _onTabTapped,
+        isAdmin: _isAdmin,
+      ),
     );
   }
 
@@ -275,13 +325,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
   Widget _buildScanOverlay() {
     return Stack(
       children: [
-        // Fondo semitransparente excepto el recuadro central
         CustomPaint(
           size: Size.infinite,
           painter: _ScanFramePainter(),
         ),
-
-        // Instrucción
         const Positioned(
           top: 60,
           left: 0, right: 0,
@@ -291,8 +338,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
             textAlign: TextAlign.center,
           ),
         ),
-
-        // Botón linterna
         Positioned(
           bottom: 40,
           left: 0, right: 0,
@@ -321,28 +366,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
       ],
     );
   }
-
-  Widget _buildBottomBar() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.blanco,
-        boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, -2))],
-      ),
-      child: BottomNavigationBar(
-        backgroundColor: AppColors.blanco,
-        selectedItemColor: AppColors.fondoAzulClaroActivo,
-        unselectedItemColor: AppColors.azulFondo,
-        currentIndex: _selectedTab,
-        onTap: _onTabTapped,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.refresh),         label: 'Historial'),
-          BottomNavigationBarItem(icon: Icon(Icons.home),            label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Escáner'),
-          BottomNavigationBarItem(icon: Icon(Icons.restaurant),      label: 'Comida'),
-        ],
-      ),
-    );
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -365,26 +388,20 @@ class _ScanFramePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
-    // Fondo oscuro completo
     canvas.saveLayer(Rect.fromLTWH(0, 0, w, h), Paint());
     canvas.drawRect(Rect.fromLTWH(0, 0, w, h), overlay);
-
-    // Hueco transparente
     canvas.drawRRect(
       RRect.fromRectAndRadius(
           Rect.fromLTWH(left, top, frameW, frameH), const Radius.circular(12)),
       clear,
     );
     canvas.restore();
-
-    // Borde azul del recuadro
     canvas.drawRRect(
       RRect.fromRectAndRadius(
           Rect.fromLTWH(left, top, frameW, frameH), const Radius.circular(12)),
       border,
     );
 
-    // Esquinas destacadas
     final corner = Paint()
       ..color = AppColors.azulFondo
       ..style = PaintingStyle.stroke
@@ -392,16 +409,12 @@ class _ScanFramePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
     const len = 24.0;
 
-    // Esquina sup-izq
     canvas.drawLine(Offset(left, top + len), Offset(left, top), corner);
     canvas.drawLine(Offset(left, top), Offset(left + len, top), corner);
-    // Esquina sup-der
     canvas.drawLine(Offset(left + frameW - len, top), Offset(left + frameW, top), corner);
     canvas.drawLine(Offset(left + frameW, top), Offset(left + frameW, top + len), corner);
-    // Esquina inf-izq
     canvas.drawLine(Offset(left, top + frameH - len), Offset(left, top + frameH), corner);
     canvas.drawLine(Offset(left, top + frameH), Offset(left + len, top + frameH), corner);
-    // Esquina inf-der
     canvas.drawLine(Offset(left + frameW - len, top + frameH), Offset(left + frameW, top + frameH), corner);
     canvas.drawLine(Offset(left + frameW, top + frameH - len), Offset(left + frameW, top + frameH), corner);
   }
@@ -432,7 +445,7 @@ class _ProductModalState extends State<_ProductModal> {
   double _calories = 0;
   double _raciones = 0;
 
-  bool _editingGrams = true; // evita bucle al sincronizar campos
+  bool _editingGrams = true;
 
   @override
   void initState() {
@@ -491,7 +504,6 @@ class _ProductModalState extends State<_ProductModal> {
       ),
       child: Column(
         children: [
-          // ── Header ────────────────────────────────────────────────── //
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -517,11 +529,9 @@ class _ProductModalState extends State<_ProductModal> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ── Info del producto ──────────────────────────────── //
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Imagen o icono
                       Container(
                         width: 72, height: 72,
                         decoration: BoxDecoration(
@@ -566,7 +576,6 @@ class _ProductModalState extends State<_ProductModal> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ── Tabla de macros por 100g ───────────────────────── //
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -600,7 +609,6 @@ class _ProductModalState extends State<_ProductModal> {
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Calculadora bidireccional ──────────────────────── //
                   const Text('Calculadora de raciones',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
                           color: AppColors.azulFondo)),
@@ -633,7 +641,6 @@ class _ProductModalState extends State<_ProductModal> {
                       textAlign: TextAlign.right),
                   const SizedBox(height: 16),
 
-                  // ── Resultado calculado ────────────────────────────── //
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -651,7 +658,6 @@ class _ProductModalState extends State<_ProductModal> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Botón escanear de nuevo ────────────────────────── //
                   SizedBox(
                     height: 50,
                     child: OutlinedButton.icon(

@@ -7,6 +7,7 @@ import '../services/meal_service.dart';
 import '../services/tir_service.dart';
 import '../services/tip_service.dart';
 import '../services/auth_service.dart';
+import '../utils/admin_nav_helper.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,30 +30,40 @@ class _HomeScreenState extends State<HomeScreen> {
   int    _tirPercentage      = 0;
   String _tipContent         = '';
 
-  // Estado granular: cada tarjeta carga independientemente
+  // ── Estado para navegación ───────────────────────────────────────────── //
+  bool _isAdmin = false;
+  int _selectedTab = 1;
+
+  // Estado granular de carga
   bool _loadingProfile  = true;
   bool _loadingGlucose  = true;
   bool _loadingMeals    = true;
   bool _loadingTir      = true;
   bool _loadingTip      = true;
 
-  int _selectedTab = 1;
-
   @override
   void initState() {
     super.initState();
     _loadAll();
+    _checkAdminRole();
   }
 
-  // Recarga al volver de otra pantalla
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Solo recarga si ya terminó la carga inicial
-    if (!_loadingProfile && !_loadingMeals) _loadAll();
+    if (!_loadingProfile && !_loadingMeals) {
+      _loadAll();
+      _checkAdminRole();
+    }
   }
 
-  // ── Carga en paralelo, cada sección muestra su propio indicador ──────── //
+  // ── Verificar rol de administrador ───────────────────────────────────── //
+  Future<void> _checkAdminRole() async {
+    final isAdmin = await AdminNavHelper.getIsAdmin();
+    if (mounted) setState(() => _isAdmin = isAdmin);
+  }
+
+  // ── Carga en paralelo ────────────────────────────────────────────────── //
   Future<void> _loadAll() async {
     if (!mounted) return;
     setState(() {
@@ -63,7 +74,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _loadingTip     = true;
     });
 
-    // Cada futuro actualiza la UI en cuanto termina — no bloquean entre sí
     _loadProfile();
     _loadGlucose();
     _loadMealCount();
@@ -78,10 +88,17 @@ class _HomeScreenState extends State<HomeScreen> {
         await _profileService.ensureProfileExists();
         profile = await _profileService.getMyProfile();
       }
+      
       final username = (profile?['username'] as String?)?.isNotEmpty == true
           ? profile!['username'] as String
           : (_authService.currentUser?.email?.split('@').first ?? '');
-      if (mounted) setState(() { _username = username; _loadingProfile = false; });
+      
+      if (mounted) {
+        setState(() {
+          _username = username;
+          _loadingProfile = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() { _loadingProfile = false; });
     }
@@ -123,14 +140,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // ── Manejo de tabs con AdminNavHelper ────────────────────────────────── //
   void _onTabTapped(int index) {
-    if (index == _selectedTab) return;
-    setState(() => _selectedTab = index);
-    switch (index) {
-      case 0: Navigator.pushReplacementNamed(context, '/historial'); break;
-      case 2: Navigator.pushReplacementNamed(context, '/scanner'); break;
-      case 3: Navigator.pushReplacementNamed(context, '/add-meal'); break;
-    }
+    AdminNavHelper.handleTabTap(
+      context: context,
+      index: index,
+      isAdmin: _isAdmin,
+      onValidTap: (validIndex) {
+        setState(() => _selectedTab = validIndex);
+        switch (validIndex) {
+          case 0: Navigator.pushReplacementNamed(context, '/historial'); break;
+          case 2: Navigator.pushReplacementNamed(context, '/scanner'); break;
+          case 3: Navigator.pushReplacementNamed(context, '/add-meal'); break;
+          // case 1 (Home) no hace nada
+        }
+      },
+    );
   }
 
   @override
@@ -140,19 +165,17 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: AppColors.azulFondo,
-        titleSpacing: 0, // ← Elimina el margen izquierdo por defecto del AppBar
+        titleSpacing: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(width: 16), // ← Margen izquierdo opcional para separar del borde
-            // Fondo blanco con bordes redondeados + Logo
+            const SizedBox(width: 16),
             Container(
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: AppColors.blanco, // ← Fondo blanco
-                borderRadius: BorderRadius.circular(8), // ← Bordes circulares (ajusta el valor)
-                // Opcional: sombra sutil para profundidad
+                color: AppColors.blanco,
+                borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -162,7 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(8), // ← Recorta la imagen a los bordes redondeados
+                borderRadius: BorderRadius.circular(8),
                 child: Image.asset(
                   'assets/favicon.png',
                   width: 42,
@@ -173,8 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            const SizedBox(width: 12), // ← Espacio entre logo y texto
-            // Título
+            const SizedBox(width: 12),
             const Text('DiAppBetes',
                 style: TextStyle(
                   color: AppColors.blanco, 
@@ -184,18 +206,44 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          // Badge de Admin en AppBar
+          if (_isAdmin && !_loadingProfile)
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.blanco,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.admin_panel_settings, color: AppColors.azulFondo, size: 14),
+                  SizedBox(width: 4),
+                  Text('Admin', 
+                      style: TextStyle(
+                        color: AppColors.azulFondo, 
+                        fontSize: 11, 
+                        fontWeight: FontWeight.w600,
+                      )),
+                ],
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.settings, color: AppColors.blanco),
             onPressed: () async {
               await Navigator.pushNamed(context, '/settings');
               _loadProfile();
+              _checkAdminRole();
             },
           ),
         ],
       ),
       body: RefreshIndicator(
         color: AppColors.azulFondo,
-        onRefresh: _loadAll,
+        onRefresh: () async {
+          await _loadAll();
+          await _checkAdminRole();
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
@@ -209,8 +257,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               Expanded(flex: 6, child: _buildTirCard()),
               const SizedBox(height: 10),
-              /*Expanded(flex: 2, child: _buildGlucosaCard()),
-              const SizedBox(height: 10),*/
               Expanded(flex: 2, child: _buildMealsCard()),
               const SizedBox(height: 10),
               Expanded(flex: 2, child: _buildTipCard()),
@@ -219,7 +265,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomBar(),
+      bottomNavigationBar: AdminNavHelper.buildBottomBar(
+        context: context,
+        currentIndex: _selectedTab,
+        onTap: _onTabTapped,
+        isAdmin: _isAdmin,
+      ),
     );
   }
 
@@ -341,29 +392,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-        ],
-      ),
-    );
-  }
-
-  // ── Bottom bar ────────────────────────────────────────────────────────── //
-  Widget _buildBottomBar() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.blanco,
-        boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, -2))],
-      ),
-      child: BottomNavigationBar(
-        backgroundColor: AppColors.blanco,
-        selectedItemColor: AppColors.fondoAzulClaroActivo,
-        unselectedItemColor: AppColors.azulFondo,
-        currentIndex: _selectedTab,
-        onTap: _onTabTapped,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.refresh),         label: 'Historial'),
-          BottomNavigationBarItem(icon: Icon(Icons.home),            label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Escáner'),
-          BottomNavigationBarItem(icon: Icon(Icons.restaurant),      label: 'Comida'),
         ],
       ),
     );
