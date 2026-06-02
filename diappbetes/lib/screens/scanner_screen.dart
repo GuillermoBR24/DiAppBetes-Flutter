@@ -74,6 +74,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
   bool _loading     = false;
   String? _lastCode;
 
+  int _scannerKey = 0;
+
   @override
   void initState() {
     super.initState();
@@ -81,7 +83,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    try {
+      _controller.stop();
+    } catch (_) {}
+    try {
+      _controller.dispose();
+    } catch (_) {}
     super.dispose();
   }
 
@@ -91,7 +98,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
     if (barcode == null || barcode == _lastCode || _loading) return;
 
     _lastCode = barcode;
-    await _controller.stop();
+    
+    try {
+      await _controller.stop();
+    } catch (e) {
+      print('⚠️ [SCANNER] Error al detener tras detección: $e');
+    }
+    
+    if (!mounted) return;
     setState(() { _scanning = false; _loading = true; });
 
     try {
@@ -132,8 +146,57 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
   // ── Reanuda la cámara ─────────────────────────────────────────────────── //
   void _resumeScanner() {
-    setState(() { _scanning = true; _lastCode = null; });
-    _controller.start();
+    print('🔄 [SCANNER] Reanudando scanner...');
+    
+    // Detener primero por si acaso
+    try {
+      _controller.stop();
+    } catch (e) {
+      print('⚠️ [SCANNER] Error al detener: $e');
+    }
+    
+    setState(() {
+      _scanning = false;
+      _lastCode = null;
+      _scannerKey++; // ← Cambiar key para forzar reconstrucción
+    });
+    
+    // Pequeño delay para dar tiempo al sistema a liberar la cámara
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      
+      setState(() {
+        _scanning = true;
+      });
+      
+      // Iniciar el controlador
+      try {
+        _controller.start();
+        print('✅ [SCANNER] Scanner reanudado correctamente');
+      } catch (e) {
+        print('❌ [SCANNER] Error al reanudar: $e');
+        // Si falla, intentar recrear el controlador
+        _recreateController();
+      }
+    });
+  }
+
+  void _recreateController() {
+    print('🔧 [SCANNER] Recreando controlador...');
+    try {
+      _controller.dispose();
+    } catch (_) {}
+    
+    setState(() {
+      _scannerKey++;
+    });
+    
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (!mounted) return;
+      setState(() {
+        _scanning = true;
+      });
+    });
   }
 
   // ── Modal con los datos del producto ─────────────────────────────────── //
@@ -142,20 +205,34 @@ class _ScannerScreenState extends State<ScannerScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      isDismissible: false,  // ← No se puede cerrar tocando fuera
+      enableDrag: false,      // ← No se puede cerrar arrastrando
       builder: (_) => _ProductModal(
         product: product,
         onRescan: () {
           Navigator.pop(context);
           _resumeScanner();
         },
+        onClose: () {
+          Navigator.pop(context);
+          // No reanudar scanner, volver a pantalla anterior
+          Navigator.pop(context);
+        },
       ),
-    );
+    ).then((_) {
+      // Fallback: si el modal se cierra de forma inesperada, reanudar scanner
+      if (mounted && !_scanning) {
+        print('🔄 [SCANNER] Modal cerrado inesperadamente, reanudando scanner...');
+        _resumeScanner();
+      }
+    });
   }
 
   // ── Producto no encontrado ────────────────────────────────────────────── //
   void _showNotFound(String barcode) {
     showDialog(
       context: context,
+      barrierDismissible: false,  // ← No se puede cerrar tocando fuera
       builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(ctx).cardColor,
         title: Text('Producto no encontrado',
@@ -178,7 +255,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () { Navigator.pop(context); _resumeScanner(); },
+            onPressed: () { 
+              Navigator.pop(context); 
+              _resumeScanner();  // ← Reanudar al cerrar
+            },
             child: Text('Escanear de nuevo',
                 style: TextStyle(
                   color: Theme.of(ctx).colorScheme.primary, 
@@ -187,7 +267,13 @@ class _ScannerScreenState extends State<ScannerScreen> {
           ),
         ],
       ),
-    );
+    ).then((_) {
+      // Fallback: si el diálogo se cierra de forma inesperada, reanudar scanner
+      if (mounted && !_scanning) {
+        print('🔄 [SCANNER] Diálogo cerrado inesperadamente, reanudando scanner...');
+        _resumeScanner();
+      }
+    });
   }
 
   // =========================================================================
@@ -204,7 +290,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back, 
               color: Theme.of(context).appBarTheme.foregroundColor),
-          onPressed: () => Navigator.pop(context), // ← Vuelve a la pantalla anterior
+          onPressed: () => Navigator.pop(context),
         ),
         title: Text('DiAppBetes',
             style: TextStyle(
@@ -214,8 +300,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
       ),
       body: Stack(
         children: [
+          // ✅ USAR KEY para forzar reconstrucción
           if (_scanning)
             MobileScanner(
+              key: ValueKey('scanner_$_scannerKey'), // ← CLAVE IMPORTANTE
               controller: _controller,
               onDetect: _onBarcodeDetected,
             ),
@@ -237,7 +325,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
             ),
         ],
       ),
-      // ← ELIMINADO: bottomNavigationBar
     );
   }
 
@@ -354,8 +441,13 @@ class _ScanFramePainter extends CustomPainter {
 class _ProductModal extends StatefulWidget {
   final ScannedProduct product;
   final VoidCallback onRescan;
+  final VoidCallback? onClose;
 
-  const _ProductModal({required this.product, required this.onRescan});
+  const _ProductModal({
+    required this.product, 
+    required this.onRescan,
+    this.onClose,
+  });
 
   @override
   State<_ProductModal> createState() => _ProductModalState();
@@ -451,7 +543,13 @@ class _ProductModalState extends State<_ProductModal> {
               ),
               IconButton(
                 icon: Icon(Icons.close, color: onPrimaryColor),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  if (widget.onClose != null) {
+                    widget.onClose!();
+                  } else {
+                    Navigator.pop(context);
+                  }
+                },
               ),
             ]),
           ),
