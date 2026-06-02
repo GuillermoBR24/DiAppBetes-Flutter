@@ -1,7 +1,9 @@
+// lib/screens/login_screen.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/maintenance_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController   = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final _authService = AuthService();
+  final _maintenanceService = MaintenanceService();
 
   String _error = '';
   bool _obscurePassword = true;
@@ -29,32 +32,159 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _clearError() => setState(() => _error = '');
 
+  // ── Login con verificación de modo mantenimiento ──────────────────────── //
   Future<void> _onLogin() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _error = ''; _loading = true; });
 
     try {
-      print('🔍 Intentando login con: ${_identifierController.text.trim()}');
+      print('\n═══════════════════════════════════════════════════════');
+      print('🔐 [LOGIN] Iniciando proceso de login');
+      print('═══════════════════════════════════════════════════════');
+      print('🔍 [LOGIN] Intentando login con: ${_identifierController.text.trim()}');
       
+      // 1. Login exitoso con Firebase Auth
+      print('📡 [LOGIN] Llamando a _authService.login()...');
       await _authService.login(
         identifier: _identifierController.text.trim(),
         password:   _passwordController.text,
       );
       
+      print('✅ [LOGIN] Login exitoso con Firebase Auth');
+      print('👤 [LOGIN] Usuario autenticado: ${FirebaseAuth.instance.currentUser?.uid}');
+      
+      // 2. ✅ Login OK - Ahora verificar modo mantenimiento
+      print('\n🔧 [LOGIN] Verificando modo mantenimiento...');
+      final maintenanceMsg = await _maintenanceService.checkMaintenanceMode();
+      
+      print('\n🔍 [LOGIN] Resultado de checkMaintenanceMode(): ${maintenanceMsg ?? "null (PERMITIR)"}');
+      
+      if (maintenanceMsg != null) {
+        // ❌ Modo mantenimiento activo y usuario NO es admin
+        print('🚫 [LOGIN] BLOQUEADO por modo mantenimiento');
+        print('🚫 [LOGIN] Mensaje: $maintenanceMsg');
+        print('📡 [LOGIN] Cerrando sesión...');
+        
+        await FirebaseAuth.instance.signOut(); // Cerrar sesión
+        
+        print('✅ [LOGIN] Sesión cerrada');
+        
+        if (!mounted) return;
+        setState(() => _loading = false);
+        
+        print('📱 [LOGIN] Mostrando diálogo de mantenimiento...');
+        _showMaintenanceDialog(maintenanceMsg);
+        print('═══════════════════════════════════════════════════════\n');
+        return;
+      }
+      
+      // ✅ Todo OK - Redirigir al home
+      print('✅ [LOGIN] Todo OK - Redirigiendo al home');
+      print('═══════════════════════════════════════════════════════\n');
       if (mounted) Navigator.pushReplacementNamed(context, '/home');
       
     } on FirebaseAuthException catch (e) {
-      print('❌ FirebaseAuthException: ${e.code} - ${e.message}');
+      print('❌ [LOGIN] FirebaseAuthException: ${e.code} - ${e.message}');
       setState(() => _error = AuthService.translateError(e));
       
     } catch (e, stackTrace) {
-      print('❌ ERROR GENERAL: $e');
-      print('📋 STACK TRACE: $stackTrace');
+      print('❌ [LOGIN] ERROR GENERAL: $e');
+      print('📋 [LOGIN] STACK TRACE: $stackTrace');
       setState(() => _error = 'Error: ${e.toString()}');
       
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  // ── Diálogo de modo mantenimiento ─────────────────────────────────────── //
+  void _showMaintenanceDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.blanco,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.ambarSuave.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.build, color: AppColors.ambarSuave, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Modo Mantenimiento',
+                style: TextStyle(
+                  color: AppColors.azulFondo,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.ambarSuave.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.ambarSuave.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.info_outline, size: 40, color: AppColors.ambarSuave),
+                  const SizedBox(height: 12),
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      color: AppColors.grisTexto,
+                      fontSize: 14,
+                      height: 1.4,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx); // Cerrar diálogo
+                // Se queda en la pantalla de login
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.azulFondo,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Entendido',
+                style: TextStyle(
+                  color: AppColors.blanco,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

@@ -1,3 +1,5 @@
+import 'package:diappbetes/screens/admin_config_screen.dart';
+import 'package:diappbetes/screens/admin_stats_screen.dart';
 import 'package:diappbetes/screens/admin_user_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -332,11 +334,19 @@ class _AdminScreenState extends State<AdminScreen> {
           _buildPlaceholderCard(
             icon: Icons.analytics_outlined,
             title: 'Estadísticas',
-            subtitle: 'Próximamente: Métricas y reportes de uso',
+            subtitle: 'Métricas y reportes de uso',
             primaryColor: primaryColor,
             textColor: textColor,
             textSmallColor: textSmallColor,
             isDark: isDark,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AdminStatsScreen(),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 12),
           _buildPlaceholderCard(
@@ -347,6 +357,14 @@ class _AdminScreenState extends State<AdminScreen> {
             textColor: textColor,
             textSmallColor: textSmallColor,
             isDark: isDark,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AdminConfigScreen(),
+                ),
+              );
+            },
           ),
 
           const SizedBox(height: 32),

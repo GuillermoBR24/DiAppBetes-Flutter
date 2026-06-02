@@ -1,4 +1,5 @@
 import 'package:diappbetes/screens/add_food_detail_modal.dart';
+import 'package:diappbetes/widgets/custom_appbar.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/food_service.dart';
@@ -58,7 +59,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
   bool _saving = false;
   
   // ── Estado para navegación con AdminNavHelper ────────────────────────── //
-  int _selectedTab = 3;
+  int _selectedTab = 2;
   bool _isAdmin = false;
 
   final _glucemiaCtrl = TextEditingController();
@@ -240,7 +241,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
         switch (validIndex) {
           case 0: Navigator.pushReplacementNamed(context, '/historial'); break;
           case 1: Navigator.pushReplacementNamed(context, '/home'); break;
-          case 2: Navigator.pushReplacementNamed(context, '/scanner'); break;
           // case 3 (Add Meal) no hace nada, ya está aquí
         }
       },
@@ -252,78 +252,11 @@ class _AddMealScreenState extends State<AddMealScreen> {
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
-    final cardColor = Theme.of(context).cardColor;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
-        titleSpacing: 0,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(width: 16),
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.asset(
-                  'assets/favicon.png',
-                  width: 42,
-                  height: 42,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => 
-                      Icon(Icons.image_not_supported, color: primaryColor, size: 20),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text('DiAppBetes',
-                style: TextStyle(
-                  color: Theme.of(context).appBarTheme.foregroundColor, 
-                  fontWeight: FontWeight.bold, 
-                  fontSize: 20
-                )),
-          ],
-        ),
-        actions: [
-          // Badge de Admin en AppBar
-          if (_isAdmin)
-            Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.admin_panel_settings, color: primaryColor, size: 14),
-                  const SizedBox(width: 4),
-                  Text('Admin', 
-                      style: TextStyle(
-                        color: primaryColor, 
-                        fontSize: 11, 
-                        fontWeight: FontWeight.w600,
-                      )),
-                ],
-              ),
-            ),
-        ],
+      appBar: CustomAppBar(
+        title: 'DiAppBetes',
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),

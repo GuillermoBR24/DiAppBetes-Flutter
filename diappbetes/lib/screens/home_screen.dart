@@ -1,3 +1,5 @@
+// lib/screens/home_screen.dart
+import 'package:diappbetes/widgets/custom_appbar.dart';
 import 'package:flutter/material.dart';
 import '../widgets/tir_progress_ring.dart';
 import '../services/profile_service.dart';
@@ -149,8 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _selectedTab = validIndex);
         switch (validIndex) {
           case 0: Navigator.pushReplacementNamed(context, '/historial'); break;
-          case 2: Navigator.pushReplacementNamed(context, '/scanner'); break;
-          case 3: Navigator.pushReplacementNamed(context, '/add-meal'); break;
+          case 2: Navigator.pushReplacementNamed(context, '/add-meal'); break;
           // case 1 (Home) no hace nada
         }
       },
@@ -161,82 +162,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
-        titleSpacing: 0,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(width: 16),
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.asset(
-                  'assets/favicon.png',
-                  width: 42,
-                  height: 42,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => 
-                      Icon(Icons.image_not_supported, color: Theme.of(context).colorScheme.primary, size: 20),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text('DiAppBetes',
-                style: TextStyle(
-                  color: Theme.of(context).appBarTheme.foregroundColor, 
-                  fontWeight: FontWeight.bold, 
-                  fontSize: 20
-                )),
-          ],
-        ),
-        actions: [
-          // Badge de Admin en AppBar
-          if (_isAdmin && !_loadingProfile)
-            Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.admin_panel_settings, color: Theme.of(context).colorScheme.primary, size: 14),
-                  const SizedBox(width: 4),
-                  Text('Admin', 
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary, 
-                        fontSize: 11, 
-                        fontWeight: FontWeight.w600,
-                      )),
-                ],
-              ),
-            ),
-          IconButton(
-            icon: Icon(Icons.settings, color: Theme.of(context).appBarTheme.foregroundColor),
-            onPressed: () async {
-              await Navigator.pushNamed(context, '/settings');
-              _loadProfile();
-              _checkAdminRole();
-            },
-          ),
-        ],
+      appBar: CustomAppBar(
+        title: 'DiAppBetes',
+        onSettingsPressed: () async {
+          await Navigator.pushNamed(context, '/settings');
+          _loadProfile();
+          _checkAdminRole();
+        },
       ),
       body: RefreshIndicator(
         color: Theme.of(context).colorScheme.primary,

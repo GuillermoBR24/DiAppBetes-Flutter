@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../theme/app_theme.dart';
 
 class AdminNavHelper {
   /// Verifica si el usuario actual es administrador
@@ -23,37 +22,28 @@ class AdminNavHelper {
     }
   }
 
-  /// Construye el BottomNavigationBar con ítem Admin condicional
+  /// Construye el BottomNavigationBar con solo 3 ítems principales
   static Widget buildBottomBar({
     required BuildContext context,
     required int currentIndex,
     required Function(int) onTap,
     required bool isAdmin,
   }) {
+    // Solo 3 ítems principales
+    final items = <BottomNavigationBarItem>[
+      const BottomNavigationBarItem(icon: Icon(Icons.refresh), label: 'Historial'),
+      const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+      const BottomNavigationBarItem(icon: Icon(Icons.restaurant), label: 'Comida'),
+    ];
+
+    // Ajustar índice si es necesario
+    int safeIndex = currentIndex;
+    if (currentIndex < 0 || currentIndex > 2) safeIndex = 1; // ← CAMBIO: validar rango 0-2
+
     final backgroundColor = Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Theme.of(context).cardColor;
     final selectedItemColor = Theme.of(context).bottomNavigationBarTheme.selectedItemColor ?? Theme.of(context).colorScheme.primary;
     final unselectedItemColor = Theme.of(context).bottomNavigationBarTheme.unselectedItemColor ?? Theme.of(context).textTheme.bodySmall?.color;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Ítems base (siempre visibles)
-    final items = <BottomNavigationBarItem>[
-      const BottomNavigationBarItem(icon: Icon(Icons.refresh), label: 'Historial'),
-      const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-      const BottomNavigationBarItem(icon: Icon(Icons.qr_code_scanner), label: 'Escáner'),
-      const BottomNavigationBarItem(icon: Icon(Icons.restaurant), label: 'Comida'),
-    ];
-
-    // Agregar Admin SOLO si tiene permisos
-    if (isAdmin) {
-      items.add(const BottomNavigationBarItem(
-        icon: Icon(Icons.admin_panel_settings),
-        label: 'Admin',
-      ));
-    }
-
-    // Ajustar índice si admin no está disponible
-    int safeIndex = currentIndex;
-    if (!isAdmin && currentIndex >= 4) safeIndex = 1; // Volver a Home
 
     return Container(
       decoration: BoxDecoration(
@@ -80,33 +70,14 @@ class AdminNavHelper {
     );
   }
 
-  /// Maneja el tap en el BottomNavigationBar con lógica de admin
+  /// Maneja el tap en el BottomNavigationBar
   static void handleTabTap({
     required BuildContext context,
     required int index,
     required bool isAdmin,
     required Function(int) onValidTap,
   }) {
-    // Índice del admin (es el último si existe)
-    final adminIndex = isAdmin ? 4 : -1;
-
-    // Si tocó Admin
-    if (index == adminIndex) {
-      if (isAdmin) {
-        Navigator.pushNamed(context, '/admin');
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🔒 Acceso denegado: Se requieren permisos de administrador'),
-            backgroundColor: AppColors.rojoSuave,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-      return;
-    }
-
-    // Para los demás ítems
+    // Para los 3 ítems principales
     onValidTap(index);
   }
 }

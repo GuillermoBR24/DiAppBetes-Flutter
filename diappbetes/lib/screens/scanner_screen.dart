@@ -1,9 +1,9 @@
+// lib/screens/scanner_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme/app_theme.dart';
-import '../utils/admin_nav_helper.dart';
 
 // ---------------------------------------------------------------------------
 // Modelo del producto escaneado
@@ -73,33 +73,16 @@ class _ScannerScreenState extends State<ScannerScreen> {
   bool _scanning    = true;
   bool _loading     = false;
   String? _lastCode;
-  
-  // ── Estado para navegación con AdminNavHelper ────────────────────────── //
-  int _selectedTab  = 2;
-  bool _isAdmin = false;
 
   @override
   void initState() {
     super.initState();
-    _checkAdminRole();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _checkAdminRole();
   }
 
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  // ── Verificar rol de administrador ───────────────────────────────────── //
-  Future<void> _checkAdminRole() async {
-    final isAdmin = await AdminNavHelper.getIsAdmin();
-    if (mounted) setState(() => _isAdmin = isAdmin);
   }
 
   // ── Código detectado → buscar en OpenFoodFacts ───────────────────────── //
@@ -207,100 +190,27 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
   }
 
-  // ── Manejo de tabs con AdminNavHelper ────────────────────────────────── //
-  void _onTabTapped(int index) {
-    AdminNavHelper.handleTabTap(
-      context: context,
-      index: index,
-      isAdmin: _isAdmin,
-      onValidTap: (validIndex) {
-        setState(() => _selectedTab = validIndex);
-        switch (validIndex) {
-          case 0: Navigator.pushReplacementNamed(context, '/historial'); break;
-          case 1: Navigator.pushReplacementNamed(context, '/home'); break;
-          case 3: Navigator.pushReplacementNamed(context, '/add-meal'); break;
-        }
-      },
-    );
-  }
-
   // =========================================================================
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final cardColor = Theme.of(context).cardColor;
     final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
 
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
-        titleSpacing: 0,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(width: 16),
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.asset(
-                  'assets/favicon.png',
-                  width: 42,
-                  height: 42,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => 
-                      Icon(Icons.image_not_supported, color: primaryColor, size: 20),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text('DiAppBetes',
-                style: TextStyle(
-                  color: Theme.of(context).appBarTheme.foregroundColor, 
-                  fontWeight: FontWeight.bold, 
-                  fontSize: 20
-                )),
-          ],
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, 
+              color: Theme.of(context).appBarTheme.foregroundColor),
+          onPressed: () => Navigator.pop(context), // ← Vuelve a la pantalla anterior
         ),
-        actions: [
-          // Badge de Admin en AppBar
-          if (_isAdmin)
-            Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.admin_panel_settings, color: primaryColor, size: 14),
-                  const SizedBox(width: 4),
-                  Text('Admin', 
-                      style: TextStyle(
-                        color: primaryColor, 
-                        fontSize: 11, 
-                        fontWeight: FontWeight.w600,
-                      )),
-                ],
-              ),
-            ),
-        ],
+        title: Text('DiAppBetes',
+            style: TextStyle(
+              color: Theme.of(context).appBarTheme.foregroundColor, 
+              fontWeight: FontWeight.bold,
+            )),
       ),
       body: Stack(
         children: [
@@ -327,12 +237,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
             ),
         ],
       ),
-      bottomNavigationBar: AdminNavHelper.buildBottomBar(
-        context: context,
-        currentIndex: _selectedTab,
-        onTap: _onTabTapped,
-        isAdmin: _isAdmin,
-      ),
+      // ← ELIMINADO: bottomNavigationBar
     );
   }
 
