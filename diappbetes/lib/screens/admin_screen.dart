@@ -1,3 +1,4 @@
+import 'package:diappbetes/screens/admin_user_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -318,6 +319,14 @@ class _AdminScreenState extends State<AdminScreen> {
             textColor: textColor,
             textSmallColor: textSmallColor,
             isDark: isDark,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AdminUsersScreen(),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 12),
           _buildPlaceholderCard(
@@ -380,57 +389,62 @@ class _AdminScreenState extends State<AdminScreen> {
     required Color? textColor,
     required Color? textSmallColor,
     required bool isDark,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor),
-        boxShadow: [
-          BoxShadow(
-            color: isDark 
-                ? Colors.black.withOpacity(0.3) 
-                : Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+    return InkWell(  // ← AÑADE ESTO
+      onTap: onTap,  // ← AÑADE ESTO
+      borderRadius: BorderRadius.circular(16),  // ← Para el efecto ripple
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Theme.of(context).dividerColor),
+          boxShadow: [
+            BoxShadow(
+              color: isDark 
+                  ? Colors.black.withOpacity(0.3) 
+                  : Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(icon, color: primaryColor, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: primaryColor,
-                    )),
-                const SizedBox(height: 4),
-                Text(subtitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: textSmallColor,
-                    )),
-              ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: primaryColor, size: 24),
             ),
-          ),
-          Icon(Icons.arrow_forward_ios, 
-              color: textSmallColor?.withOpacity(0.5), size: 16),
-        ],
-      ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: primaryColor,
+                      )),
+                  const SizedBox(height: 4),
+                  Text(subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: textSmallColor,
+                      )),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, 
+                color: textSmallColor?.withOpacity(0.5), size: 16),
+          ],
+        ),
+      )
     );
   }
 }
