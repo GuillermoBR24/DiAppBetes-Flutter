@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:diappbetes/providers/theme_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/profile_service.dart';
@@ -12,8 +15,8 @@ import '../services/auth_service.dart';
 // ---------------------------------------------------------------------------
 class HcRatio {
   String id;
-  int startMins; // minutos desde 00:00
-  int endMins;   // minutos desde 00:00
+  int startMins;
+  int endMins;
   double ratioValue;
 
   HcRatio({
@@ -23,7 +26,6 @@ class HcRatio {
     required this.ratioValue,
   });
 
-  // Helpers de formato
   String get startTime => _fmt(startMins);
   String get endTime   => _fmt(endMins);
 
@@ -45,11 +47,6 @@ class HcRatio {
 // ---------------------------------------------------------------------------
 // Helpers de validación de ratios
 // ---------------------------------------------------------------------------
-
-/// Garantiza que la lista cubre exactamente 00:00–24:00 (1440 min)
-/// sin huecos ni solapamientos.
-/// Regla: los tramos son contiguos; startMins[i+1] == endMins[i].
-/// El primer tramo SIEMPRE empieza en 0, el último SIEMPRE termina en 1440.
 List<HcRatio> _enforceFullDay(List<HcRatio> ratios) {
   if (ratios.isEmpty) {
     return [HcRatio(startMins: 0, endMins: 1440, ratioValue: 10.0)];
@@ -57,10 +54,8 @@ List<HcRatio> _enforceFullDay(List<HcRatio> ratios) {
   final r = List<HcRatio>.from(ratios);
   r.first.startMins = 0;
   r.last.endMins    = 1440;
-  // Encadena los tramos intermedios
   for (int i = 1; i < r.length; i++) {
     r[i].startMins = r[i - 1].endMins;
-    // Si quedó invertido, forzar mínimo 1 minuto de duración
     if (r[i].startMins >= r[i].endMins) {
       r[i].endMins = r[i].startMins + 1;
     }
@@ -83,16 +78,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _profileService = ProfileService();
   final _hcRatioService = HcRatioService();
   final _authService    = AuthService();
+  final _imagePicker    = ImagePicker();
 
   bool _loadingProfile = true;
   bool _savingPersonal = false;
   bool _savingDiabetes = false;
+  bool _uploadingAvatar = false;
 
   String _username  = '';
   String _email     = '';
   String _birthDate = '';
   String _role      = 'Usuario';
   double _fsi       = 50.0;
+  Uint8List? _avatarBytes;
 
   List<HcRatio> _hcRatios = [];
 
@@ -140,19 +138,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (profile == null) throw Exception('Perfil no encontrado');
       if (!mounted) return;
 
+      // Decodificar avatar si existe
+      Uint8List? avatarBytes;
+      final avatarBase64 = profile['avatar_base64'] as String?;
+      if (avatarBase64 != null && avatarBase64.isNotEmpty) {
+        try {
+          avatarBytes = base64Decode(avatarBase64);
+          print('✅ [AVATAR] Avatar cargado: ${avatarBytes.length} bytes');
+        } catch (e) {
+          print('❌ [AVATAR] Error decodificando avatar: $e');
+        }
+      }
+
       setState(() {
         _username  = profile['username']?.toString() ?? '';
         _email     = profile['email']?.toString() ?? '';
         _birthDate = profile['birth_date']?.toString() ?? '';
         _role      = profile['role']?.toString() ?? 'Usuario';
         _fsi       = (profile['fsi'] as num?)?.toDouble() ?? 50.0;
+        _avatarBytes = avatarBytes;
 
         _set(_usernameCtrl,  _username);
         _set(_emailCtrl,     _email);
         _set(_birthDateCtrl, _birthDate);
         _set(_fsiCtrl,       _fsi.toString());
 
-        // Convertir los mapas a objetos HcRatio con startMins/endMins
         final loaded = ratioMaps.map((r) => HcRatio(
           id:         r['id']?.toString() ?? '',
           startMins:  HcRatio.parse(r['start_time']?.toString() ?? '00:00'),
@@ -219,63 +229,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // =========================================================================
-  // LÓGICA DE RATIOS HC — Edición de fronteras con validación en cascada
+  // LÓGICA DE RATIOS HC
   // =========================================================================
 
-  /// Cambia endTime del tramo [i] y automáticamente ajusta startTime de [i+1]
-  /// para mantener la continuidad sin solapamientos.
   void _changeEndTime(int i, int newEndMins) {
     setState(() {
       final r = _hcRatios;
-
-      // Límites: mínimo startMins+1, máximo startMins del siguiente o 1439
       final minEnd = r[i].startMins + 1;
       final maxEnd = (i < r.length - 1)
-          ? r[i + 1].endMins - 1   // no puede sobrepasar el fin del siguiente
+          ? r[i + 1].endMins - 1
           : 1440;
 
       final clamped = newEndMins.clamp(minEnd, maxEnd);
       r[i].endMins = clamped;
 
-      // El siguiente tramo arranca donde termina este
       if (i < r.length - 1) {
         r[i + 1].startMins = clamped;
-        // Si quedó sin espacio, comprimir (siempre mínimo 1 min)
         if (r[i + 1].startMins >= r[i + 1].endMins) {
           r[i + 1].endMins = r[i + 1].startMins + 1;
         }
       }
-
-      // El último siempre termina en 1440
       r.last.endMins = 1440;
     });
   }
 
-  /// Cambia startTime del tramo [i] y ajusta endTime de [i-1]
   void _changeStartTime(int i, int newStartMins) {
-    if (i == 0) return; // el primero siempre empieza en 00:00
+    if (i == 0) return;
     setState(() {
       final r = _hcRatios;
-
       final minStart = r[i - 1].startMins + 1;
       final maxStart = r[i].endMins - 1;
 
       final clamped = newStartMins.clamp(minStart, maxStart);
       r[i].startMins = clamped;
-
-      // El tramo anterior termina donde empieza este
       r[i - 1].endMins = clamped;
     });
   }
 
-  /// Añade un tramo dividiendo el último a la mitad
   void _addHcRatio() {
     setState(() {
       final last = _hcRatios.last;
       final duration = last.endMins - last.startMins;
 
       if (duration < 2) {
-        // Sin espacio para dividir
         _showSnack('No hay espacio para añadir otro tramo', isError: true);
         return;
       }
@@ -292,23 +288,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  /// Elimina el tramo [i] y extiende el anterior para cubrir su hueco
   void _removeHcRatio(int i) {
     if (_hcRatios.length <= 1) return;
     setState(() {
       final removed = _hcRatios.removeAt(i);
       if (i == 0) {
-        // El nuevo primero empieza en 00:00
         _hcRatios.first.startMins = 0;
       } else {
-        // El anterior absorbe el hueco
         _hcRatios[i - 1].endMins = removed.endMins;
       }
       _hcRatios = _enforceFullDay(_hcRatios);
     });
   }
 
-  // ── Abrir TimePicker ──────────────────────────────────────────────────── //
+  // ── TimePicker ────────────────────────────────────────────────────────── //
   Future<int?> _pickTime(int currentMins) async {
     final picked = await showTimePicker(
       context: context,
@@ -337,7 +330,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return picked.hour * 60 + picked.minute;
   }
 
-  // ── DatePicker para fecha de nacimiento ──────────────────────────────── //
+  // ── DatePicker ────────────────────────────────────────────────────────── //
   Future<void> _pickBirthDate() async {
     DateTime? init;
     try {
@@ -371,6 +364,170 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (picked != null && mounted) {
       final f = '${picked.year}-${picked.month.toString().padLeft(2,'0')}-${picked.day.toString().padLeft(2,'0')}';
       setState(() { _set(_birthDateCtrl, f); _birthDate = f; });
+    }
+  }
+
+  // =========================================================================
+  // SISTEMA DE AVATAR (base64 en Firestore)
+  // =========================================================================
+
+  /// Muestra el bottom sheet para elegir fuente de la imagen
+  Future<void> _showAvatarOptions() async {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final cardColor = Theme.of(context).cardColor;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).dividerColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Text('Cambiar foto de perfil',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                  )),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Icon(Icons.photo_library, color: primaryColor),
+                title: Text('Seleccionar de la galería',
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndSaveAvatar(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.camera_alt, color: primaryColor),
+                title: Text('Tomar una foto',
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndSaveAvatar(ImageSource.camera);
+                },
+              ),
+              if (_avatarBytes != null) ...[
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.delete, color: AppColors.rojoSuave),
+                  title: const Text('Eliminar foto actual',
+                      style: TextStyle(color: AppColors.rojoSuave)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _confirmDeleteAvatar();
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Selecciona una imagen, la comprime y la guarda como base64
+  Future<void> _pickAndSaveAvatar(ImageSource source) async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 256,
+        maxHeight: 256,
+        imageQuality: 75,
+      );
+
+      if (image == null) return;
+      if (!mounted) return;
+      setState(() => _uploadingAvatar = true);
+
+      // Leer bytes (compatible con web y móvil)
+      final Uint8List imageBytes = await image.readAsBytes();
+      print('📏 [AVATAR] Tamaño: ${(imageBytes.length / 1024).toStringAsFixed(1)} KB');
+
+      // Guardar en Firestore como base64
+      final success = await _profileService.updateAvatarBase64(imageBytes);
+
+      if (!mounted) return;
+
+      if (success) {
+        setState(() {
+          _avatarBytes = imageBytes;
+          _uploadingAvatar = false;
+        });
+        _showSnack('Foto de perfil actualizada');
+      } else {
+        setState(() => _uploadingAvatar = false);
+        _showSnack('Error al guardar la imagen', isError: true);
+      }
+    } catch (e) {
+      print('❌ [AVATAR] Error: $e');
+      if (mounted) {
+        setState(() => _uploadingAvatar = false);
+        _showSnack('Error: $e', isError: true);
+      }
+    }
+  }
+
+  /// Confirma y elimina el avatar
+  Future<void> _confirmDeleteAvatar() async {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        title: Text('Eliminar foto',
+            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold)),
+        content: Text('¿Estás seguro de que quieres eliminar tu foto de perfil?',
+            style: TextStyle(color: Theme.of(ctx).textTheme.bodyMedium?.color)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancelar', style: TextStyle(color: textSmallColor)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar',
+                style: TextStyle(color: AppColors.rojoSuave, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _uploadingAvatar = true);
+
+    try {
+      await _profileService.deleteAvatar();
+      if (mounted) {
+        setState(() {
+          _avatarBytes = null;
+          _uploadingAvatar = false;
+        });
+        _showSnack('Foto de perfil eliminada');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _uploadingAvatar = false);
+        _showSnack('Error al eliminar: $e', isError: true);
+      }
     }
   }
 
@@ -534,15 +691,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Tarjeta perfil ────────────────────────────────────────────────────── //
+  // ── Tarjeta perfil CON AVATAR CLICABLE ────────────────────────────────── //
   Widget _buildProfileCard() => _Card(
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        Container(
-          width: 54, height: 54,
-          decoration: BoxDecoration(shape: BoxShape.circle,
-              border: Border.all(color: Theme.of(context).colorScheme.primary, width: 3)),
-          child: Icon(Icons.person, size: 30, color: Theme.of(context).colorScheme.primary),
+        // ✅ AVATAR CLICABLE
+        GestureDetector(
+          onTap: _uploadingAvatar ? null : _showAvatarOptions,
+          child: Stack(
+            children: [
+              Container(
+                width: 54,
+                height: 54,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary, 
+                    width: 3,
+                  ),
+                  // Si hay avatar, mostrarlo; si no, mostrar icono
+                  image: _avatarBytes != null
+                      ? DecorationImage(
+                          image: MemoryImage(_avatarBytes!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: _avatarBytes == null
+                    ? Icon(Icons.person, 
+                        size: 30, 
+                        color: Theme.of(context).colorScheme.primary)
+                    : null,
+              ),
+              // Icono de cámara en esquina inferior derecha
+              if (!_uploadingAvatar)
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Theme.of(context).cardColor,
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.camera_alt,
+                      size: 10,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
+              // Loading indicator mientras sube
+              if (_uploadingAvatar)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -594,7 +819,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ]),
   );
 
-   Widget _buildAppearanceCard(BuildContext context) {
+  Widget _buildAppearanceCard(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     final cardColor = Theme.of(context).cardColor;
     final subtitleColor = Theme.of(context).textTheme.bodySmall?.color ?? AppColors.grisTexto;
@@ -625,7 +850,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: Theme.of(context).colorScheme.primary,
               )),
           const SizedBox(height: 16),
-          // Selector de modo (sistema/claro/oscuro)
           Text('Seguir configuración del sistema',
               style: TextStyle(fontSize: 13, color: subtitleColor)),
           const SizedBox(height: 8),
@@ -773,10 +997,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildHcRow(int i, HcRatio ratio) {
     final isFirst = i == 0;
     final isLast  = i == _hcRatios.length - 1;
-
-    // La frontera izquierda (start) es editable si NO es el primer tramo
-    // La frontera derecha (end) es editable si NO es el último tramo
-    // (el último siempre termina en 23:59/24:00)
     final canEditStart = _editingDiabetes && !isFirst;
     final canEditEnd   = _editingDiabetes && !isLast;
 
@@ -797,7 +1017,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
       child: Row(children: [
-        // ── Hora inicio ─── //
         _timeChip(ratio.startTime, tappable: canEditStart,
             onTap: canEditStart ? () async {
               final picked = await _pickTime(ratio.startMins);
@@ -811,7 +1030,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   fontWeight: FontWeight.bold,
                 ))),
 
-        // ── Hora fin ─── //
         _timeChip(ratio.endTime, tappable: canEditEnd,
             onTap: canEditEnd ? () async {
               final picked = await _pickTime(ratio.endMins);
@@ -820,7 +1038,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         const SizedBox(width: 10),
 
-        // ── Valor ratio ─── //
         Expanded(
           child: TextFormField(
             key: ValueKey('ratio_${ratio.id}_${ratio.startMins}'),
@@ -847,7 +1064,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
 
-        // ── Eliminar ─── //
         if (_editingDiabetes && _hcRatios.length > 1)
           IconButton(
             padding: EdgeInsets.zero, constraints: const BoxConstraints(),

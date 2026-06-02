@@ -1,4 +1,6 @@
 // lib/screens/home_screen.dart
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:diappbetes/widgets/custom_appbar.dart';
 import 'package:flutter/material.dart';
 import '../widgets/tir_progress_ring.dart';
@@ -30,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int    _todayMealCount     = 0;
   int    _tirPercentage      = 0;
   String _tipContent         = '';
+  Uint8List? _avatarBytes;  // ← NUEVO: avatar del usuario
 
   // ── Estado para navegación ───────────────────────────────────────────── //
   bool _isAdmin = false;
@@ -94,9 +97,21 @@ class _HomeScreenState extends State<HomeScreen> {
           ? profile!['username'] as String
           : (_authService.currentUser?.email?.split('@').first ?? '');
       
+      // ✅ NUEVO: Decodificar avatar si existe
+      Uint8List? avatarBytes;
+      final avatarBase64 = profile?['avatar_base64'] as String?;
+      if (avatarBase64 != null && avatarBase64.isNotEmpty) {
+        try {
+          avatarBytes = base64Decode(avatarBase64);
+        } catch (e) {
+          print('❌ [HOME] Error decodificando avatar: $e');
+        }
+      }
+      
       if (mounted) {
         setState(() {
           _username = username;
+          _avatarBytes = avatarBytes;  // ← NUEVO
           _loadingProfile = false;
         });
       }
@@ -206,18 +221,27 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Profile card ─────────────────────────────────────────────────────── //
+  // ── Profile card CON AVATAR ──────────────────────────────────────────── //
   Widget _buildProfileCard() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // ✅ AVATAR: muestra imagen si existe, sino icono
         Container(
           width: 46, height: 46,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(color: Theme.of(context).colorScheme.primary, width: 3),
+            image: _avatarBytes != null
+                ? DecorationImage(
+                    image: MemoryImage(_avatarBytes!),
+                    fit: BoxFit.cover,
+                  )
+                : null,
           ),
-          child: Icon(Icons.person, size: 26, color: Theme.of(context).colorScheme.primary),
+          child: _avatarBytes == null
+              ? Icon(Icons.person, size: 26, color: Theme.of(context).colorScheme.primary)
+              : null,
         ),
         const SizedBox(width: 12),
         _loadingProfile
