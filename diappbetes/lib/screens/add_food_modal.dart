@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:diappbetes/screens/add_food_detail_modal.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/food_service.dart';
 
 // ---------------------------------------------------------------------------
@@ -86,7 +89,7 @@ Color categoryText(BuildContext context, String cat) {
 }
 
 // ---------------------------------------------------------------------------
-// AddFoodModal — búsqueda con OpenFoodFacts + fallback local
+// AddFoodModal — búsqueda con OpenFoodFacts + fallback local + escáner
 // ---------------------------------------------------------------------------
 class AddFoodModal extends StatefulWidget {
   final void Function(Map<String, dynamic> foodData)? onFoodAdded;
@@ -103,22 +106,27 @@ class _AddFoodModalState extends State<AddFoodModal> {
 
   List<Food> _foods        = [];
   bool       _loading      = false;
-  bool       _searching    = false; // true = búsqueda API activa
+  bool       _searching    = false;
   String     _searchTerm   = '';
 
-  // Debounce para no llamar a la API en cada tecla
+  // ── Estado del escáner ──────────────────────────────────────────────── //
+  bool _scanning = false;
+  String? _lastScannedCode;
+  bool _scanningLoading = false;
+  MobileScannerController? _scannerController;
+
   DateTime? _lastKeyPress;
 
   @override
   void initState() {
     super.initState();
-    // Carga los alimentos locales al abrir el modal
     setState(() => _foods = _foodService.getLocalFoods());
   }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _scannerController?.dispose();
     super.dispose();
   }
 
@@ -138,7 +146,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
     Future.delayed(const Duration(milliseconds: 600), () async {
       if (!mounted) return;
       final elapsed = DateTime.now().difference(_lastKeyPress!);
-      if (elapsed.inMilliseconds < 590) return; // otro keypress llegó antes
+      if (elapsed.inMilliseconds < 590) return;
 
       setState(() { _loading = true; _searching = true; });
       final results = await _foodService.searchFoods(term.trim());
@@ -155,6 +163,158 @@ class _AddFoodModalState extends State<AddFoodModal> {
       builder: (_) => AddFoodDetailsModal(
         selectedFood: food,
         onConfirm: (data) => widget.onFoodAdded?.call(data),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // ESCÁNER
+  // ═══════════════════════════════════════════════════════════════════════
+
+  void _startScanner() {
+    _scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.normal,
+      facing: CameraFacing.back,
+    );
+    setState(() {
+      _scanning = true;
+      _lastScannedCode = null;
+      _scanningLoading = false;
+    });
+  }
+
+  void _stopScanner() {
+    _scannerController?.dispose();
+    _scannerController = null;
+    setState(() {
+      _scanning = false;
+      _scanningLoading = false;
+    });
+  }
+
+  Future<void> _onBarcodeDetected(BarcodeCapture capture) async {
+    final barcode = capture.barcodes.firstOrNull?.rawValue;
+    if (barcode == null || barcode == _lastScannedCode || _scanningLoading) return;
+
+    _lastScannedCode = barcode;
+    await _scannerController?.stop();
+    if (!mounted) return;
+    setState(() => _scanningLoading = true);
+
+    try {
+      final food = await _fetchProductFromBarcode(barcode);
+      if (!mounted) return;
+      
+      _stopScanner();
+
+      if (food != null) {
+        // Cerrar el modal de añadir alimento y abrir el de detalles
+        Navigator.pop(context);
+        showDialog(
+          context: context,
+          builder: (_) => AddFoodDetailsModal(
+            selectedFood: food,
+            onConfirm: (data) => widget.onFoodAdded?.call(data),
+          ),
+        );
+      } else {
+        _showNotFoundDialog(barcode);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _stopScanner();
+      _showNotFoundDialog(barcode);
+    }
+  }
+
+  /// Consulta OpenFoodFacts y convierte el resultado a un objeto Food
+  Future<Food?> _fetchProductFromBarcode(String barcode) async {
+    final url = Uri.parse(
+        'https://world.openfoodfacts.org/api/v2/product/$barcode.json'
+        '?fields=product_name,product_name_es,product_name_en,brands,'
+        'nutriments,image_front_small_url,image_url');
+
+    final response = await http.get(url,
+        headers: {'User-Agent': 'DiAppBetes/1.0 (contact@diappbetes.com)'})
+        .timeout(const Duration(seconds: 8));
+
+    if (response.statusCode != 200) return null;
+    final json = jsonDecode(response.body) as Map<String, dynamic>;
+    if (json['status'] != 1) return null;
+
+    final product    = json['product'] as Map<String, dynamic>? ?? {};
+    final nutriments = product['nutriments'] as Map<String, dynamic>? ?? {};
+
+    final name = product['product_name']?.toString()
+        ?? product['product_name_es']?.toString()
+        ?? product['product_name_en']?.toString()
+        ?? 'Producto desconocido';
+
+    final carbs = (nutriments['carbohydrates_100g'] as num?)?.toDouble()
+        ?? (nutriments['carbohydrates'] as num?)?.toDouble()
+        ?? 0.0;
+
+    final calories = (nutriments['energy-kcal_100g'] as num?)?.toDouble()
+        ?? (nutriments['energy-kcal'] as num?)?.toDouble()
+        ?? ((nutriments['energy_100g'] as num?)?.toDouble() ?? 0.0) / 4.184;
+
+    return Food(
+      id: barcode,
+      name: name,
+      category: 'plato',
+      carbsPer100g: carbs,
+      caloriesPer100g: calories,
+      iconUrl: product['image_front_small_url']?.toString()
+          ?? product['image_url']?.toString(),
+    );
+  }
+
+  void _showNotFoundDialog(String barcode) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        title: Text('Producto no encontrado',
+            style: TextStyle(
+              color: Theme.of(ctx).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            )),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search_off, size: 48, color: Theme.of(ctx).dividerColor),
+            const SizedBox(height: 12),
+            Text('No se encontraron datos para el código:\n$barcode',
+                style: TextStyle(color: Theme.of(ctx).textTheme.bodyMedium?.color, fontSize: 13),
+                textAlign: TextAlign.center),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              // Reanudar el escáner para intentar de nuevo
+              _scannerController?.start();
+              setState(() {
+                _scanningLoading = false;
+                _lastScannedCode = null;
+              });
+            },
+            child: Text('Escanear de nuevo',
+                style: TextStyle(
+                  color: Theme.of(ctx).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                )),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _stopScanner();
+            },
+            child: Text('Cancelar',
+                style: TextStyle(color: Theme.of(ctx).textTheme.bodySmall?.color)),
+          ),
+        ],
       ),
     );
   }
@@ -191,6 +351,21 @@ class _AddFoodModalState extends State<AddFoodModal> {
                   child: Text('Añadir Alimento',
                       style: TextStyle(color: onPrimaryColor, fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
+                // ✅ Botón escanear
+                IconButton(
+                  icon: Icon(
+                    _scanning ? Icons.keyboard : Icons.qr_code_scanner,
+                    color: onPrimaryColor,
+                  ),
+                  tooltip: _scanning ? 'Volver a buscar' : 'Escanear código',
+                  onPressed: () {
+                    if (_scanning) {
+                      _stopScanner();
+                    } else {
+                      _startScanner();
+                    }
+                  },
+                ),
                 IconButton(
                   icon: Icon(Icons.close, color: onPrimaryColor),
                   onPressed: () => Navigator.pop(context),
@@ -199,83 +374,193 @@ class _AddFoodModalState extends State<AddFoodModal> {
             ),
           ),
 
-          // ── Buscador ──────────────────────────────────────────────── //
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-            child: TextField(
-              controller: _searchCtrl,
-              onChanged: _onSearchChanged,
-              style: TextStyle(fontSize: 15, color: textColor),
-              decoration: InputDecoration(
-                hintText: 'Buscar alimento...',
-                hintStyle: TextStyle(color: textSmallColor),
-                prefixIcon: Icon(Icons.search, color: primaryColor),
-                suffixIcon: _loading
-                    ? Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: SizedBox(width: 20, height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor)))
-                    : (_searchTerm.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(Icons.clear, color: textSmallColor),
-                            onPressed: () {
-                              _searchCtrl.clear();
-                              _onSearchChanged('');
-                            })
-                        : null),
-                filled: true,
-                fillColor: isDark 
-                    ? surfaceColor.withOpacity(0.5)
-                    : const Color(0xFFF5F5F5),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-            ),
-          ),
-
-          // ── Indicador de fuente ───────────────────────────────────── //
-          if (_searching && !_loading)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                _foods.isEmpty
-                    ? 'Sin resultados para "$_searchTerm"'
-                    : '${_foods.length} resultados de OpenFoodFacts',
-                style: TextStyle(fontSize: 11, color: textSmallColor),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-          // ── Lista ─────────────────────────────────────────────────── //
+          // ── Cuerpo: Scanner o Lista ───────────────────────────────── //
           Expanded(
-            child: _foods.isEmpty && !_loading
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.search_off, size: 48, color: dividerColor),
-                        const SizedBox(height: 8),
-                        Text(
-                          _searchTerm.isNotEmpty
-                              ? 'Sin resultados para "$_searchTerm"'
-                              : 'Escribe para buscar alimentos',
-                          style: TextStyle(color: textColor, fontSize: 14),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    itemCount: _foods.length,
-                    separatorBuilder: (_, __) =>
-                        Divider(height: 1, color: dividerColor),
-                    itemBuilder: (_, i) => _buildFoodRow(_foods[i]),
+            child: _scanning
+                ? _buildScannerView(primaryColor, onPrimaryColor)
+                : _buildSearchView(
+                    primaryColor: primaryColor,
+                    cardColor: cardColor,
+                    textColor: textColor,
+                    textSmallColor: textSmallColor,
+                    dividerColor: dividerColor,
+                    isDark: isDark,
+                    surfaceColor: surfaceColor,
                   ),
           ),
         ],
       ),
+    );
+  }
+
+  // ── Vista de búsqueda (original) ────────────────────────────────────── //
+  Widget _buildSearchView({
+    required Color primaryColor,
+    required Color cardColor,
+    required Color? textColor,
+    required Color? textSmallColor,
+    required Color dividerColor,
+    required bool isDark,
+    required Color surfaceColor,
+  }) {
+    return Column(
+      children: [
+        // ── Buscador ──────────────────────────────────────────────── //
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+          child: TextField(
+            controller: _searchCtrl,
+            onChanged: _onSearchChanged,
+            style: TextStyle(fontSize: 15, color: textColor),
+            decoration: InputDecoration(
+              hintText: 'Buscar alimento...',
+              hintStyle: TextStyle(color: textSmallColor),
+              prefixIcon: Icon(Icons.search, color: primaryColor),
+              suffixIcon: _loading
+                  ? Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: SizedBox(width: 20, height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor)))
+                  : (_searchTerm.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.clear, color: textSmallColor),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            _onSearchChanged('');
+                          })
+                      : null),
+              filled: true,
+              fillColor: isDark
+                  ? surfaceColor.withOpacity(0.5)
+                  : const Color(0xFFF5F5F5),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+          ),
+        ),
+
+        // ── Indicador de fuente ───────────────────────────────────── //
+        if (_searching && !_loading)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(
+              _foods.isEmpty
+                  ? 'Sin resultados para "$_searchTerm"'
+                  : '${_foods.length} resultados de OpenFoodFacts',
+              style: TextStyle(fontSize: 11, color: textSmallColor),
+              textAlign: TextAlign.center,
+            ),
+          ),
+
+        // ── Lista ─────────────────────────────────────────────────── //
+        Expanded(
+          child: _foods.isEmpty && !_loading
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.search_off, size: 48, color: dividerColor),
+                      const SizedBox(height: 8),
+                      Text(
+                        _searchTerm.isNotEmpty
+                            ? 'Sin resultados para "$_searchTerm"'
+                            : 'Escribe para buscar alimentos',
+                        style: TextStyle(color: textColor, fontSize: 14),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  itemCount: _foods.length,
+                  separatorBuilder: (_, __) =>
+                      Divider(height: 1, color: dividerColor),
+                  itemBuilder: (_, i) => _buildFoodRow(_foods[i]),
+                ),
+        ),
+      ],
+    );
+  }
+
+  // ── Vista del escáner ───────────────────────────────────────────────── //
+  Widget _buildScannerView(Color primaryColor, Color onPrimaryColor) {
+    return Stack(
+      children: [
+        // Cámara
+        ClipRRect(
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(24),
+            bottomRight: Radius.circular(24),
+          ),
+          child: MobileScanner(
+            controller: _scannerController!,
+            onDetect: _onBarcodeDetected,
+          ),
+        ),
+
+        // Overlay con recuadro guía
+        CustomPaint(
+          size: Size.infinite,
+          painter: _ScanFramePainter(primaryColor),
+        ),
+
+        // Texto superior
+        const Positioned(
+          top: 20,
+          left: 0, right: 0,
+          child: Text(
+            'Apunta al código de barras del producto',
+            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
+            textAlign: TextAlign.center,
+          ),
+        ),
+
+        // Botón linterna
+        Positioned(
+          bottom: 30,
+          left: 0, right: 0,
+          child: Center(
+            child: GestureDetector(
+              onTap: () => _scannerController?.toggleTorch(),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.black45,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white30),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.flash_on, color: Colors.white, size: 20),
+                    SizedBox(width: 6),
+                    Text('Linterna', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Loading al procesar código
+        if (_scanningLoading)
+          Container(
+            color: Colors.black54,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: onPrimaryColor),
+                  const SizedBox(height: 16),
+                  const Text('Buscando producto...',
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -290,7 +575,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          // Thumbnail o icono de categoría
           Container(
             width: 42, height: 42,
             decoration: BoxDecoration(
@@ -309,7 +593,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
           const SizedBox(width: 10),
 
-          // Nombre + macros
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,7 +609,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
           const SizedBox(width: 8),
 
-          // Chip categoría
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -338,7 +620,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
           const SizedBox(width: 8),
 
-          // Botón añadir
           GestureDetector(
             onTap: () => _selectFood(food),
             child: Container(
@@ -351,4 +632,63 @@ class _AddFoodModalState extends State<AddFoodModal> {
       ),
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Pintor del recuadro de escaneo
+// ---------------------------------------------------------------------------
+class _ScanFramePainter extends CustomPainter {
+  final Color borderColor;
+  _ScanFramePainter(this.borderColor);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final frameW = w * 0.75;
+    final frameH = frameW * 0.55;
+    final left   = (w - frameW) / 2;
+    final top    = (h - frameH) / 2;
+
+    final overlay = Paint()..color = Colors.black.withOpacity(0.55);
+    final clear   = Paint()..blendMode = BlendMode.clear;
+    final border  = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+
+    canvas.saveLayer(Rect.fromLTWH(0, 0, w, h), Paint());
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, h), overlay);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+          Rect.fromLTWH(left, top, frameW, frameH), const Radius.circular(12)),
+      clear,
+    );
+    canvas.restore();
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+          Rect.fromLTWH(left, top, frameW, frameH), const Radius.circular(12)),
+      border,
+    );
+
+    final corner = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round;
+    const len = 24.0;
+
+    canvas.drawLine(Offset(left, top + len), Offset(left, top), corner);
+    canvas.drawLine(Offset(left, top), Offset(left + len, top), corner);
+    canvas.drawLine(Offset(left + frameW - len, top), Offset(left + frameW, top), corner);
+    canvas.drawLine(Offset(left + frameW, top), Offset(left + frameW, top + len), corner);
+    canvas.drawLine(Offset(left, top + frameH - len), Offset(left, top + frameH), corner);
+    canvas.drawLine(Offset(left, top + frameH), Offset(left + len, top + frameH), corner);
+    canvas.drawLine(Offset(left + frameW - len, top + frameH), Offset(left + frameW, top + frameH), corner);
+    canvas.drawLine(Offset(left + frameW, top + frameH - len), Offset(left + frameW, top + frameH), corner);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ScanFramePainter oldDelegate) =>
+      oldDelegate.borderColor != borderColor;
 }
