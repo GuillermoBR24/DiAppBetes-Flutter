@@ -92,6 +92,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   double _fsi       = 50.0;
   Uint8List? _avatarBytes;
 
+  // ✅ MODO CELÍACO: declaración única
+  bool _celiacMode = false;
+  bool _savingCeliac = false;
+
   List<HcRatio> _hcRatios = [];
 
   bool _editingPersonal = false;
@@ -150,6 +154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       }
 
+      // ✅ MODO CELÍACO: cargar dentro del setState
       setState(() {
         _username  = profile['username']?.toString() ?? '';
         _email     = profile['email']?.toString() ?? '';
@@ -157,6 +162,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _role      = profile['role']?.toString() ?? 'Usuario';
         _fsi       = (profile['fsi'] as num?)?.toDouble() ?? 50.0;
         _avatarBytes = avatarBytes;
+        _celiacMode = profile['celiac_mode'] == true;  // ✅ Aquí va la asignación
 
         _set(_usernameCtrl,  _username);
         _set(_emailCtrl,     _email);
@@ -207,7 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ── Guardar diabetes ──────────────────────────────────────────────────── //
+  // ─ Guardar diabetes ──────────────────────────────────────────────────── //
   Future<void> _saveDiabetes() async {
     setState(() => _errorDiabetes = '');
     final fsiVal = double.tryParse(_txt(_fsiCtrl) ?? '');
@@ -225,6 +231,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() => _errorDiabetes = 'Error al guardar.');
     } finally {
       if (mounted) setState(() => _savingDiabetes = false);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // MODO CELÍACO
+  // ══════════════════════════════════════════════════════════════════════
+  Future<void> _toggleCeliacMode(bool value) async {
+    setState(() => _savingCeliac = true);
+    try {
+      await _profileService.updateCeliacMode(value);
+      if (mounted) {
+        setState(() {
+          _celiacMode = value;
+          _savingCeliac = false;
+        });
+        _showSnack(value ? 'Modo celíaco activado' : 'Modo celíaco desactivado');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _savingCeliac = false);
+        _showSnack('Error al guardar', isError: true);
+      }
     }
   }
 
@@ -301,7 +329,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  // ── TimePicker ────────────────────────────────────────────────────────── //
+  // ─ TimePicker ────────────────────────────────────────────────────────── //
   Future<int?> _pickTime(int currentMins) async {
     final picked = await showTimePicker(
       context: context,
@@ -371,7 +399,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // SISTEMA DE AVATAR (base64 en Firestore)
   // =========================================================================
 
-  /// Muestra el bottom sheet para elegir fuente de la imagen
   Future<void> _showAvatarOptions() async {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final cardColor = Theme.of(context).cardColor;
@@ -441,7 +468,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Selecciona una imagen, la comprime y la guarda como base64
   Future<void> _pickAndSaveAvatar(ImageSource source) async {
     try {
       final XFile? image = await _imagePicker.pickImage(
@@ -455,11 +481,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (!mounted) return;
       setState(() => _uploadingAvatar = true);
 
-      // Leer bytes (compatible con web y móvil)
       final Uint8List imageBytes = await image.readAsBytes();
       print('📏 [AVATAR] Tamaño: ${(imageBytes.length / 1024).toStringAsFixed(1)} KB');
 
-      // Guardar en Firestore como base64
       final success = await _profileService.updateAvatarBase64(imageBytes);
 
       if (!mounted) return;
@@ -483,7 +507,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  /// Confirma y elimina el avatar
   Future<void> _confirmDeleteAvatar() async {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
@@ -684,6 +707,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 12),
                   _buildAppearanceCard(context),
                   const SizedBox(height: 12),
+                  _buildCeliacCard(),  // ✅ NUEVO: Tarjeta de modo celíaco
+                  const SizedBox(height: 12),
                   _buildDiabetesCard(),
                 ],
               ),
@@ -691,11 +716,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Tarjeta perfil CON AVATAR CLICABLE ────────────────────────────────── //
+  // ══════════════════════════════════════════════════════════════════════
+  // TARJETA MODO CELÍACO
+  // ══════════════════════════════════════════════════════════════════════
+  Widget _buildCeliacCard() {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.grain, color: primaryColor, size: 24),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Modo celíaco',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        )),
+                    Text('Mostrará si los alimentos contienen gluten',
+                        style: TextStyle(fontSize: 12, color: textSmallColor)),
+                  ],
+                ),
+              ),
+              if (_savingCeliac)
+                SizedBox(
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2, color: primaryColor),
+                )
+              else
+                Switch(
+                  value: _celiacMode,
+                  onChanged: _toggleCeliacMode,
+                  activeColor: primaryColor,
+                ),
+            ],
+          ),
+          if (_celiacMode) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: primaryColor.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 18, color: primaryColor),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Se mostrará un indicador junto a cada alimento indicando si contiene gluten.',
+                      style: TextStyle(fontSize: 12, color: textColor),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Tarjeta perfil ────────────────────────────────────────────────────── //
   Widget _buildProfileCard() => _Card(
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        // ✅ AVATAR CLICABLE
         GestureDetector(
           onTap: _uploadingAvatar ? null : _showAvatarOptions,
           child: Stack(
@@ -709,7 +806,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     color: Theme.of(context).colorScheme.primary, 
                     width: 3,
                   ),
-                  // Si hay avatar, mostrarlo; si no, mostrar icono
                   image: _avatarBytes != null
                       ? DecorationImage(
                           image: MemoryImage(_avatarBytes!),
@@ -723,7 +819,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: Theme.of(context).colorScheme.primary)
                     : null,
               ),
-              // Icono de cámara en esquina inferior derecha
               if (!_uploadingAvatar)
                 Positioned(
                   bottom: 0,
@@ -746,7 +841,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ),
-              // Loading indicator mientras sube
               if (_uploadingAvatar)
                 Positioned.fill(
                   child: Container(

@@ -198,4 +198,18 @@ class ProfileService {
     await batch.commit();
     await _auth.currentUser!.delete();
   }
+
+  Future<void> updateCeliacMode(bool enabled) async {
+    if (_uid == null) return;
+    await _db.collection('profiles').doc(_uid).update({
+      'celiac_mode': enabled,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+    print('✅ [CELIAC] Modo celíaco actualizado: $enabled');
+  }
+
+  Future<bool> getCeliacMode() async {
+    final profile = await getMyProfile();
+    return profile?['celiac_mode'] == true;
+  }
 }

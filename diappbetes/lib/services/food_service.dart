@@ -11,6 +11,7 @@ class Food {
   final double carbsPer100g;
   final double caloriesPer100g;
   final String? iconUrl;
+  final bool? containsGluten;
 
   const Food({
     required this.id,
@@ -19,7 +20,20 @@ class Food {
     required this.carbsPer100g,
     required this.caloriesPer100g,
     this.iconUrl,
+    this.containsGluten,
   });
+
+  factory Food.fromMap(Map<String, dynamic> map) {
+    return Food(
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      category: map['category']?.toString() ?? 'plato',
+      carbsPer100g: (map['carbs_per_100g'] as num?)?.toDouble() ?? 0,
+      caloriesPer100g: (map['calories_per_100g'] as num?)?.toDouble() ?? 0,
+      iconUrl: map['icon_url']?.toString(),
+      containsGluten: map['contains_gluten'] as bool?,
+    );
+  }
 
   // Mapea la respuesta de OpenFoodFacts al modelo Food
   factory Food.fromOpenFoodFacts(Map<String, dynamic> product) {
@@ -189,5 +203,16 @@ class FoodService {
   ];
 
   // ── Obtener lista local completa (para mostrar al abrir el modal) ─────── //
-  List<Food> getLocalFoods() => List.from(_localFoods);
+  List<Food> getLocalFoods() {
+    return [
+      const Food(id: 'pan_trigo', name: 'Pan de trigo', category: 'cereales',
+          carbsPer100g: 49, caloriesPer100g: 265, containsGluten: true),
+      const Food(id: 'arroz_blanco', name: 'Arroz blanco', category: 'cereales',
+          carbsPer100g: 28, caloriesPer100g: 130, containsGluten: false),
+      const Food(id: 'pasta', name: 'Pasta', category: 'cereales',
+          carbsPer100g: 25, caloriesPer100g: 131, containsGluten: true),
+      const Food(id: 'patata', name: 'Patata', category: 'verduras',
+          carbsPer100g: 17, caloriesPer100g: 77, containsGluten: false),
+    ];
+  }
 }

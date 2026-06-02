@@ -1,5 +1,7 @@
 // lib/screens/scanner_screen.dart
 import 'dart:convert';
+import 'package:diappbetes/services/profile_service.dart';
+import 'package:diappbetes/widgets/gluten_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -17,6 +19,7 @@ class ScannedProduct {
   final double fatPer100g;
   final double proteinPer100g;
   final String? imageUrl;
+  final bool? containsGluten;
 
   const ScannedProduct({
     required this.barcode,
@@ -27,11 +30,13 @@ class ScannedProduct {
     required this.fatPer100g,
     required this.proteinPer100g,
     this.imageUrl,
+    this.containsGluten,
   });
 
   factory ScannedProduct.fromOpenFoodFacts(String barcode, Map<String, dynamic> data) {
     final product    = data['product'] as Map<String, dynamic>? ?? {};
     final nutriments = product['nutriments'] as Map<String, dynamic>? ?? {};
+    final bool? hasGluten = _detectGluten(product);
 
     return ScannedProduct(
       barcode:         barcode,
@@ -50,9 +55,50 @@ class ScannedProduct {
       proteinPer100g:  (nutriments['proteins_100g'] as num?)?.toDouble() ?? 0.0,
       imageUrl:        product['image_front_small_url']?.toString()
                         ?? product['image_url']?.toString(),
+      containsGluten:  hasGluten,
     );
   }
+  
+  static bool? _detectGluten(Map<String, dynamic> product) {
+    // 1. Buscar en allergens_tags (array)
+    final allergensTags = product['allergens_tags'] as List?;
+    if (allergensTags != null) {
+      for (final tag in allergensTags) {
+        final tagStr = tag.toString().toLowerCase();
+        if (tagStr.contains('gluten') || tagStr.contains('wheat') || 
+            tagStr.contains('barley') || tagStr.contains('rye')) {
+          return true;
+        }
+      }
+      // Si hay tags pero ninguno es gluten, probablemente no tiene
+      if (allergensTags.isNotEmpty) return false;
+    }
+
+    // 2. Buscar en allergens (texto)
+    final allergens = product['allergens']?.toString().toLowerCase() ?? '';
+    if (allergens.contains('gluten') || allergens.contains('trigo') ||
+        allergens.contains('wheat') || allergens.contains('centeño')) {
+      return true;
+    }
+
+    // 3. Buscar en ingredients_analysis_tags
+    final analysisTags = product['ingredients_analysis_tags'] as List?;
+    if (analysisTags != null) {
+      for (final tag in analysisTags) {
+        final tagStr = tag.toString().toLowerCase();
+        if (tagStr.contains('gluten')) return true;
+      }
+    }
+
+    // Si no hay información, devolver null (desconocido)
+    if (allergens.isEmpty && allergensTags == null) return null;
+    
+    // Si hay info de alérgenos pero no menciona gluten, probablemente no tiene
+    return false;
+  }
 }
+
+
 
 // ---------------------------------------------------------------------------
 // ScannerScreen
@@ -131,7 +177,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
     final url = Uri.parse(
         'https://world.openfoodfacts.org/api/v2/product/$barcode.json'
         '?fields=product_name,product_name_es,product_name_en,brands,'
-        'nutriments,image_front_small_url,image_url');
+        'nutriments,image_front_small_url,image_url,'
+        'allergens,allergens_tags,ingredients_analysis_tags');
 
     final response = await http.get(url,
         headers: {'User-Agent': 'DiAppBetes/1.0 (contact@diappbetes.com)'})
@@ -463,12 +510,14 @@ class _ProductModalState extends State<_ProductModal> {
   double _raciones = 0;
 
   bool _editingGrams = true;
+  bool _celiacMode = false;
 
   @override
   void initState() {
     super.initState();
     _calcFromGrams();
     _racionesCtrl.text = _raciones.toStringAsFixed(1);
+    _loadCeliacMode();
   }
 
   @override
@@ -476,6 +525,11 @@ class _ProductModalState extends State<_ProductModal> {
     _gramsCtrl.dispose();
     _racionesCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCeliacMode() async {
+    final celiac = await ProfileService().getCeliacMode();
+    if (mounted) setState(() => _celiacMode = celiac);
   }
 
   void _calcFromGrams() {
@@ -592,6 +646,13 @@ class _ProductModalState extends State<_ProductModal> {
                             if (widget.product.brand.isNotEmpty)
                               Text(widget.product.brand,
                                   style: TextStyle(fontSize: 12, color: textSmallColor)),
+                            if (_celiacMode && widget.product.containsGluten != null) ...[
+                              const SizedBox(height: 6),
+                              GlutenIndicator(
+                                containsGluten: widget.product.containsGluten,
+                                size: 14,
+                              ),
+                            ],
                             const SizedBox(height: 4),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

@@ -1,5 +1,7 @@
 import 'package:diappbetes/screens/add_food_detail_modal.dart';
+import 'package:diappbetes/services/profile_service.dart';
 import 'package:diappbetes/widgets/custom_appbar.dart';
+import 'package:diappbetes/widgets/gluten_indicator.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../services/food_service.dart';
@@ -21,6 +23,7 @@ class AddedFood {
   double calculatedHc;
   double calculatedCalories;
   double calculatedRations;
+  final bool? containsGluten;
 
   AddedFood({
     required this.id,
@@ -32,6 +35,7 @@ class AddedFood {
     required this.calculatedHc,
     required this.calculatedCalories,
     required this.calculatedRations,
+    this.containsGluten,
   });
 }
 
@@ -47,6 +51,7 @@ class AddMealScreen extends StatefulWidget {
 
 class _AddMealScreenState extends State<AddMealScreen> {
   final _mealService = MealCreateService();
+  bool _celiacMode = false;
 
   late String _mealTime;
   String _mealType    = '';
@@ -70,6 +75,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
     _setNow();
     _loadUserData();
     _checkAdminRole();
+    _loadCeliacMode();
   }
 
   @override
@@ -82,6 +88,11 @@ class _AddMealScreenState extends State<AddMealScreen> {
   void dispose() {
     _glucemiaCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCeliacMode() async {
+    final celiac = await ProfileService().getCeliacMode();
+    if (mounted) setState(() => _celiacMode = celiac);
   }
 
   // ── Verificar rol de administrador ───────────────────────────────────── //
@@ -130,6 +141,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
             calculatedHc:        (data['calculated_hc'] as num).toDouble(),
             calculatedCalories:  (data['calculated_calories'] as num).toDouble(),
             calculatedRations:   (data['calculated_rations'] as num).toDouble(),
+            containsGluten: data['contains_gluten'] as bool?,
           ));
         }),
       ),
@@ -443,6 +455,14 @@ class _AddMealScreenState extends State<AddMealScreen> {
             Expanded(child: Text(food.name,
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: primaryColor),
                 maxLines: 1, overflow: TextOverflow.ellipsis)),
+            if (_celiacMode && food.containsGluten != null) ...[
+              GlutenIndicator(
+                containsGluten: food.containsGluten,
+                size: 12,
+                showLabel: false,
+              ),
+              const SizedBox(width: 4),
+            ],
             IconButton(
               padding: EdgeInsets.zero, constraints: const BoxConstraints(),
               icon: Icon(Icons.edit, size: 18, color: primaryColor),

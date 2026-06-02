@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:diappbetes/screens/add_food_detail_modal.dart';
+import 'package:diappbetes/services/profile_service.dart';
+import 'package:diappbetes/widgets/gluten_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -103,6 +105,7 @@ class AddFoodModal extends StatefulWidget {
 class _AddFoodModalState extends State<AddFoodModal> {
   final _foodService    = FoodService();
   final _searchCtrl     = TextEditingController();
+  bool _celiacMode = false;
 
   List<Food> _foods        = [];
   bool       _loading      = false;
@@ -121,6 +124,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
   void initState() {
     super.initState();
     setState(() => _foods = _foodService.getLocalFoods());
+    _loadCeliacMode();
   }
 
   @override
@@ -128,6 +132,11 @@ class _AddFoodModalState extends State<AddFoodModal> {
     _searchCtrl.dispose();
     _scannerController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCeliacMode() async {
+    final celiac = await ProfileService().getCeliacMode();
+    if (mounted) setState(() => _celiacMode = celiac);
   }
 
   // ── Búsqueda con debounce de 600ms ───────────────────────────────────── //
@@ -232,7 +241,8 @@ class _AddFoodModalState extends State<AddFoodModal> {
     final url = Uri.parse(
         'https://world.openfoodfacts.org/api/v2/product/$barcode.json'
         '?fields=product_name,product_name_es,product_name_en,brands,'
-        'nutriments,image_front_small_url,image_url');
+        'nutriments,image_front_small_url,image_url,'
+        'allergens,allergens_tags,ingredients_analysis_tags,ingredients_text,ingredients_text_es');
 
     final response = await http.get(url,
         headers: {'User-Agent': 'DiAppBetes/1.0 (contact@diappbetes.com)'})
@@ -258,6 +268,9 @@ class _AddFoodModalState extends State<AddFoodModal> {
         ?? (nutriments['energy-kcal'] as num?)?.toDouble()
         ?? ((nutriments['energy_100g'] as num?)?.toDouble() ?? 0.0) / 4.184;
 
+    // ✅ Mejorar detección de gluten
+    final bool? hasGluten = _detectGluten(product);
+
     return Food(
       id: barcode,
       name: name,
@@ -266,7 +279,69 @@ class _AddFoodModalState extends State<AddFoodModal> {
       caloriesPer100g: calories,
       iconUrl: product['image_front_small_url']?.toString()
           ?? product['image_url']?.toString(),
+      containsGluten: hasGluten,
     );
+  }
+
+  bool? _detectGluten(Map<String, dynamic> product) {
+    // 1. Buscar en allergens_tags (el más fiable)
+    final allergensTags = product['allergens_tags'] as List?;
+    if (allergensTags != null) {
+      for (final tag in allergensTags) {
+        final tagStr = tag.toString().toLowerCase();
+        if (tagStr.contains('en:gluten') || 
+            tagStr.contains('en:wheat') || 
+            tagStr.contains('en:barley') || 
+            tagStr.contains('en:rye') ||
+            tagStr.contains('en:oats')) {
+          return true;
+        }
+      }
+      // Si hay tags pero ninguno es gluten, probablemente no tiene
+      if (allergensTags.isNotEmpty) return false;
+    }
+
+    // 2. Buscar en allergens (texto plano)
+    final allergens = product['allergens']?.toString().toLowerCase() ?? '';
+    if (allergens.contains('gluten') || 
+        allergens.contains('trigo') || 
+        allergens.contains('wheat') || 
+        allergens.contains('barley') ||
+        allergens.contains('centeño') ||
+        allergens.contains('cebada')) {
+      return true;
+    }
+
+    // 3. Buscar en ingredients_analysis_tags
+    final analysisTags = product['ingredients_analysis_tags'] as List?;
+    if (analysisTags != null) {
+      for (final tag in analysisTags) {
+        final tagStr = tag.toString().toLowerCase();
+        if (tagStr.contains('gluten')) return true;
+      }
+    }
+
+    // 4. Buscar en ingredients_text (más lento pero exhaustivo)
+    final ingredients = (product['ingredients_text']?.toString().toLowerCase() ?? '') +
+                       ' ' + 
+                       (product['ingredients_text_es']?.toString().toLowerCase() ?? '');
+    
+    if (ingredients.contains('trigo') || 
+        ingredients.contains('harina de trigo') ||
+        ingredients.contains('gluten') ||
+        ingredients.contains('cebada') ||
+        ingredients.contains('centeno') ||
+        ingredients.contains('avena')) {
+      return true;
+    }
+
+    // Si no hay información, devolver null (desconocido)
+    if (allergens.isEmpty && allergensTags == null && ingredients.isEmpty) {
+      return null;
+    }
+    
+    // Si hay info de alérgenos pero no menciona gluten, probablemente no tiene
+    return false;
   }
 
   void _showNotFoundDialog(String barcode) {
@@ -564,7 +639,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
     );
   }
 
-  Widget _buildFoodRow(Food food) {
+    Widget _buildFoodRow(Food food) {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
     final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
@@ -575,6 +650,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
+          // Thumbnail o icono de categoría
           Container(
             width: 42, height: 42,
             decoration: BoxDecoration(
@@ -593,6 +669,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
           const SizedBox(width: 10),
 
+          // Nombre + macros
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -609,6 +686,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
           const SizedBox(width: 8),
 
+          // Chip categoría
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -620,6 +698,17 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
           const SizedBox(width: 8),
 
+          // ✅ Indicador de gluten (solo si el modo celíaco está activo y hay info)
+          if (_celiacMode && food.containsGluten != null) ...[
+            GlutenIndicator(
+              containsGluten: food.containsGluten,
+              size: 12,
+              showLabel: false,
+            ),
+            const SizedBox(width: 6),
+          ],
+
+          // Botón añadir
           GestureDetector(
             onTap: () => _selectFood(food),
             child: Container(

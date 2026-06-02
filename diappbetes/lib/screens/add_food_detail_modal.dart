@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/food_service.dart';
+import '../services/profile_service.dart';
+import '../widgets/gluten_indicator.dart';
 import 'add_food_modal.dart' show categoryBg, categoryText;
 
 // ---------------------------------------------------------------------------
@@ -42,6 +44,9 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
   bool _updatingFromGrams    = false;
   bool _updatingFromRaciones = false;
 
+  // ✅ NUEVO: Modo celíaco
+  bool _celiacMode = false;
+
   @override
   void initState() {
     super.initState();
@@ -56,6 +61,11 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
     }
     _gramsCtrl.text    = _grams.toStringAsFixed(0);
     _racionesCtrl.text = _raciones.toStringAsFixed(1);
+    _loadCeliacMode();
+    
+    // ✅ DEBUG: Verificar datos del alimento
+    print('🔍 [DEBUG] Alimento: ${widget.selectedFood.name}');
+    print('🔍 [DEBUG] containsGluten: ${widget.selectedFood.containsGluten}');
   }
 
   @override
@@ -63,6 +73,12 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
     _gramsCtrl.dispose();
     _racionesCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCeliacMode() async {
+    final celiac = await ProfileService().getCeliacMode();
+    print('🔍 [DEBUG] Modo celíaco cargado: $celiac');
+    if (mounted) setState(() => _celiacMode = celiac);
   }
 
   // ── Calcular desde gramos ─────────────────────────────────────────────── //
@@ -116,6 +132,7 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
       'calculated_hc':        _hc,
       'calculated_calories':  _calories,
       'calculated_rations':   _raciones,
+      'contains_gluten':      widget.selectedFood.containsGluten, // ✅ NUEVO
     });
     Navigator.pop(context);
   }
@@ -195,6 +212,22 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                               Text('${widget.selectedFood.carbsPer100g.toStringAsFixed(1)}g HC  •  '
                                   '${widget.selectedFood.caloriesPer100g.toStringAsFixed(0)} cal/100g',
                                   style: TextStyle(fontSize: 12, color: textSmallColor)),
+                              // ✅ NUEVO: Indicador de gluten (siempre que el modo esté activo)
+                              if (_celiacMode) ...[
+                                const SizedBox(height: 6),
+                                GlutenIndicator(
+                                  containsGluten: widget.selectedFood.containsGluten,
+                                  size: 12,
+                                ),
+                              ],
+                              // ✅ DEBUG: Si no se muestra, mostrar por qué
+                              if (!_celiacMode) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  'ℹ️ Activa el modo celíaco en Settings para ver esta información',
+                                  style: TextStyle(fontSize: 11, color: textSmallColor, fontStyle: FontStyle.italic),
+                                ),
+                              ],
                             ],
                           ),
                         ),
