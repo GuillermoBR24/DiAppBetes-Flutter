@@ -52,9 +52,9 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Correo reenviado'),
-            backgroundColor: AppColors.azulFondo,
+          SnackBar(
+            content: const Text('Correo reenviado'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
       }
@@ -68,12 +68,25 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final h = MediaQuery.of(context).size.height;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+    final cardColor = Theme.of(context).cardColor;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+    final dividerColor = Theme.of(context).dividerColor;
 
     return Scaffold(
-      backgroundColor: AppColors.blanco,
+      backgroundColor: isDark ? AppColors.darkBackground : AppColors.blanco,
       body: Stack(
         children: [
-          SizedBox.expand(child: CustomPaint(painter: _BgPainter())),
+          SizedBox.expand(
+            child: CustomPaint(
+              painter: _BgPainter(
+                color: isDark ? const Color(0xFF1A1A2E) : AppColors.azulFondo,
+              ),
+            ),
+          ),
           SafeArea(
             child: SingleChildScrollView(
               child: ConstrainedBox(
@@ -83,16 +96,33 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(height: h * 0.01),
-                      _buildLogo(),
+                      _buildLogo(context, cardColor, isDark),
                       const SizedBox(height: 30),
-                      _sent ? _buildSuccessCard() : _buildFormCard(),
+                      _sent
+                          ? _buildSuccessCard(
+                              context,
+                              primaryColor,
+                              onPrimaryColor,
+                              textColor,
+                              textSmallColor,
+                              isDark,
+                            )
+                          : _buildFormCard(
+                              context,
+                              primaryColor,
+                              onPrimaryColor,
+                              textColor,
+                              textSmallColor,
+                              dividerColor,
+                              isDark,
+                            ),
                       const SizedBox(height: 16),
                       TextButton(
                         onPressed: () =>
                             Navigator.pushReplacementNamed(context, '/login'),
-                        child: const Text('Volver al Login',
+                        child: Text('Volver al Login',
                             style: TextStyle(
-                                color: AppColors.azulFondo,
+                                color: primaryColor,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500)),
                       ),
@@ -109,36 +139,60 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
   }
 
   // ── Logo ─────────────────────────────────────────────────────────────── //
-  Widget _buildLogo() {
+  Widget _buildLogo(BuildContext context, Color cardColor, bool isDark) {
     return Container(
       width: 160, height: 160,
       decoration: BoxDecoration(
-        color: AppColors.blanco, borderRadius: BorderRadius.circular(12),
-        boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, 2))],
+        color: cardColor, 
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : const Color(0x1A000000),
+            blurRadius: 6, 
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       padding: const EdgeInsets.all(10),
       child: Image.asset('assets/LogoDiAppBetes.png', fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(
-              Icons.medical_services_rounded, size: 100, color: AppColors.azulFondo)),
+          errorBuilder: (_, __, ___) => Icon(
+              Icons.medical_services_rounded, 
+              size: 100, 
+              color: Theme.of(context).colorScheme.primary)),
     );
   }
 
   // ── Formulario ───────────────────────────────────────────────────────── //
-  Widget _buildFormCard() {
+  Widget _buildFormCard(
+    BuildContext context,
+    Color primaryColor,
+    Color onPrimaryColor,
+    Color? textColor,
+    Color? textSmallColor,
+    Color dividerColor,
+    bool isDark,
+  ) {
     return _Card(
+      isDark: isDark,
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Recuperar Contraseña',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.azulFondo),
+            Text('Recuperar Contraseña',
+                style: TextStyle(
+                  fontSize: 20, 
+                  fontWeight: FontWeight.bold, 
+                  color: primaryColor,
+                ),
                 textAlign: TextAlign.center),
             const SizedBox(height: 10),
 
-            const Text(
+            Text(
               'Introduce tu email y te enviaremos un enlace para crear una nueva contraseña.',
-              style: TextStyle(fontSize: 13, color: AppColors.grisTexto, height: 1.5),
+              style: TextStyle(fontSize: 13, color: textColor, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 22),
@@ -146,8 +200,8 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
             TextFormField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(color: AppColors.grisTexto, fontSize: 15),
-              decoration: _inputDeco('Email'),
+              style: TextStyle(color: textColor, fontSize: 15),
+              decoration: _inputDeco('Email', primaryColor, textSmallColor, dividerColor),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return 'Campo obligatorio';
                 if (!v.contains('@')) return 'Formato de email incorrecto';
@@ -168,15 +222,19 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
               child: ElevatedButton(
                 onPressed: _loading ? null : _onSend,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.azulFondo,
+                  backgroundColor: primaryColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
                 child: _loading
-                    ? const SizedBox(width: 22, height: 22,
-                        child: CircularProgressIndicator(color: AppColors.blanco, strokeWidth: 2))
-                    : const Text('Enviar enlace',
-                        style: TextStyle(color: AppColors.blanco, fontSize: 15, fontWeight: FontWeight.w600)),
+                    ? SizedBox(width: 22, height: 22,
+                        child: CircularProgressIndicator(color: onPrimaryColor, strokeWidth: 2))
+                    : Text('Enviar enlace',
+                        style: TextStyle(
+                          color: onPrimaryColor, 
+                          fontSize: 15, 
+                          fontWeight: FontWeight.w600,
+                        )),
               ),
             ),
           ],
@@ -186,8 +244,16 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
   }
 
   // ── Pantalla de confirmación (después de enviar) ──────────────────────── //
-  Widget _buildSuccessCard() {
+  Widget _buildSuccessCard(
+    BuildContext context,
+    Color primaryColor,
+    Color onPrimaryColor,
+    Color? textColor,
+    Color? textSmallColor,
+    bool isDark,
+  ) {
     return _Card(
+      isDark: isDark,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -198,8 +264,12 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
           ),
           const SizedBox(height: 16),
 
-          const Text('¡Correo enviado!',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.azulFondo),
+          Text('¡Correo enviado!',
+              style: TextStyle(
+                fontSize: 20, 
+                fontWeight: FontWeight.bold, 
+                color: primaryColor,
+              ),
               textAlign: TextAlign.center),
           const SizedBox(height: 10),
 
@@ -207,21 +277,23 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFE3F2FD),
+              color: primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               _emailController.text.trim(),
-              style: const TextStyle(
-                  color: AppColors.azulFondo, fontWeight: FontWeight.bold, fontSize: 14),
+              style: TextStyle(
+                  color: primaryColor, 
+                  fontWeight: FontWeight.bold, 
+                  fontSize: 14),
               textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 14),
 
-          const Text(
+          Text(
             'Revisa tu bandeja de entrada y haz clic en el enlace para crear una nueva contraseña.\n\nSi no lo ves, revisa la carpeta de spam.',
-            style: TextStyle(fontSize: 13, color: AppColors.grisTexto, height: 1.5),
+            style: TextStyle(fontSize: 13, color: textColor, height: 1.5),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -232,12 +304,16 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
             child: ElevatedButton(
               onPressed: () => Navigator.pushReplacementNamed(context, '/login'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.azulFondo,
+                backgroundColor: primaryColor,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: const Text('Ir al Login',
-                  style: TextStyle(color: AppColors.blanco, fontSize: 15, fontWeight: FontWeight.w600)),
+              child: Text('Ir al Login',
+                  style: TextStyle(
+                    color: onPrimaryColor, 
+                    fontSize: 15, 
+                    fontWeight: FontWeight.w600,
+                  )),
             ),
           ),
           const SizedBox(height: 10),
@@ -247,11 +323,15 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
             height: 46,
             child: OutlinedButton.icon(
               onPressed: _loading ? null : _onResend,
-              icon: const Icon(Icons.refresh, size: 18, color: AppColors.azulFondo),
-              label: const Text('Reenviar correo',
-                  style: TextStyle(color: AppColors.azulFondo, fontSize: 14, fontWeight: FontWeight.w500)),
+              icon: Icon(Icons.refresh, size: 18, color: primaryColor),
+              label: Text('Reenviar correo',
+                  style: TextStyle(
+                    color: primaryColor, 
+                    fontSize: 14, 
+                    fontWeight: FontWeight.w500,
+                  )),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.azulFondo),
+                side: BorderSide(color: primaryColor),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
@@ -261,11 +341,16 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
     );
   }
 
-  InputDecoration _inputDeco(String label) => InputDecoration(
+  InputDecoration _inputDeco(
+    String label,
+    Color primaryColor,
+    Color? textSmallColor,
+    Color dividerColor,
+  ) => InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: AppColors.grisTexto, fontSize: 14),
-        enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
-        focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
+        labelStyle: TextStyle(color: textSmallColor, fontSize: 14),
+        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: dividerColor)),
+        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryColor)),
         errorBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.rojoSuave)),
         focusedErrorBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.rojoSuave)),
       );
@@ -274,7 +359,8 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
 // ── Tarjeta reutilizable ──────────────────────────────────────────────────── //
 class _Card extends StatelessWidget {
   final Widget child;
-  const _Card({required this.child});
+  final bool isDark;
+  const _Card({required this.child, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -284,8 +370,17 @@ class _Card extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: AppColors.blanco, borderRadius: BorderRadius.circular(24),
-        boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4))],
+        color: isDark ? AppColors.darkCard : AppColors.blanco, 
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : const Color(0x1A000000),
+            blurRadius: 12, 
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: child,
     );
@@ -293,13 +388,20 @@ class _Card extends StatelessWidget {
 }
 
 class _BgPainter extends CustomPainter {
+  final Color color;
+
+  _BgPainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = AppColors.azulFondo;
+    final paint = Paint()..color = color;
     canvas.drawRRect(RRect.fromLTRBAndCorners(
       0, -size.height * 0.30, size.width, size.height * 0.50,
       bottomLeft: const Radius.circular(25), bottomRight: const Radius.circular(25),
     ), paint);
   }
-  @override bool shouldRepaint(covariant CustomPainter o) => false;
+  
+  @override 
+  bool shouldRepaint(covariant _BgPainter oldDelegate) => 
+      oldDelegate.color != color;
 }

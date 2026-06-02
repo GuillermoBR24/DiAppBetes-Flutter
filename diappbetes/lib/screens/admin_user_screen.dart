@@ -151,57 +151,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     }
     usernameCtrl.dispose();
   }
-
-  // ── Eliminar usuario ──────────────────────────────────────────────────── //
-  Future<void> _deleteUser(Map<String, dynamic> user) async {
-    final docId = user['_docId'] as String;
-    final name  = user['username']?.toString() ?? user['email']?.toString() ?? docId;
-    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
-
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Theme.of(ctx).cardColor,
-        title: const Text('¿Eliminar usuario?',
-            style: TextStyle(color: AppColors.rojoSuave, fontWeight: FontWeight.bold)),
-        content: Text('Se eliminará el perfil de "$name".\n\nNota: la cuenta de Firebase Auth solo se puede eliminar si el usuario inicia sesión. Aquí se borra el perfil de Firestore.',
-            style: TextStyle(color: Theme.of(ctx).textTheme.bodyMedium?.color)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancelar', style: TextStyle(color: textSmallColor))),
-          TextButton(onPressed: () => Navigator.pop(context, true),
-              child: const Text('Eliminar', style: TextStyle(color: AppColors.rojoSuave, fontWeight: FontWeight.bold))),
-        ],
-      ),
-    );
-    if (ok != true) return;
-
-    try {
-      // Borra perfil + datos relacionados en batch
-      final batch = _db.batch();
-      batch.delete(_db.collection('profiles').doc(docId));
-
-      final ratios = await _db.collection('hc_ratios').where('user_id', isEqualTo: docId).get();
-      for (final d in ratios.docs) batch.delete(d.reference);
-
-      final meals = await _db.collection('meals').where('user_id', isEqualTo: docId).get();
-      for (final m in meals.docs) {
-        final foods = await m.reference.collection('meal_foods').get();
-        for (final f in foods.docs) batch.delete(f.reference);
-        batch.delete(m.reference);
-      }
-
-      final readings = await _db.collection('glucose_readings').where('user_id', isEqualTo: docId).get();
-      for (final d in readings.docs) batch.delete(d.reference);
-
-      await batch.commit();
-      _snack('Perfil de "$name" eliminado');
-      _loadUsers();
-    } catch (e) {
-      _snack('Error al eliminar: $e', isError: true);
-    }
-  }
-
   // ── Helpers ───────────────────────────────────────────────────────────── //
   Widget _roleChipDialog(String label, String value, String current,
       Function(String) onSelect, BuildContext ctx) {
@@ -446,13 +395,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             onPressed: () => _editUser(user),
             icon: Icon(Icons.edit, size: 16, color: primaryColor),
             label: Text('Editar', style: TextStyle(color: primaryColor, fontSize: 13)),
-            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6)),
-          ),
-          const SizedBox(width: 8),
-          TextButton.icon(
-            onPressed: () => _deleteUser(user),
-            icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.rojoSuave),
-            label: const Text('Eliminar', style: TextStyle(color: AppColors.rojoSuave, fontSize: 13)),
             style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6)),
           ),
         ]),

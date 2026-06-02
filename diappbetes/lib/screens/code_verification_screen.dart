@@ -48,21 +48,22 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
     // Simulación hardcodeada: cualquier código de 6 dígitos es válido
     await showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Éxito',
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        title: Text('Éxito',
             style: TextStyle(
-                color: AppColors.azulFondo, fontWeight: FontWeight.bold)),
-        content: const Text(
+                color: Theme.of(ctx).colorScheme.primary, fontWeight: FontWeight.bold)),
+        content: Text(
             'Contraseña cambiada con éxito. Ahora puede iniciar sesión.',
-            style: TextStyle(color: AppColors.grisTexto)),
+            style: TextStyle(color: Theme.of(ctx).textTheme.bodyMedium?.color)),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               if (mounted) Navigator.pushReplacementNamed(context, '/password-changed');
             },
-            child: const Text('OK',
-                style: TextStyle(color: AppColors.azulFondo)),
+            child: Text('OK',
+                style: TextStyle(color: Theme.of(ctx).colorScheme.primary)),
           ),
         ],
       ),
@@ -88,17 +89,18 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
   Future<void> _showAlert(String title, String message) async {
     await showDialog(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
         title: Text(title,
-            style: const TextStyle(
-                color: AppColors.azulFondo, fontWeight: FontWeight.bold)),
+            style: TextStyle(
+                color: Theme.of(ctx).colorScheme.primary, fontWeight: FontWeight.bold)),
         content: Text(message,
-            style: const TextStyle(color: AppColors.grisTexto)),
+            style: TextStyle(color: Theme.of(ctx).textTheme.bodyMedium?.color)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK',
-                style: TextStyle(color: AppColors.azulFondo)),
+            child: Text('OK',
+                style: TextStyle(color: Theme.of(ctx).colorScheme.primary)),
           ),
         ],
       ),
@@ -109,12 +111,24 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+    final cardColor = Theme.of(context).cardColor;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+    final dividerColor = Theme.of(context).dividerColor;
 
     return Scaffold(
-      backgroundColor: AppColors.blanco,
+      backgroundColor: isDark ? AppColors.darkBackground : AppColors.blanco,
       body: Stack(
         children: [
-          SizedBox.expand(child: CustomPaint(painter: _BackgroundPainter())),
+          SizedBox.expand(
+            child: CustomPaint(
+              painter: _BackgroundPainter(
+                color: isDark ? const Color(0xFF1A1A2E) : AppColors.azulFondo,
+              ),
+            ),
+          ),
 
           SafeArea(
             child: SingleChildScrollView(
@@ -126,19 +140,26 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(height: screenHeight * 0.01),
-                      _buildLogo(),
+                      _buildLogo(context, cardColor, isDark),
                       const SizedBox(height: 30),
-                      _buildCard(),
+                      _buildCard(
+                        context,
+                        primaryColor,
+                        onPrimaryColor,
+                        textSmallColor,
+                        dividerColor,
+                        isDark,
+                      ),
                       const SizedBox(height: 16),
 
                       // Botón Volver → /auth
                       TextButton(
                         onPressed: () =>
                             Navigator.pushReplacementNamed(context, '/auth'),
-                        child: const Text(
+                        child: Text(
                           'Volver',
                           style: TextStyle(
-                              color: AppColors.azulFondo,
+                              color: primaryColor,
                               fontSize: 14,
                               fontWeight: FontWeight.w500),
                         ),
@@ -155,61 +176,80 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
     );
   }
 
-  Widget _buildLogo() {
+  Widget _buildLogo(BuildContext context, Color cardColor, bool isDark) {
     return Container(
       width: 160,
       height: 160,
       decoration: BoxDecoration(
-        color: AppColors.blanco,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, 2)),
+        boxShadow: [
+          BoxShadow(
+            color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : const Color(0x1A000000),
+            blurRadius: 6, 
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       padding: const EdgeInsets.all(10),
       child: Image.asset(
         'assets/LogoDiAppBetes.png',
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => const Icon(
+        errorBuilder: (_, __, ___) => Icon(
           Icons.medical_services_rounded,
           size: 100,
-          color: AppColors.azulFondo,
+          color: Theme.of(context).colorScheme.primary,
         ),
       ),
     );
   }
 
-  Widget _buildCard() {
+  Widget _buildCard(
+    BuildContext context,
+    Color primaryColor,
+    Color onPrimaryColor,
+    Color? textSmallColor,
+    Color dividerColor,
+    bool isDark,
+  ) {
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 300),
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
-        color: AppColors.blanco,
+        color: isDark ? AppColors.darkCard : AppColors.blanco,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4)),
+        boxShadow: [
+          BoxShadow(
+            color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : const Color(0x1A000000),
+            blurRadius: 12, 
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Título
-          const Text(
+          Text(
             'Introduce Código',
             style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: AppColors.azulFondo),
+                color: primaryColor),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 10),
 
           // Instrucción (.instruction-message)
-          const Text(
+          Text(
             'Un código fue mandado a su correo.',
-            style: TextStyle(fontSize: 14, color: AppColors.grisTexto, height: 1.4),
+            style: TextStyle(fontSize: 14, color: textSmallColor, height: 1.4),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -224,27 +264,27 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
                 textAlign: TextAlign.center,
                 maxLength: 6,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.azulFondo,
+                  color: primaryColor,
                   letterSpacing: 8,
                 ),
                 decoration: InputDecoration(
                   counterText: '',   // oculta el contador de caracteres
                   hintText: '000000',
-                  hintStyle: const TextStyle(
-                      color: AppColors.grisDivider,
+                  hintStyle: TextStyle(
+                      color: dividerColor,
                       fontSize: 26,
                       letterSpacing: 8),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.grisDivider),
+                    borderSide: BorderSide(color: dividerColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                        color: AppColors.azulFondo, width: 2),
+                    borderSide: BorderSide(
+                        color: primaryColor, width: 2),
                   ),
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -260,15 +300,15 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
             child: ElevatedButton(
               onPressed: _verifyCode,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.azulFondo,
+                backgroundColor: primaryColor,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: const Text(
+              child: Text(
                 'Introducir Código',
                 style: TextStyle(
-                    color: AppColors.blanco,
+                    color: onPrimaryColor,
                     fontSize: 15,
                     fontWeight: FontWeight.w600),
               ),
@@ -282,14 +322,14 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
             child: OutlinedButton(
               onPressed: _resendCode,
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.azulFondo, width: 1.5),
+                side: BorderSide(color: primaryColor, width: 1.5),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text(
+              child: Text(
                 'Reenviar Código',
                 style: TextStyle(
-                    color: AppColors.azulFondo,
+                    color: primaryColor,
                     fontSize: 15,
                     fontWeight: FontWeight.w600),
               ),
@@ -305,9 +345,13 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
 // Fondo — mismo CustomPainter que el resto de pantallas de auth
 // ---------------------------------------------------------------------------
 class _BackgroundPainter extends CustomPainter {
+  final Color color;
+
+  _BackgroundPainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = AppColors.azulFondo;
+    final paint = Paint()..color = color;
     final rect = RRect.fromLTRBAndCorners(
       0, -size.height * 0.35, size.width, size.height * 0.45,
       bottomLeft: const Radius.circular(25),
@@ -317,5 +361,6 @@ class _BackgroundPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _BackgroundPainter oldDelegate) => 
+      oldDelegate.color != color;
 }

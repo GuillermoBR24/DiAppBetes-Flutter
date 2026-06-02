@@ -99,11 +99,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // ── Diálogo de modo mantenimiento ─────────────────────────────────────── //
   void _showMaintenanceDialog(String message) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+    final cardColor = Theme.of(context).cardColor;
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.blanco,
+        backgroundColor: cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Row(
           children: [
@@ -120,7 +125,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Text(
                 'Modo Mantenimiento',
                 style: TextStyle(
-                  color: AppColors.azulFondo,
+                  color: primaryColor,
                   fontWeight: FontWeight.bold,
                   fontSize: 17,
                 ),
@@ -145,8 +150,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 12),
                   Text(
                     message,
-                    style: const TextStyle(
-                      color: AppColors.grisTexto,
+                    style: TextStyle(
+                      color: textColor,
                       fontSize: 14,
                       height: 1.4,
                     ),
@@ -166,16 +171,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Se queda en la pantalla de login
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.azulFondo,
+                backgroundColor: primaryColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 0,
               ),
-              child: const Text(
+              child: Text(
                 'Entendido',
                 style: TextStyle(
-                  color: AppColors.blanco,
+                  color: onPrimaryColor,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -190,12 +195,25 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+    final cardColor = Theme.of(context).cardColor;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+    final dividerColor = Theme.of(context).dividerColor;
 
     return Scaffold(
-      backgroundColor: AppColors.blanco,
+      backgroundColor: isDark ? AppColors.darkBackground : AppColors.blanco,
       body: Stack(
         children: [
-          SizedBox.expand(child: CustomPaint(painter: _BackgroundPainter())),
+          SizedBox.expand(
+            child: CustomPaint(
+              painter: _BackgroundPainter(
+                color: isDark ? const Color(0xFF1A1A2E) : AppColors.azulFondo,
+              ),
+            ),
+          ),
           SafeArea(
             child: SingleChildScrollView(
               child: ConstrainedBox(
@@ -206,14 +224,26 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(height: screenHeight * 0.01),
-                      _buildLogo(),
+                      _buildLogo(context, cardColor, isDark),
                       const SizedBox(height: 30),
-                      _buildLoginCard(),
+                      _buildLoginCard(
+                        context,
+                        primaryColor,
+                        onPrimaryColor,
+                        textColor,
+                        textSmallColor,
+                        dividerColor,
+                        isDark,
+                      ),
                       const SizedBox(height: 16),
                       TextButton(
                         onPressed: () => Navigator.pushReplacementNamed(context, '/auth'),
-                        child: const Text('Volver',
-                            style: TextStyle(color: AppColors.azulFondo, fontSize: 14, fontWeight: FontWeight.w500)),
+                        child: Text('Volver',
+                            style: TextStyle(
+                              color: primaryColor, 
+                              fontSize: 14, 
+                              fontWeight: FontWeight.w500,
+                            )),
                       ),
                       const SizedBox(height: 40),
                     ],
@@ -227,38 +257,70 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLogo() {
+  Widget _buildLogo(BuildContext context, Color cardColor, bool isDark) {
     return Container(
       width: 160, height: 160,
       decoration: BoxDecoration(
-        color: AppColors.blanco,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : const Color(0x1A000000),
+            blurRadius: 6, 
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       padding: const EdgeInsets.all(10),
       child: Image.asset('assets/LogoDiAppBetes.png', fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(Icons.medical_services_rounded, size: 100, color: AppColors.azulFondo)),
+          errorBuilder: (_, __, ___) => Icon(
+            Icons.medical_services_rounded, 
+            size: 100, 
+            color: Theme.of(context).colorScheme.primary,
+          )),
     );
   }
 
-  Widget _buildLoginCard() {
+  Widget _buildLoginCard(
+    BuildContext context,
+    Color primaryColor,
+    Color onPrimaryColor,
+    Color? textColor,
+    Color? textSmallColor,
+    Color dividerColor,
+    bool isDark,
+  ) {
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 300),
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
-        color: AppColors.blanco,
+        color: isDark ? AppColors.darkCard : AppColors.blanco,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : const Color(0x1A000000),
+            blurRadius: 12, 
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Login',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.azulFondo),
+            Text('Login',
+                style: TextStyle(
+                  fontSize: 22, 
+                  fontWeight: FontWeight.bold, 
+                  color: primaryColor,
+                ),
                 textAlign: TextAlign.center),
             const SizedBox(height: 20),
 
@@ -266,9 +328,9 @@ class _LoginScreenState extends State<LoginScreen> {
             TextFormField(
               controller: _identifierController,
               keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(color: AppColors.grisTexto, fontSize: 15),
+              style: TextStyle(color: textColor, fontSize: 15),
               onChanged: (_) => _clearError(),
-              decoration: _inputDeco('Email o Usuario'),
+              decoration: _inputDeco('Email o Usuario', primaryColor, textSmallColor, dividerColor),
               validator: (v) => (v == null || v.trim().isEmpty) ? 'Campo obligatorio' : null,
             ),
             const SizedBox(height: 16),
@@ -277,12 +339,12 @@ class _LoginScreenState extends State<LoginScreen> {
             TextFormField(
               controller: _passwordController,
               obscureText: _obscurePassword,
-              style: const TextStyle(color: AppColors.grisTexto, fontSize: 15),
+              style: TextStyle(color: textColor, fontSize: 15),
               onChanged: (_) => _clearError(),
-              decoration: _inputDeco('Contraseña').copyWith(
+              decoration: _inputDeco('Contraseña', primaryColor, textSmallColor, dividerColor).copyWith(
                 suffixIcon: IconButton(
                   icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility,
-                      color: AppColors.grisTexto, size: 20),
+                      color: textSmallColor, size: 20),
                   onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
               ),
@@ -304,15 +366,19 @@ class _LoginScreenState extends State<LoginScreen> {
               child: ElevatedButton(
                 onPressed: _loading ? null : _onLogin,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.azulFondo,
+                  backgroundColor: primaryColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
                 child: _loading
-                    ? const SizedBox(width: 22, height: 22,
-                        child: CircularProgressIndicator(color: AppColors.blanco, strokeWidth: 2))
-                    : const Text('Login',
-                        style: TextStyle(color: AppColors.blanco, fontSize: 16, fontWeight: FontWeight.w600)),
+                    ? SizedBox(width: 22, height: 22,
+                        child: CircularProgressIndicator(color: onPrimaryColor, strokeWidth: 2))
+                    : Text('Login',
+                        style: TextStyle(
+                          color: onPrimaryColor, 
+                          fontSize: 16, 
+                          fontWeight: FontWeight.w600,
+                        )),
               ),
             ),
             const SizedBox(height: 16),
@@ -320,8 +386,12 @@ class _LoginScreenState extends State<LoginScreen> {
             // ¿Olvidaste tu contraseña?
             GestureDetector(
               onTap: () => Navigator.pushNamed(context, '/remember-password'),
-              child: const Text('¿Olvidaste tu contraseña?',
-                  style: TextStyle(color: AppColors.azulFondo, fontSize: 13, fontWeight: FontWeight.w500),
+              child: Text('¿Olvidaste tu contraseña?',
+                  style: TextStyle(
+                    color: primaryColor, 
+                    fontSize: 13, 
+                    fontWeight: FontWeight.w500,
+                  ),
                   textAlign: TextAlign.center),
             ),
           ],
@@ -330,22 +400,34 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  InputDecoration _inputDeco(String label) => InputDecoration(
+  InputDecoration _inputDeco(
+    String label,
+    Color primaryColor,
+    Color? textSmallColor,
+    Color dividerColor,
+  ) => InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: AppColors.grisTexto, fontSize: 14),
-        enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
-        focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
+        labelStyle: TextStyle(color: textSmallColor, fontSize: 14),
+        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: dividerColor)),
+        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryColor)),
         errorBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.rojoSuave)),
         focusedErrorBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.rojoSuave)),
       );
 }
 
 class _BackgroundPainter extends CustomPainter {
+  final Color color;
+
+  _BackgroundPainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = AppColors.azulFondo;
+    final paint = Paint()..color = color;
     canvas.drawRRect(RRect.fromLTRBAndCorners(0, -size.height * 0.30, size.width, size.height * 0.50,
         bottomLeft: const Radius.circular(25), bottomRight: const Radius.circular(25)), paint);
   }
-  @override bool shouldRepaint(covariant CustomPainter o) => false;
+  
+  @override 
+  bool shouldRepaint(covariant _BackgroundPainter oldDelegate) => 
+      oldDelegate.color != color;
 }

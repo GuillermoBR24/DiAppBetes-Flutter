@@ -11,13 +11,24 @@ class PasswordChangedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+    final cardColor = Theme.of(context).cardColor;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
 
     return Scaffold(
-      backgroundColor: AppColors.blanco,
+      backgroundColor: isDark ? AppColors.darkBackground : AppColors.blanco,
       body: Stack(
         children: [
-          // ── Fondo azul (mismo que el resto de pantallas auth) ─────── //
-          SizedBox.expand(child: CustomPaint(painter: _BackgroundPainter())),
+          // ── Fondo dinámico (mismo que el resto de pantallas auth) ─────── //
+          SizedBox.expand(
+            child: CustomPaint(
+              painter: _BackgroundPainter(
+                color: isDark ? const Color(0xFF1A1A2E) : AppColors.azulFondo,
+              ),
+            ),
+          ),
 
           SafeArea(
             child: SingleChildScrollView(
@@ -31,11 +42,17 @@ class PasswordChangedScreen extends StatelessWidget {
                       SizedBox(height: screenHeight * 0.01),
 
                       // ── Logo ─────────────────────────────────────── //
-                      _buildLogo(),
+                      _buildLogo(context, cardColor, isDark),
                       const SizedBox(height: 30),
 
                       // ── Tarjeta de confirmación ───────────────────── //
-                      _buildCard(context),
+                      _buildCard(
+                        context,
+                        primaryColor,
+                        onPrimaryColor,
+                        textColor,
+                        isDark,
+                      ),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -48,64 +65,82 @@ class PasswordChangedScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLogo() {
+  Widget _buildLogo(BuildContext context, Color cardColor, bool isDark) {
     return Container(
       width: 160,
       height: 160,
       decoration: BoxDecoration(
-        color: AppColors.blanco,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: const [
-          BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, 2)),
+        boxShadow: [
+          BoxShadow(
+            color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : const Color(0x1A000000),
+            blurRadius: 6, 
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       padding: const EdgeInsets.all(10),
       child: Image.asset(
         'assets/LogoDiAppBetes.png',
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => const Icon(
+        errorBuilder: (_, __, ___) => Icon(
           Icons.medical_services_rounded,
           size: 100,
-          color: AppColors.azulFondo,
+          color: Theme.of(context).colorScheme.primary,
         ),
       ),
     );
   }
 
-  Widget _buildCard(BuildContext context) {
+  Widget _buildCard(
+    BuildContext context,
+    Color primaryColor,
+    Color onPrimaryColor,
+    Color? textColor,
+    bool isDark,
+  ) {
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 300),
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
-        color: AppColors.blanco,
+        color: isDark ? AppColors.darkCard : AppColors.blanco,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4)),
+        boxShadow: [
+          BoxShadow(
+            color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : const Color(0x1A000000),
+            blurRadius: 12, 
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Título
-          const Text(
+          Text(
             'Contraseña Cambiada',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: AppColors.azulFondo,
+              color: primaryColor,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 10),
 
           // Mensaje de éxito (.success-message)
-          const Text(
+          Text(
             'Felicidades, su contraseña ha sido cambiada con éxito.',
             style: TextStyle(
               fontSize: 15,
-              color: AppColors.grisTexto,
+              color: textColor,
               height: 1.4,
             ),
             textAlign: TextAlign.center,
@@ -116,19 +151,15 @@ class PasswordChangedScreen extends StatelessWidget {
             child: Container(
               width: 180,
               height: 180,
-              decoration: BoxDecoration(
-                color: AppColors.blanco.withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
               child: Image.asset(
                 'assets/TickContaseñaCambiada.png',
                 width: 80,
                 height: 80,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(
+                errorBuilder: (_, __, ___) => Icon(
                   Icons.check_circle_rounded,
                   size: 80,
-                  color: AppColors.blanco,
+                  color: primaryColor,
                 ),
               ),
             ),
@@ -142,15 +173,15 @@ class PasswordChangedScreen extends StatelessWidget {
               onPressed: () =>
                   Navigator.pushReplacementNamed(context, '/login'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.azulFondo,
+                backgroundColor: primaryColor,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: const Text(
+              child: Text(
                 'Volver al Login',
                 style: TextStyle(
-                  color: AppColors.blanco,
+                  color: onPrimaryColor,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -167,9 +198,13 @@ class PasswordChangedScreen extends StatelessWidget {
 // Fondo — mismo CustomPainter que el resto de pantallas auth
 // ---------------------------------------------------------------------------
 class _BackgroundPainter extends CustomPainter {
+  final Color color;
+
+  _BackgroundPainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = AppColors.azulFondo;
+    final paint = Paint()..color = color;
     final rect = RRect.fromLTRBAndCorners(
       0, -size.height * 0.35, size.width, size.height * 0.45,
       bottomLeft: const Radius.circular(25),
@@ -179,5 +214,6 @@ class _BackgroundPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _BackgroundPainter oldDelegate) => 
+      oldDelegate.color != color;
 }

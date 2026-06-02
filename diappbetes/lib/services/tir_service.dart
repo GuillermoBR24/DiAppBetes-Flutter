@@ -1,3 +1,4 @@
+// lib/services/tir_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -11,11 +12,33 @@ class TirService {
 
   String? get _uid => _auth.currentUser?.uid;
 
-  // ── % lecturas en rango 70–180 mg/dL (últimos 7 días) ────────────────── //
-  // Además extrae el dato de glucemia de las comidas si no hay lecturas
-  // separadas, para que el TIR funcione aunque el usuario solo use add_meal
+  // ── Obtener configuración global ────────────────────────────────────── //
+  Future<Map<String, dynamic>> _getGlobalConfig() async {
+    try {
+      final doc = await _db.collection('app_config').doc('global').get();
+      if (doc.exists) {
+        return doc.data()!;
+      }
+    } catch (e) {
+      print('⚠️ [TIR] Error obteniendo config global: $e');
+    }
+    // Valores por defecto si no existe el documento
+    return {
+      'default_glucose_min': 70.0,
+      'default_glucose_max': 180.0,
+    };
+  }
+
+  // ── % lecturas en rango configurado (últimos 7 días) ────────────────── //
   Future<int> getTirPercentage() async {
     if (_uid == null) return 0;
+
+    // Obtener rangos configurados
+    final config = await _getGlobalConfig();
+    final glucoseMin = (config['default_glucose_min'] as num?)?.toDouble() ?? 70.0;
+    final glucoseMax = (config['default_glucose_max'] as num?)?.toDouble() ?? 180.0;
+    
+    print('📊 [TIR] Rangos de glucosa configurados: $glucoseMin - $glucoseMax mg/dL');
 
     final since = DateTime.now().subtract(const Duration(days: 7));
 
@@ -29,7 +52,8 @@ class TirService {
 
     if (levels.isEmpty) return 0;
 
-    final inRange = levels.where((v) => v >= 70 && v <= 180).length;
+    // 3. Calcular % en rango usando valores configurados
+    final inRange = levels.where((v) => v >= glucoseMin && v <= glucoseMax).length;
     return ((inRange / levels.length) * 100).round();
   }
 
