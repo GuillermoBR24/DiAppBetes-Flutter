@@ -173,24 +173,34 @@ class _ScannerScreenState extends State<ScannerScreen> {
   void _showNotFound(String barcode) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Producto no encontrado',
-            style: TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.bold)),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        title: Text('Producto no encontrado',
+            style: TextStyle(
+              color: Theme.of(ctx).colorScheme.primary, 
+              fontWeight: FontWeight.bold,
+            )),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.search_off, size: 48, color: AppColors.grisDivider),
+            Icon(Icons.search_off, size: 48, color: Theme.of(ctx).dividerColor),
             const SizedBox(height: 12),
             Text('No se encontraron datos para el código:\n$barcode',
-                style: const TextStyle(color: AppColors.grisTexto, fontSize: 13),
+                style: TextStyle(
+                  color: Theme.of(ctx).textTheme.bodyMedium?.color, 
+                  fontSize: 13,
+                ),
                 textAlign: TextAlign.center),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () { Navigator.pop(context); _resumeScanner(); },
-            child: const Text('Escanear de nuevo',
-                style: TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.bold)),
+            child: Text('Escanear de nuevo',
+                style: TextStyle(
+                  color: Theme.of(ctx).colorScheme.primary, 
+                  fontWeight: FontWeight.bold,
+                )),
           ),
         ],
       ),
@@ -217,11 +227,16 @@ class _ScannerScreenState extends State<ScannerScreen> {
   // =========================================================================
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final cardColor = Theme.of(context).cardColor;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: AppColors.azulFondo,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         titleSpacing: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -231,7 +246,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: AppColors.blanco,
+                color: cardColor,
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
@@ -249,14 +264,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
                   height: 42,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) => 
-                      const Icon(Icons.image_not_supported, color: AppColors.azulFondo, size: 20),
+                      Icon(Icons.image_not_supported, color: primaryColor, size: 20),
                 ),
               ),
             ),
             const SizedBox(width: 12),
-            const Text('DiAppBetes',
+            Text('DiAppBetes',
                 style: TextStyle(
-                  color: AppColors.blanco, 
+                  color: Theme.of(context).appBarTheme.foregroundColor, 
                   fontWeight: FontWeight.bold, 
                   fontSize: 20
                 )),
@@ -269,16 +284,16 @@ class _ScannerScreenState extends State<ScannerScreen> {
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.blanco,
+                color: cardColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.admin_panel_settings, color: AppColors.azulFondo, size: 14),
-                  SizedBox(width: 4),
+                  Icon(Icons.admin_panel_settings, color: primaryColor, size: 14),
+                  const SizedBox(width: 4),
                   Text('Admin', 
                       style: TextStyle(
-                        color: AppColors.azulFondo, 
+                        color: primaryColor, 
                         fontSize: 11, 
                         fontWeight: FontWeight.w600,
                       )),
@@ -294,18 +309,18 @@ class _ScannerScreenState extends State<ScannerScreen> {
               controller: _controller,
               onDetect: _onBarcodeDetected,
             ),
-          if (_scanning) _buildScanOverlay(),
+          if (_scanning) _buildScanOverlay(primaryColor),
           if (_loading)
             Container(
               color: Colors.black54,
-              child: const Center(
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: AppColors.blanco),
-                    SizedBox(height: 16),
+                    CircularProgressIndicator(color: onPrimaryColor),
+                    const SizedBox(height: 16),
                     Text('Buscando producto...',
-                        style: TextStyle(color: AppColors.blanco, fontSize: 16)),
+                        style: TextStyle(color: onPrimaryColor, fontSize: 16)),
                   ],
                 ),
               ),
@@ -322,12 +337,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
   }
 
   // ── Overlay con recuadro guía y linterna ─────────────────────────────── //
-  Widget _buildScanOverlay() {
+  Widget _buildScanOverlay(Color primaryColor) {
     return Stack(
       children: [
         CustomPaint(
           size: Size.infinite,
-          painter: _ScanFramePainter(),
+          painter: _ScanFramePainter(primaryColor),
         ),
         const Positioned(
           top: 60,
@@ -372,6 +387,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
 // Pintor del recuadro de escaneo
 // ---------------------------------------------------------------------------
 class _ScanFramePainter extends CustomPainter {
+  final Color borderColor;
+
+  _ScanFramePainter(this.borderColor);
+
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
@@ -384,7 +403,7 @@ class _ScanFramePainter extends CustomPainter {
     final overlay = Paint()..color = Colors.black.withOpacity(0.55);
     final clear   = Paint()..blendMode = BlendMode.clear;
     final border  = Paint()
-      ..color = AppColors.azulFondo
+      ..color = borderColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
@@ -403,7 +422,7 @@ class _ScanFramePainter extends CustomPainter {
     );
 
     final corner = Paint()
-      ..color = AppColors.azulFondo
+      ..color = borderColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5
       ..strokeCap = StrokeCap.round;
@@ -420,7 +439,8 @@ class _ScanFramePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_) => false;
+  bool shouldRepaint(covariant _ScanFramePainter oldDelegate) => 
+      oldDelegate.borderColor != borderColor;
 }
 
 // ---------------------------------------------------------------------------
@@ -496,28 +516,36 @@ class _ProductModalState extends State<_ProductModal> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+    final cardColor = Theme.of(context).cardColor;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+    final dividerColor = Theme.of(context).dividerColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = Theme.of(context).colorScheme.surface;
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.88,
-      decoration: const BoxDecoration(
-        color: AppColors.blanco,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: const BoxDecoration(
-              color: AppColors.azulFondo,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: primaryColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Row(children: [
-              const Expanded(
+              Expanded(
                 child: Text('Producto Escaneado',
-                    style: TextStyle(color: AppColors.blanco, fontSize: 18, fontWeight: FontWeight.bold)),
+                    style: TextStyle(color: onPrimaryColor, fontSize: 18, fontWeight: FontWeight.bold)),
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: AppColors.blanco),
+                icon: Icon(Icons.close, color: onPrimaryColor),
                 onPressed: () => Navigator.pop(context),
               ),
             ]),
@@ -535,7 +563,9 @@ class _ProductModalState extends State<_ProductModal> {
                       Container(
                         width: 72, height: 72,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF5F5F5),
+                          color: isDark 
+                              ? surfaceColor.withOpacity(0.5)
+                              : const Color(0xFFF5F5F5),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: widget.product.imageUrl != null
@@ -544,8 +574,8 @@ class _ProductModalState extends State<_ProductModal> {
                                 child: Image.network(widget.product.imageUrl!,
                                     fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) =>
-                                        const Icon(Icons.fastfood, size: 36, color: AppColors.azulFondo)))
-                            : const Icon(Icons.fastfood, size: 36, color: AppColors.azulFondo),
+                                        Icon(Icons.fastfood, size: 36, color: primaryColor)))
+                            : Icon(Icons.fastfood, size: 36, color: primaryColor),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -553,21 +583,21 @@ class _ProductModalState extends State<_ProductModal> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(widget.product.name,
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-                                    color: AppColors.azulFondo),
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
+                                    color: primaryColor),
                                 maxLines: 2, overflow: TextOverflow.ellipsis),
                             if (widget.product.brand.isNotEmpty)
                               Text(widget.product.brand,
-                                  style: const TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+                                  style: TextStyle(fontSize: 12, color: textSmallColor)),
                             const SizedBox(height: 4),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE3F2FD),
+                                color: primaryColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text('Cód: ${widget.product.barcode}',
-                                  style: const TextStyle(fontSize: 11, color: AppColors.azulFondo)),
+                                  style: TextStyle(fontSize: 11, color: primaryColor)),
                             ),
                           ],
                         ),
@@ -579,29 +609,31 @@ class _ProductModalState extends State<_ProductModal> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8F9FA),
+                      color: isDark 
+                          ? surfaceColor.withOpacity(0.5)
+                          : const Color(0xFFF8F9FA),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Valores nutricionales por 100g',
+                        Text('Valores nutricionales por 100g',
                             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold,
-                                color: AppColors.azulFondo)),
+                                color: primaryColor)),
                         const SizedBox(height: 10),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             _macroCol('HC', '${widget.product.carbsPer100g.toStringAsFixed(1)}g',
-                                AppColors.ambarSuave),
+                                AppColors.ambarSuave, textSmallColor),
                             _macroCol('Calorías',
                                 '${widget.product.caloriesPer100g.toStringAsFixed(0)} kcal',
-                                AppColors.rojoSuave),
+                                AppColors.rojoSuave, textSmallColor),
                             _macroCol('Grasas', '${widget.product.fatPer100g.toStringAsFixed(1)}g',
-                                AppColors.verdesuave),
+                                AppColors.verdesuave, textSmallColor),
                             _macroCol('Proteínas',
                                 '${widget.product.proteinPer100g.toStringAsFixed(1)}g',
-                                AppColors.azulFondo),
+                                primaryColor, textSmallColor),
                           ],
                         ),
                       ],
@@ -609,12 +641,12 @@ class _ProductModalState extends State<_ProductModal> {
                   ),
                   const SizedBox(height: 20),
 
-                  const Text('Calculadora de raciones',
+                  Text('Calculadora de raciones',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-                          color: AppColors.azulFondo)),
+                          color: primaryColor)),
                   const SizedBox(height: 4),
-                  const Text('Introduce los gramos o las raciones — el otro campo se calcula solo.',
-                      style: TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+                  Text('Introduce los gramos o las raciones — el otro campo se calcula solo.',
+                      style: TextStyle(fontSize: 12, color: textSmallColor)),
                   const SizedBox(height: 14),
 
                   Row(children: [
@@ -623,36 +655,42 @@ class _ProductModalState extends State<_ProductModal> {
                       suffix: 'g',
                       controller: _gramsCtrl,
                       onChanged: _onGramsChanged,
+                      primaryColor: primaryColor,
+                      textSmallColor: textSmallColor,
+                      dividerColor: dividerColor,
                     )),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Icon(Icons.swap_horiz, color: AppColors.azulFondo),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Icon(Icons.swap_horiz, color: primaryColor),
                     ),
                     Expanded(child: _inputField(
                       label: 'Raciones',
                       suffix: 'R',
                       controller: _racionesCtrl,
                       onChanged: _onRacionesChanged,
+                      primaryColor: primaryColor,
+                      textSmallColor: textSmallColor,
+                      dividerColor: dividerColor,
                     )),
                   ]),
                   const SizedBox(height: 4),
-                  const Text('1 ración = 10g HC',
-                      style: TextStyle(fontSize: 11, color: AppColors.grisTexto),
+                  Text('1 ración = 10g HC',
+                      style: TextStyle(fontSize: 11, color: textSmallColor),
                       textAlign: TextAlign.right),
                   const SizedBox(height: 16),
 
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE3F2FD),
+                      color: primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _resultCol('HC total', '${_hc.toStringAsFixed(1)}g', AppColors.ambarSuave),
-                        _resultCol('Calorías', '${_calories.toStringAsFixed(0)} kcal', AppColors.rojoSuave),
-                        _resultCol('Raciones', _raciones.toStringAsFixed(1), AppColors.azulFondo),
+                        _resultCol('HC total', '${_hc.toStringAsFixed(1)}g', AppColors.ambarSuave, textSmallColor),
+                        _resultCol('Calorías', '${_calories.toStringAsFixed(0)} kcal', AppColors.rojoSuave, textSmallColor),
+                        _resultCol('Raciones', _raciones.toStringAsFixed(1), primaryColor, textSmallColor),
                       ],
                     ),
                   ),
@@ -662,11 +700,11 @@ class _ProductModalState extends State<_ProductModal> {
                     height: 50,
                     child: OutlinedButton.icon(
                       onPressed: widget.onRescan,
-                      icon: const Icon(Icons.qr_code_scanner, color: AppColors.azulFondo),
-                      label: const Text('Escanear otro producto',
-                          style: TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.w600)),
+                      icon: Icon(Icons.qr_code_scanner, color: primaryColor),
+                      label: Text('Escanear otro producto',
+                          style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600)),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.azulFondo),
+                        side: BorderSide(color: primaryColor),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
@@ -680,17 +718,17 @@ class _ProductModalState extends State<_ProductModal> {
     );
   }
 
-  Widget _macroCol(String label, String value, Color color) => Column(
+  Widget _macroCol(String label, String value, Color color, Color? labelColor) => Column(
     children: [
       Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
-      Text(label, style: const TextStyle(fontSize: 10, color: AppColors.grisTexto)),
+      Text(label, style: TextStyle(fontSize: 10, color: labelColor)),
     ],
   );
 
-  Widget _resultCol(String label, String value, Color color) => Column(
+  Widget _resultCol(String label, String value, Color color, Color? labelColor) => Column(
     children: [
       Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-      Text(label, style: const TextStyle(fontSize: 11, color: AppColors.grisTexto)),
+      Text(label, style: TextStyle(fontSize: 11, color: labelColor)),
     ],
   );
 
@@ -699,18 +737,21 @@ class _ProductModalState extends State<_ProductModal> {
     required String suffix,
     required TextEditingController controller,
     required ValueChanged<String> onChanged,
+    required Color primaryColor,
+    required Color? textSmallColor,
+    required Color dividerColor,
   }) => TextField(
     controller: controller,
     keyboardType: const TextInputType.numberWithOptions(decimal: true),
     textAlign: TextAlign.center,
-    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.azulFondo),
+    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor),
     decoration: InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: AppColors.grisTexto, fontSize: 13),
+      labelStyle: TextStyle(color: textSmallColor, fontSize: 13),
       suffixText: suffix,
-      suffixStyle: const TextStyle(color: AppColors.grisTexto, fontSize: 13),
-      enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
-      focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
+      suffixStyle: TextStyle(color: textSmallColor, fontSize: 13),
+      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: dividerColor)),
+      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryColor)),
     ),
     onChanged: onChanged,
   );

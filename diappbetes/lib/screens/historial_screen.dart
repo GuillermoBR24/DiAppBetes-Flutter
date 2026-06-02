@@ -119,10 +119,11 @@ class _HistorialScreenState extends State<HistorialScreen> {
       locale: const Locale('es'),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: AppColors.azulFondo,
-            onPrimary: AppColors.blanco,
-            surface: AppColors.blanco,
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+            primary: Theme.of(context).colorScheme.primary,
+            onPrimary: Theme.of(context).colorScheme.onPrimary,
+            surface: Theme.of(context).cardColor,
+            onSurface: Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
         child: child!,
@@ -180,11 +181,15 @@ class _HistorialScreenState extends State<HistorialScreen> {
   // =========================================================================
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final cardColor = Theme.of(context).cardColor;
+
     return Scaffold(
-      backgroundColor: AppColors.blanco,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: AppColors.azulFondo,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         titleSpacing: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -194,7 +199,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: AppColors.blanco,
+                color: cardColor,
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
@@ -212,14 +217,14 @@ class _HistorialScreenState extends State<HistorialScreen> {
                   height: 42,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) => 
-                      const Icon(Icons.image_not_supported, color: AppColors.azulFondo, size: 20),
+                      Icon(Icons.image_not_supported, color: primaryColor, size: 20),
                 ),
               ),
             ),
             const SizedBox(width: 12),
-            const Text('DiAppBetes',
+            Text('DiAppBetes',
                 style: TextStyle(
-                  color: AppColors.blanco, 
+                  color: Theme.of(context).appBarTheme.foregroundColor, 
                   fontWeight: FontWeight.bold, 
                   fontSize: 20
                 )),
@@ -232,16 +237,16 @@ class _HistorialScreenState extends State<HistorialScreen> {
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.blanco,
+                color: cardColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.admin_panel_settings, color: AppColors.azulFondo, size: 14),
-                  SizedBox(width: 4),
+                  Icon(Icons.admin_panel_settings, color: primaryColor, size: 14),
+                  const SizedBox(width: 4),
                   Text('Admin', 
                       style: TextStyle(
-                        color: AppColors.azulFondo, 
+                        color: primaryColor, 
                         fontSize: 11, 
                         fontWeight: FontWeight.w600,
                       )),
@@ -251,9 +256,9 @@ class _HistorialScreenState extends State<HistorialScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.azulFondo))
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
           : RefreshIndicator(
-              color: AppColors.azulFondo,
+              color: primaryColor,
               onRefresh: () async {
                 await _loadMeals();
                 await _checkAdminRole();
@@ -264,8 +269,8 @@ class _HistorialScreenState extends State<HistorialScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Mis Comidas',
-                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+                    Text('Mis Comidas',
+                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: primaryColor)),
                     const SizedBox(height: 10),
 
                     // ── Selector de fecha ────────────────────────────── //
@@ -274,20 +279,20 @@ class _HistorialScreenState extends State<HistorialScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE3F2FD),
+                          color: primaryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.calendar_today, size: 18, color: AppColors.azulFondo),
+                            Icon(Icons.calendar_today, size: 18, color: primaryColor),
                             const SizedBox(width: 8),
                             Text(
                               _dateLabel(_selectedDate),
-                              style: const TextStyle(color: AppColors.azulFondo, fontSize: 15, fontWeight: FontWeight.w500),
+                              style: TextStyle(color: primaryColor, fontSize: 15, fontWeight: FontWeight.w500),
                             ),
                             const SizedBox(width: 6),
-                            const Icon(Icons.arrow_drop_down, color: AppColors.azulFondo),
+                            Icon(Icons.arrow_drop_down, color: primaryColor),
                           ],
                         ),
                       ),
@@ -316,6 +321,10 @@ class _HistorialScreenState extends State<HistorialScreen> {
   // ── Tarjeta comidas ───────────────────────────────────────────────────── //
   Widget _buildMealsCard() {
     const tipos = ['todas','desayuno','almuerzo','comida','merienda','cena'];
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+    final dividerColor = Theme.of(context).dividerColor;
 
     return _Card(
       child: Column(
@@ -326,7 +335,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Comidas (${_filteredMeals.length})',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor)),
             ],
           ),
           const SizedBox(height: 10),
@@ -334,17 +343,17 @@ class _HistorialScreenState extends State<HistorialScreen> {
           // Filtro por tipo
           DropdownButtonFormField<String>(
             value: _selectedType,
-            style: const TextStyle(color: AppColors.grisTexto, fontSize: 14),
-            decoration: const InputDecoration(
+            style: TextStyle(color: textColor, fontSize: 14),
+            decoration: InputDecoration(
               labelText: 'Filtrar por tipo',
-              labelStyle: TextStyle(color: AppColors.grisTexto, fontSize: 13),
-              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
-              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
+              labelStyle: TextStyle(color: textSmallColor, fontSize: 13),
+              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: dividerColor)),
+              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryColor)),
             ),
             items: tipos.map((t) => DropdownMenuItem(
               value: t,
               child: Text(t[0].toUpperCase() + t.substring(1),
-                  style: const TextStyle(color: AppColors.grisTexto)),
+                  style: TextStyle(color: textColor)),
             )).toList(),
             onChanged: (v) { setState(() => _selectedType = v ?? 'todas'); _applyFilters(); },
           ),
@@ -352,11 +361,11 @@ class _HistorialScreenState extends State<HistorialScreen> {
 
           // Lista de comidas
           if (_filteredMeals.isEmpty)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
+                padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Text('No se han registrado comidas aún.',
-                    style: TextStyle(color: AppColors.grisTexto, fontSize: 14)),
+                    style: TextStyle(color: textColor, fontSize: 14)),
               ),
             )
           else
@@ -368,8 +377,9 @@ class _HistorialScreenState extends State<HistorialScreen> {
 
   // ── Item de comida (equivalente al .meal-item del HTML) ──────────────── //
   Widget _buildMealItem(int i, MealDTO meal) {
-    final bg = mealBg(meal.mealType);
-    final fg = mealFg(meal.mealType);
+    final bg = mealBg(context, meal.mealType);
+    final fg = mealFg(context, meal.mealType);
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
 
     return GestureDetector(
       onTap: () => _openMealDetails(meal),
@@ -397,7 +407,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                   children: [
                     Text('${meal.totalHc.toStringAsFixed(1)}g',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: fg)),
-                    const Text('HC', style: TextStyle(fontSize: 11, color: AppColors.grisTexto)),
+                    Text('HC', style: TextStyle(fontSize: 11, color: textSmallColor)),
                   ],
                 ),
               ],
@@ -406,23 +416,23 @@ class _HistorialScreenState extends State<HistorialScreen> {
 
             // Fecha
             Row(children: [
-              const Icon(Icons.access_time, size: 14, color: AppColors.grisTexto),
+              Icon(Icons.access_time, size: 14, color: textSmallColor),
               const SizedBox(width: 4),
               Text(_formatMealDate(meal.createdAt),
-                  style: const TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+                  style: TextStyle(fontSize: 12, color: textSmallColor)),
             ]),
             const SizedBox(height: 4),
 
             // Detalles
             Row(children: [
               Text('${meal.totalCalories.toStringAsFixed(0)} cal',
-                  style: const TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+                  style: TextStyle(fontSize: 12, color: textSmallColor)),
               const SizedBox(width: 10),
               Text('${meal.foods.length} alimentos',
-                  style: const TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+                  style: TextStyle(fontSize: 12, color: textSmallColor)),
               const SizedBox(width: 10),
               Text('${meal.totalRations.toStringAsFixed(1)} raciones',
-                  style: const TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+                  style: TextStyle(fontSize: 12, color: textSmallColor)),
             ]),
           ],
         ),
@@ -432,12 +442,14 @@ class _HistorialScreenState extends State<HistorialScreen> {
 
   // ── Tarjeta estadísticas ──────────────────────────────────────────────── //
   Widget _buildStatsCard() {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Estadísticas',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+          Text('Estadísticas',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor)),
           const SizedBox(height: 14),
           GridView.count(
             crossAxisCount: 2,
@@ -459,23 +471,29 @@ class _HistorialScreenState extends State<HistorialScreen> {
   }
 
   Widget _statItem(IconData icon, String label, String value) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
+        color: isDark 
+            ? Theme.of(context).colorScheme.surface.withOpacity(0.5)
+            : const Color(0xFFF8F9FA),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(children: [
-        Icon(icon, size: 26, color: AppColors.azulFondo),
+        Icon(icon, size: 26, color: primaryColor),
         const SizedBox(width: 8),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(label, style: const TextStyle(fontSize: 10, color: AppColors.grisTexto)),
+              Text(label, style: TextStyle(fontSize: 10, color: textSmallColor)),
               Text(value,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.azulFondo),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: primaryColor),
                   overflow: TextOverflow.ellipsis),
             ],
           ),
@@ -489,13 +507,24 @@ class _HistorialScreenState extends State<HistorialScreen> {
 class _Card extends StatelessWidget {
   final Widget child;
   const _Card({required this.child});
+  
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity, padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: AppColors.cardBackground, borderRadius: BorderRadius.circular(24),
-      boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4))],
-    ),
-    child: child,
-  );
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity, padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor, 
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withOpacity(0.3) : const Color(0x1A000000),
+            blurRadius: 12, 
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
 }

@@ -56,10 +56,16 @@ class AddMealSummaryModal extends StatelessWidget {
   // =========================================================================
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+    final cardColor = Theme.of(context).cardColor;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+    final dividerColor = Theme.of(context).dividerColor;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
-      backgroundColor: AppColors.blanco,
+      backgroundColor: cardColor,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -67,14 +73,14 @@ class AddMealSummaryModal extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            decoration: const BoxDecoration(
-              color: AppColors.azulFondo,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: primaryColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            child: const Text(
+            child: Text(
               'DiAppBetes',
               style: TextStyle(
-                color: AppColors.blanco,
+                color: onPrimaryColor,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -90,12 +96,12 @@ class AddMealSummaryModal extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Título
-                  const Text(
+                  Text(
                     'Resumen de la Comida',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.azulFondo,
+                      color: primaryColor,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -107,42 +113,55 @@ class AddMealSummaryModal extends StatelessWidget {
                     value: meal.mealType.isNotEmpty
                         ? _capitalize(meal.mealType)
                         : 'No definido',
+                    valueColor: primaryColor,
+                    labelColor: textSmallColor,
                   ),
                   _detailRow(
                     label: 'Fecha y Hora',
                     value: _formatDateTime(meal.createdAt),
+                    valueColor: primaryColor,
+                    labelColor: textSmallColor,
                   ),
 
                   // ── Divider ───────────────────────────────────────── //
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 14),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     child: Divider(
-                        color: AppColors.grisDivider, thickness: 2),
+                        color: dividerColor, thickness: 2),
                   ),
 
                   // ── Filas nutricionales ───────────────────────────── //
                   _detailRow(
                     label: 'HC Totales',
                     value: '${meal.totalHc.toStringAsFixed(1)}g',
-                    valueColor: AppColors.verdesuave, // .value-hc
+                    valueColor: AppColors.verdesuave, // .value-hc (semántico)
+                    labelColor: textSmallColor,
                   ),
                   _detailRow(
                     label: 'Calorías',
                     value: '${meal.totalCalories.toStringAsFixed(0)} cal',
+                    valueColor: primaryColor,
+                    labelColor: textSmallColor,
                   ),
                   _detailRow(
                     label: 'Raciones',
                     value: '${meal.totalRations.toStringAsFixed(1)} R',
+                    valueColor: primaryColor,
+                    labelColor: textSmallColor,
                   ),
                   _detailRow(
                     label: 'Glucemia',
                     value: meal.glucoseLevel > 0
                         ? '${meal.glucoseLevel.toStringAsFixed(0)} mg/dl'
                         : 'No registrada',
+                    valueColor: primaryColor,
+                    labelColor: textSmallColor,
                   ),
                   _detailRow(
                     label: 'U. Insulina',
                     value: '${meal.totalInsulin.toStringAsFixed(1)} U',
+                    valueColor: primaryColor,
+                    labelColor: textSmallColor,
                   ),
 
                   const SizedBox(height: 24),
@@ -155,14 +174,14 @@ class AddMealSummaryModal extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(context),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.azulFondo,
+                          backgroundColor: primaryColor,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const Text(
+                        child: Text(
                           'Aceptar',
                           style: TextStyle(
-                            color: AppColors.blanco,
+                            color: onPrimaryColor,
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
                           ),
@@ -183,7 +202,8 @@ class AddMealSummaryModal extends StatelessWidget {
   Widget _detailRow({
     required String label,
     required String value,
-    Color valueColor = AppColors.azulFondo,
+    required Color valueColor,
+    Color? labelColor,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -192,9 +212,9 @@ class AddMealSummaryModal extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: AppColors.grisTexto,
+              color: labelColor,
               fontSize: 15,
             ),
           ),

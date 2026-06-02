@@ -1,5 +1,7 @@
+import 'package:diappbetes/providers/theme_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/profile_service.dart';
 import '../services/hc_ratio_service.dart';
@@ -313,14 +315,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       initialTime: TimeOfDay(hour: currentMins ~/ 60, minute: currentMins % 60),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: AppColors.azulFondo,
-            onPrimary: AppColors.blanco,
-            surface: AppColors.blanco,
-            onSurface: AppColors.grisTexto,
+          colorScheme: Theme.of(ctx).colorScheme.copyWith(
+            primary: Theme.of(ctx).colorScheme.primary,
+            onPrimary: Theme.of(ctx).colorScheme.onPrimary,
+            surface: Theme.of(ctx).colorScheme.surface,
+            onSurface: Theme.of(ctx).colorScheme.onSurface,
           ),
           textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(foregroundColor: AppColors.azulFondo)),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).colorScheme.primary,
+            ),
+          ),
         ),
         child: MediaQuery(
           data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
@@ -348,11 +353,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       lastDate: DateTime.now(),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.light(
-            primary: AppColors.azulFondo, onPrimary: AppColors.blanco,
-            surface: AppColors.blanco, onSurface: AppColors.grisTexto),
+          colorScheme: Theme.of(ctx).colorScheme.copyWith(
+            primary: Theme.of(ctx).colorScheme.primary,
+            onPrimary: Theme.of(ctx).colorScheme.onPrimary,
+            surface: Theme.of(ctx).colorScheme.surface,
+            onSurface: Theme.of(ctx).colorScheme.onSurface,
+          ),
           textButtonTheme: TextButtonThemeData(
-            style: TextButton.styleFrom(foregroundColor: AppColors.azulFondo)),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).colorScheme.primary,
+            ),
+          ),
         ),
         child: child!,
       ),
@@ -397,14 +408,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<bool> _confirm(String title, String msg, String btn, Color color) async {
     final r = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(title, style: const TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.bold)),
-        content: Text(msg, style: const TextStyle(color: AppColors.grisTexto)),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        title: Text(title, 
+            style: TextStyle(
+              color: Theme.of(ctx).colorScheme.primary, 
+              fontWeight: FontWeight.bold,
+            )),
+        content: Text(msg, 
+            style: TextStyle(color: Theme.of(ctx).textTheme.bodyLarge?.color)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar', style: TextStyle(color: AppColors.grisTexto))),
+              child: Text('Cancelar', 
+                  style: TextStyle(color: Theme.of(ctx).textTheme.bodySmall?.color))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: Text(btn, style: TextStyle(color: color, fontWeight: FontWeight.bold))),
+              child: Text(btn, 
+                  style: TextStyle(color: color, fontWeight: FontWeight.bold))),
         ],
       ),
     );
@@ -419,25 +438,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
-          title: const Text('Confirmar contraseña',
-              style: TextStyle(color: AppColors.azulFondo, fontWeight: FontWeight.bold)),
+          backgroundColor: Theme.of(ctx).cardColor,
+          title: Text('Confirmar contraseña',
+              style: TextStyle(
+                color: Theme.of(ctx).colorScheme.primary, 
+                fontWeight: FontWeight.bold,
+              )),
           content: TextField(
             controller: ctrl, obscureText: obs, autofocus: true,
+            style: TextStyle(color: Theme.of(ctx).textTheme.bodyLarge?.color),
             decoration: InputDecoration(
               labelText: 'Contraseña actual',
-              labelStyle: const TextStyle(color: AppColors.grisTexto),
-              enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
-              focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
+              labelStyle: TextStyle(color: Theme.of(ctx).textTheme.bodySmall?.color),
+              enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Theme.of(ctx).dividerColor)),
+              focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Theme.of(ctx).colorScheme.primary)),
               suffixIcon: IconButton(
-                icon: Icon(obs ? Icons.visibility_off : Icons.visibility, color: AppColors.grisTexto, size: 20),
+                icon: Icon(obs ? Icons.visibility_off : Icons.visibility, 
+                    color: Theme.of(ctx).textTheme.bodySmall?.color, size: 20),
                 onPressed: () => setS(() => obs = !obs),
               ),
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar', style: TextStyle(color: AppColors.grisTexto))),
+            TextButton(onPressed: () => Navigator.pop(ctx), 
+                child: Text('Cancelar', 
+                    style: TextStyle(color: Theme.of(ctx).textTheme.bodySmall?.color))),
             TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text),
-                child: const Text('Confirmar', style: TextStyle(color: AppColors.rojoSuave, fontWeight: FontWeight.bold))),
+                child: Text('Confirmar', 
+                    style: TextStyle(color: AppColors.rojoSuave, fontWeight: FontWeight.bold))),
           ],
         ),
       ),
@@ -461,29 +491,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.blanco,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.azulFondo,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.blanco),
+          icon: Icon(Icons.arrow_back, 
+              color: Theme.of(context).appBarTheme.foregroundColor),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('DiAppBetes',
-            style: TextStyle(color: AppColors.blanco, fontWeight: FontWeight.bold)),
+        title: Text('DiAppBetes',
+            style: TextStyle(
+              color: Theme.of(context).appBarTheme.foregroundColor, 
+              fontWeight: FontWeight.bold,
+            )),
       ),
       body: _loadingProfile
-          ? const Center(child: CircularProgressIndicator(color: AppColors.azulFondo))
+          ? Center(child: CircularProgressIndicator(
+              color: Theme.of(context).colorScheme.primary))
           : SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Mi Perfil',
-                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+                  Text('Mi Perfil',
+                      style: TextStyle(
+                        fontSize: 26, 
+                        fontWeight: FontWeight.bold, 
+                        color: Theme.of(context).colorScheme.primary,
+                      )),
                   const SizedBox(height: 14),
                   _buildProfileCard(),
                   const SizedBox(height: 12),
                   _buildPersonalInfoCard(),
+                  const SizedBox(height: 12),
+                  _buildAppearanceCard(context),
                   const SizedBox(height: 12),
                   _buildDiabetesCard(),
                 ],
@@ -499,20 +541,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Container(
           width: 54, height: 54,
           decoration: BoxDecoration(shape: BoxShape.circle,
-              border: Border.all(color: AppColors.azulFondo, width: 3)),
-          child: const Icon(Icons.person, size: 30, color: AppColors.azulFondo),
+              border: Border.all(color: Theme.of(context).colorScheme.primary, width: 3)),
+          child: Icon(Icons.person, size: 30, color: Theme.of(context).colorScheme.primary),
         ),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_username, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+          Text(_username, 
+              style: TextStyle(
+                fontSize: 18, 
+                fontWeight: FontWeight.bold, 
+                color: Theme.of(context).colorScheme.primary,
+              )),
           const SizedBox(height: 2),
-          Text(_email, style: const TextStyle(fontSize: 13, color: AppColors.grisTexto)),
+          Text(_email, 
+              style: TextStyle(
+                fontSize: 13, 
+                color: Theme.of(context).textTheme.bodySmall?.color,
+              )),
           const SizedBox(height: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            decoration: BoxDecoration(color: const Color(0xFFE3F2FD),
-                border: Border.all(color: AppColors.azulFondo), borderRadius: BorderRadius.circular(20)),
-            child: Text(_role, style: const TextStyle(fontSize: 12, color: AppColors.azulFondo, fontWeight: FontWeight.w500)),
+            decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                border: Border.all(color: Theme.of(context).colorScheme.primary), 
+                borderRadius: BorderRadius.circular(20)),
+            child: Text(_role, 
+                style: TextStyle(
+                  fontSize: 12, 
+                  color: Theme.of(context).colorScheme.primary, 
+                  fontWeight: FontWeight.w500,
+                )),
           ),
         ])),
       ]),
@@ -520,8 +578,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       OutlinedButton.icon(
         onPressed: _logout,
         icon: const Icon(Icons.logout, color: AppColors.rojoSuave, size: 20),
-        label: const Text('Cerrar Sesión', style: TextStyle(color: AppColors.rojoSuave, fontWeight: FontWeight.w600)),
-        style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.rojoSuave),
+        label: const Text('Cerrar Sesión', 
+            style: TextStyle(color: AppColors.rojoSuave, fontWeight: FontWeight.w600)),
+        style: OutlinedButton.styleFrom(
+            side: const BorderSide(color: AppColors.rojoSuave),
             minimumSize: const Size(double.infinity, 46),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
       ),
@@ -534,29 +594,124 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ]),
   );
 
+   Widget _buildAppearanceCard(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final cardColor = Theme.of(context).cardColor;
+    final subtitleColor = Theme.of(context).textTheme.bodySmall?.color ?? AppColors.grisTexto;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : const Color(0x1A000000),
+            blurRadius: 12, 
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Apariencia',
+              style: TextStyle(
+                fontSize: 18, 
+                fontWeight: FontWeight.bold, 
+                color: Theme.of(context).colorScheme.primary,
+              )),
+          const SizedBox(height: 16),
+          // Selector de modo (sistema/claro/oscuro)
+          Text('Seguir configuración del sistema',
+              style: TextStyle(fontSize: 13, color: subtitleColor)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _modeChip(context, 'Claro', Icons.light_mode, ThemeMode.light, themeProvider),
+              const SizedBox(width: 8),
+              _modeChip(context, 'Oscuro', Icons.dark_mode, ThemeMode.dark, themeProvider),
+              const SizedBox(width: 8),
+              _modeChip(context, 'Sistema', Icons.auto_mode, ThemeMode.system, themeProvider),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _modeChip(BuildContext context, String label, IconData icon,
+      ThemeMode mode, ThemeProvider provider) {
+    final isSelected = provider.mode == mode;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => context.read<ThemeProvider>().setMode(mode),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(icon,
+                  size: 20,
+                  color: isSelected 
+                      ? Theme.of(context).colorScheme.onPrimary 
+                      : Theme.of(context).textTheme.bodySmall?.color),
+              const SizedBox(height: 4),
+              Text(label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected 
+                        ? Theme.of(context).colorScheme.onPrimary 
+                        : Theme.of(context).textTheme.bodySmall?.color,
+                  )),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── Tarjeta info personal ─────────────────────────────────────────────── //
   Widget _buildPersonalInfoCard() => _Card(
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        const Text('Información Personal',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+        Text('Información Personal',
+            style: TextStyle(
+              fontSize: 18, 
+              fontWeight: FontWeight.bold, 
+              color: Theme.of(context).colorScheme.primary,
+            )),
         _editingPersonal
             ? Row(children: [
-                IconButton(icon: const Icon(Icons.close, color: AppColors.grisTexto),
+                IconButton(icon: Icon(Icons.close, color: Theme.of(context).textTheme.bodySmall?.color),
                     onPressed: () => setState(() {
                       _editingPersonal = false; _errorPersonal = '';
                       _set(_usernameCtrl, _username); _set(_emailCtrl, _email); _set(_birthDateCtrl, _birthDate);
                     })),
                 _savingPersonal
-                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.azulFondo))
+                    ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Theme.of(context).colorScheme.primary))
                     : IconButton(icon: const Icon(Icons.check, color: Colors.green), onPressed: _savePersonalInfo),
               ])
-            : IconButton(icon: const Icon(Icons.edit, color: AppColors.azulFondo),
+            : IconButton(icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
                 onPressed: () => setState(() => _editingPersonal = true)),
       ]),
       if (_errorPersonal.isNotEmpty)
         Padding(padding: const EdgeInsets.only(bottom: 8),
-            child: Text(_errorPersonal, style: const TextStyle(color: AppColors.rojoSuave, fontSize: 13))),
+            child: Text(_errorPersonal, 
+                style: const TextStyle(color: AppColors.rojoSuave, fontSize: 13))),
       _field('Nombre Usuario', _usernameCtrl, _editingPersonal, TextInputType.text),
       _field('Email', _emailCtrl, _editingPersonal, TextInputType.emailAddress),
       _field('Fecha de nacimiento', _birthDateCtrl, _editingPersonal, TextInputType.datetime,
@@ -568,35 +723,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildDiabetesCard() => _Card(
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        const Text('Gestión Diabetes',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+        Text('Gestión Diabetes',
+            style: TextStyle(
+              fontSize: 18, 
+              fontWeight: FontWeight.bold, 
+              color: Theme.of(context).colorScheme.primary,
+            )),
         _editingDiabetes
             ? Row(children: [
-                IconButton(icon: const Icon(Icons.close, color: AppColors.grisTexto),
+                IconButton(icon: Icon(Icons.close, color: Theme.of(context).textTheme.bodySmall?.color),
                     onPressed: () => setState(() {
                       _editingDiabetes = false; _errorDiabetes = '';
                       _set(_fsiCtrl, _fsi.toString());
                     })),
                 _savingDiabetes
-                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.azulFondo))
+                    ? SizedBox(width: 24, height: 24, child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Theme.of(context).colorScheme.primary))
                     : IconButton(icon: const Icon(Icons.check, color: Colors.green), onPressed: _saveDiabetes),
               ])
-            : IconButton(icon: const Icon(Icons.edit, color: AppColors.azulFondo),
+            : IconButton(icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.primary),
                 onPressed: () => setState(() => _editingDiabetes = true)),
       ]),
       if (_errorDiabetes.isNotEmpty)
         Padding(padding: const EdgeInsets.only(bottom: 8),
-            child: Text(_errorDiabetes, style: const TextStyle(color: AppColors.rojoSuave, fontSize: 13))),
+            child: Text(_errorDiabetes, 
+                style: const TextStyle(color: AppColors.rojoSuave, fontSize: 13))),
       _field('FSI (mg/dl x Unidad)', _fsiCtrl, _editingDiabetes, TextInputType.number),
       const SizedBox(height: 16),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        const Text('Ratio HC', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+        Text('Ratio HC', 
+            style: TextStyle(
+              fontSize: 16, 
+              fontWeight: FontWeight.bold, 
+              color: Theme.of(context).colorScheme.primary,
+            )),
       ]),
       const SizedBox(height: 10),
       ..._hcRatios.asMap().entries.map((e) => _buildHcRow(e.key, e.value)),
       if (_editingDiabetes)
         Center(child: IconButton(
-          icon: const Icon(Icons.add_circle, size: 34, color: AppColors.azulFondo),
+          icon: Icon(Icons.add_circle, size: 34, color: Theme.of(context).colorScheme.primary),
           onPressed: _addHcRatio,
           tooltip: 'Añadir tramo',
         )),
@@ -618,8 +784,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.blanco, borderRadius: BorderRadius.circular(12),
-        boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, 2))],
+        color: Theme.of(context).cardColor, 
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black.withOpacity(0.3)
+                : const Color(0x1A000000),
+            blurRadius: 6, 
+            offset: const Offset(0, 2),
+          )
+        ],
       ),
       child: Row(children: [
         // ── Hora inicio ─── //
@@ -629,8 +804,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (picked != null) _changeStartTime(i, picked);
             } : null),
 
-        const Padding(padding: EdgeInsets.symmetric(horizontal: 6),
-            child: Text('—', style: TextStyle(color: AppColors.grisTexto, fontWeight: FontWeight.bold))),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Text('—', 
+                style: TextStyle(
+                  color: Theme.of(context).textTheme.bodySmall?.color, 
+                  fontWeight: FontWeight.bold,
+                ))),
 
         // ── Hora fin ─── //
         _timeChip(ratio.endTime, tappable: canEditEnd,
@@ -649,10 +828,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             enabled: _editingDiabetes,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.azulFondo),
-            decoration: const InputDecoration(
-              isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.zero,
-              suffixText: 'g/U', suffixStyle: TextStyle(fontSize: 11, color: AppColors.grisTexto),
+            style: TextStyle(
+              fontSize: 14, 
+              fontWeight: FontWeight.bold, 
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            decoration: InputDecoration(
+              isDense: true, 
+              border: InputBorder.none, 
+              contentPadding: EdgeInsets.zero,
+              suffixText: 'g/U', 
+              suffixStyle: TextStyle(
+                fontSize: 11, 
+                color: Theme.of(context).textTheme.bodySmall?.color,
+              ),
             ),
             onChanged: (v) { final val = double.tryParse(v); if (val != null) setState(() => ratio.ratioValue = val); },
           ),
@@ -675,17 +864,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: tappable ? const Color(0xFFE3F2FD) : const Color(0xFFF5F5F5),
+          color: tappable 
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.1) 
+              : Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.darkSurface
+                  : const Color(0xFFF5F5F5),
           borderRadius: BorderRadius.circular(8),
-          border: tappable ? Border.all(color: AppColors.azulFondo.withOpacity(0.4)) : null,
+          border: tappable 
+              ? Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.4)) 
+              : null,
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           Text(time, style: TextStyle(
               fontSize: 13, fontWeight: FontWeight.w600,
-              color: tappable ? AppColors.azulFondo : AppColors.grisTexto)),
+              color: tappable 
+                  ? Theme.of(context).colorScheme.primary 
+                  : Theme.of(context).textTheme.bodySmall?.color)),
           if (tappable) ...[
             const SizedBox(width: 3),
-            const Icon(Icons.edit, size: 11, color: AppColors.azulFondo),
+            Icon(Icons.edit, size: 11, color: Theme.of(context).colorScheme.primary),
           ],
         ]),
       ),
@@ -705,16 +902,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             enabled: enabled && onTap == null,
             keyboardType: type,
             readOnly: onTap != null && enabled,
-            style: TextStyle(fontSize: 15,
-                color: enabled ? AppColors.grisTexto : AppColors.grisTexto.withOpacity(0.6)),
+            style: TextStyle(
+              fontSize: 15,
+              color: enabled 
+                  ? Theme.of(context).textTheme.bodyLarge?.color 
+                  : Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.6),
+            ),
             decoration: InputDecoration(
-              labelText: label, hintText: hint,
-              labelStyle: const TextStyle(color: AppColors.grisTexto, fontSize: 13),
-              enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
-              focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
-              disabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
+              labelText: label, 
+              hintText: hint,
+              labelStyle: TextStyle(
+                color: Theme.of(context).textTheme.bodySmall?.color, 
+                fontSize: 13,
+              ),
+              enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Theme.of(context).dividerColor)),
+              focusedBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary)),
+              disabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Theme.of(context).dividerColor)),
               suffixIcon: onTap != null && enabled
-                  ? const Icon(Icons.calendar_today, color: AppColors.azulFondo, size: 18) : null,
+                  ? Icon(Icons.calendar_today, 
+                      color: Theme.of(context).colorScheme.primary, size: 18) : null,
             ),
           ),
         ),
@@ -730,8 +939,17 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: double.infinity, padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(
-      color: AppColors.cardBackground, borderRadius: BorderRadius.circular(24),
-      boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4))],
+      color: Theme.of(context).cardColor, 
+      borderRadius: BorderRadius.circular(24),
+      boxShadow: [
+        BoxShadow(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.black.withOpacity(0.3)
+              : const Color(0x1A000000),
+          blurRadius: 12, 
+          offset: const Offset(0, 4),
+        )
+      ],
     ),
     child: child,
   );

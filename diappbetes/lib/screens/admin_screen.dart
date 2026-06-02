@@ -93,21 +93,32 @@ class _AdminScreenState extends State<AdminScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     // Mientras verifica permisos
     if (_loading) {
       return Scaffold(
-        backgroundColor: AppColors.blanco,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: AppColors.azulFondo,
-          title: const Text('Admin',
-              style: TextStyle(color: AppColors.blanco, fontWeight: FontWeight.bold)),
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+          title: Text('Admin',
+              style: TextStyle(
+                color: Theme.of(context).appBarTheme.foregroundColor, 
+                fontWeight: FontWeight.bold,
+              )),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.blanco),
+            icon: Icon(Icons.arrow_back, 
+                color: Theme.of(context).appBarTheme.foregroundColor),
             onPressed: () => Navigator.pop(context),
           ),
         ),
-        body: const Center(
-          child: CircularProgressIndicator(color: AppColors.azulFondo),
+        body: Center(
+          child: CircularProgressIndicator(color: primaryColor),
         ),
       );
     }
@@ -115,13 +126,18 @@ class _AdminScreenState extends State<AdminScreen> {
     // Si no está autorizado, muestra pantalla de acceso denegado
     if (!_isAuthorized) {
       return Scaffold(
-        backgroundColor: AppColors.blanco,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: AppColors.azulFondo,
-          title: const Text('Acceso Denegado',
-              style: TextStyle(color: AppColors.blanco, fontWeight: FontWeight.bold)),
+          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+          foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+          title: Text('Acceso Denegado',
+              style: TextStyle(
+                color: Theme.of(context).appBarTheme.foregroundColor, 
+                fontWeight: FontWeight.bold,
+              )),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.blanco),
+            icon: Icon(Icons.arrow_back, 
+                color: Theme.of(context).appBarTheme.foregroundColor),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -138,7 +154,7 @@ class _AdminScreenState extends State<AdminScreen> {
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.azulFondo,
+                    color: primaryColor,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -147,7 +163,7 @@ class _AdminScreenState extends State<AdminScreen> {
                       ? _errorMessage 
                       : 'Esta área está reservada para administradores.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16, color: AppColors.grisTexto),
+                  style: TextStyle(fontSize: 16, color: textColor),
                 ),
                 const SizedBox(height: 32),
                 ElevatedButton.icon(
@@ -155,8 +171,8 @@ class _AdminScreenState extends State<AdminScreen> {
                   icon: const Icon(Icons.arrow_back),
                   label: const Text('Volver a Mi Perfil'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.azulFondo,
-                    foregroundColor: AppColors.blanco,
+                    backgroundColor: primaryColor,
+                    foregroundColor: onPrimaryColor,
                     padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -172,13 +188,18 @@ class _AdminScreenState extends State<AdminScreen> {
 
     // ✅ Usuario autorizado: muestra el panel de administración (vacío por ahora)
     return Scaffold(
-      backgroundColor: AppColors.blanco,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.azulFondo,
-        title: const Text('Administración',
-            style: TextStyle(color: AppColors.blanco, fontWeight: FontWeight.bold)),
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
+        title: Text('Administración',
+            style: TextStyle(
+              color: Theme.of(context).appBarTheme.foregroundColor, 
+              fontWeight: FontWeight.bold,
+            )),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.blanco),
+          icon: Icon(Icons.arrow_back, 
+              color: Theme.of(context).appBarTheme.foregroundColor),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -195,18 +216,27 @@ class _AdminScreenState extends State<AdminScreen> {
               return Padding(
                 padding: const EdgeInsets.only(right: 16),
                 child: Text('👤 $username',
-                    style: const TextStyle(color: AppColors.blanco, fontSize: 14)),
+                    style: TextStyle(
+                      color: Theme.of(context).appBarTheme.foregroundColor, 
+                      fontSize: 14,
+                    )),
               );
             },
           ),
         ],
       ),
-      body: _buildAdminContent(),
+      body: _buildAdminContent(primaryColor, onPrimaryColor, textColor, textSmallColor, isDark),
     );
   }
 
   /// Contenido del panel de administración (placeholder para futuras funcionalidades)
-  Widget _buildAdminContent() {
+  Widget _buildAdminContent(
+    Color primaryColor, 
+    Color onPrimaryColor, 
+    Color? textColor, 
+    Color? textSmallColor,
+    bool isDark,
+  ) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -216,15 +246,17 @@ class _AdminScreenState extends State<AdminScreen> {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.azulFondo, Color(0xFF4A90E2)],
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [AppColors.azulFondo, const Color(0xFF2E5C8A)]  // ← Cambiado: más claro
+                    : [AppColors.azulFondo, const Color(0xFF4A90E2)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.azulFondo.withOpacity(0.3),
+                  color: primaryColor.withOpacity(0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -235,27 +267,27 @@ class _AdminScreenState extends State<AdminScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.blanco.withOpacity(0.2),
+                    color: Colors.white.withOpacity(0.2),  // ← Cambiado: blanco fijo para mejor contraste
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.admin_panel_settings, 
-                      color: AppColors.blanco, size: 32),
+                  child: const Icon(Icons.admin_panel_settings,  // ← Cambiado: const
+                      color: Colors.white, size: 32),  // ← Cambiado: blanco fijo
                 ),
                 const SizedBox(width: 16),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Bienvenido, Administrador',
+                      const Text('Bienvenido, Administrador',  // ← Cambiado: const
                           style: TextStyle(
-                            color: AppColors.blanco,
+                            color: Colors.white,  // ← Cambiado: blanco fijo
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           )),
-                      SizedBox(height: 4),
-                      Text('Gestiona usuarios, contenido y configuración',
+                      const SizedBox(height: 4),
+                      const Text('Gestiona usuarios, contenido y configuración',  // ← Cambiado: const
                           style: TextStyle(
-                            color: AppColors.blanco,
+                            color: Colors.white70,  // ← Cambiado: blanco con opacidad
                             fontSize: 13,
                             fontWeight: FontWeight.w300,
                           )),
@@ -269,11 +301,11 @@ class _AdminScreenState extends State<AdminScreen> {
           const SizedBox(height: 24),
 
           // Sección: Funcionalidades (placeholder)
-          const Text('Funcionalidades',
+          Text('Funcionalidades',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: AppColors.azulFondo,
+                color: primaryColor,
               )),
           const SizedBox(height: 16),
 
@@ -282,18 +314,30 @@ class _AdminScreenState extends State<AdminScreen> {
             icon: Icons.people_outline,
             title: 'Gestión de Usuarios',
             subtitle: 'Próximamente: Ver, editar y eliminar usuarios',
+            primaryColor: primaryColor,
+            textColor: textColor,
+            textSmallColor: textSmallColor,
+            isDark: isDark,
           ),
           const SizedBox(height: 12),
           _buildPlaceholderCard(
             icon: Icons.analytics_outlined,
             title: 'Estadísticas',
             subtitle: 'Próximamente: Métricas y reportes de uso',
+            primaryColor: primaryColor,
+            textColor: textColor,
+            textSmallColor: textSmallColor,
+            isDark: isDark,
           ),
           const SizedBox(height: 12),
           _buildPlaceholderCard(
             icon: Icons.settings_outlined,
             title: 'Configuración Global',
             subtitle: 'Próximamente: Ajustes de la aplicación',
+            primaryColor: primaryColor,
+            textColor: textColor,
+            textSmallColor: textSmallColor,
+            isDark: isDark,
           ),
 
           const SizedBox(height: 32),
@@ -302,19 +346,19 @@ class _AdminScreenState extends State<AdminScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFE3F2FD),
+              color: primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.azulFondo.withOpacity(0.3)),
+              border: Border.all(color: primaryColor.withOpacity(0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: AppColors.azulFondo, size: 20),
+                Icon(Icons.info_outline, color: primaryColor, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Este panel está en desarrollo. Las funcionalidades estarán disponibles próximamente.',
                     style: TextStyle(
-                      color: AppColors.azulFondo,
+                      color: primaryColor,
                       fontSize: 13,
                     ),
                   ),
@@ -332,16 +376,22 @@ class _AdminScreenState extends State<AdminScreen> {
     required IconData icon,
     required String title,
     required String subtitle,
+    required Color primaryColor,
+    required Color? textColor,
+    required Color? textSmallColor,
+    required bool isDark,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.grisDivider),
+        border: Border.all(color: Theme.of(context).dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : Colors.black.withOpacity(0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -352,10 +402,10 @@ class _AdminScreenState extends State<AdminScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppColors.azulFondo.withOpacity(0.1),
+              color: primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: AppColors.azulFondo, size: 24),
+            child: Icon(icon, color: primaryColor, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -363,22 +413,22 @@ class _AdminScreenState extends State<AdminScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.azulFondo,
+                      color: primaryColor,
                     )),
                 const SizedBox(height: 4),
                 Text(subtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.grisTexto,
+                      color: textSmallColor,
                     )),
               ],
             ),
           ),
           Icon(Icons.arrow_forward_ios, 
-              color: AppColors.grisTexto.withOpacity(0.5), size: 16),
+              color: textSmallColor?.withOpacity(0.5), size: 16),
         ],
       ),
     );

@@ -250,11 +250,16 @@ class _AddMealScreenState extends State<AddMealScreen> {
   // =========================================================================
   @override
   Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+    final cardColor = Theme.of(context).cardColor;
+
     return Scaffold(
-      backgroundColor: AppColors.blanco,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: AppColors.azulFondo,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         titleSpacing: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -264,7 +269,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: AppColors.blanco,
+                color: cardColor,
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
@@ -282,14 +287,14 @@ class _AddMealScreenState extends State<AddMealScreen> {
                   height: 42,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) => 
-                      const Icon(Icons.image_not_supported, color: AppColors.azulFondo, size: 20),
+                      Icon(Icons.image_not_supported, color: primaryColor, size: 20),
                 ),
               ),
             ),
             const SizedBox(width: 12),
-            const Text('DiAppBetes',
+            Text('DiAppBetes',
                 style: TextStyle(
-                  color: AppColors.blanco, 
+                  color: Theme.of(context).appBarTheme.foregroundColor, 
                   fontWeight: FontWeight.bold, 
                   fontSize: 20
                 )),
@@ -302,16 +307,16 @@ class _AddMealScreenState extends State<AddMealScreen> {
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.blanco,
+                color: cardColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.admin_panel_settings, color: AppColors.azulFondo, size: 14),
-                  SizedBox(width: 4),
+                  Icon(Icons.admin_panel_settings, color: primaryColor, size: 14),
+                  const SizedBox(width: 4),
                   Text('Admin', 
                       style: TextStyle(
-                        color: AppColors.azulFondo, 
+                        color: primaryColor, 
                         fontSize: 11, 
                         fontWeight: FontWeight.w600,
                       )),
@@ -333,14 +338,14 @@ class _AddMealScreenState extends State<AddMealScreen> {
               child: ElevatedButton.icon(
                 onPressed: (_isFormValid && !_saving) ? _createMeal : null,
                 icon: _saving
-                    ? const SizedBox(width: 20, height: 20,
-                        child: CircularProgressIndicator(color: AppColors.blanco, strokeWidth: 2))
-                    : const Icon(Icons.save, color: AppColors.blanco),
+                    ? SizedBox(width: 20, height: 20,
+                        child: CircularProgressIndicator(color: onPrimaryColor, strokeWidth: 2))
+                    : Icon(Icons.save, color: onPrimaryColor),
                 label: Text(_saving ? 'Guardando...' : 'Crear Comida',
-                    style: const TextStyle(color: AppColors.blanco, fontSize: 16, fontWeight: FontWeight.w600)),
+                    style: TextStyle(color: onPrimaryColor, fontSize: 16, fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.azulFondo,
-                  disabledBackgroundColor: AppColors.grisDivider,
+                  backgroundColor: primaryColor,
+                  disabledBackgroundColor: Theme.of(context).disabledColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
@@ -358,39 +363,44 @@ class _AddMealScreenState extends State<AddMealScreen> {
   }
 
   Widget _buildDetailsCard() {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+    final dividerColor = Theme.of(context).dividerColor;
     const opciones = ['desayuno', 'almuerzo', 'comida', 'merienda', 'cena'];
+    
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Detalles de la comida',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+          Text('Detalles de la comida',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor)),
           const SizedBox(height: 14),
 
           // Fecha/hora readonly
           Row(children: [
-            const Icon(Icons.access_time, size: 16, color: AppColors.azulFondo),
+            Icon(Icons.access_time, size: 16, color: primaryColor),
             const SizedBox(width: 6),
-            Text(_mealTime, style: const TextStyle(fontSize: 14, color: AppColors.grisTexto)),
+            Text(_mealTime, style: TextStyle(fontSize: 14, color: textColor)),
           ]),
-          const Divider(color: AppColors.grisDivider),
+          Divider(color: dividerColor),
           const SizedBox(height: 8),
 
           // Tipo de comida
           DropdownButtonFormField<String>(
             value: _mealType.isEmpty ? null : _mealType,
-            hint: const Text('Seleccionar tipo', style: TextStyle(color: AppColors.grisTexto, fontSize: 14)),
-            style: const TextStyle(color: AppColors.grisTexto, fontSize: 15),
-            decoration: const InputDecoration(
+            hint: Text('Seleccionar tipo', style: TextStyle(color: textColor, fontSize: 14)),
+            style: TextStyle(color: textColor, fontSize: 15),
+            decoration: InputDecoration(
               labelText: 'Tipo de comida',
-              labelStyle: TextStyle(color: AppColors.grisTexto, fontSize: 13),
-              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
-              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
+              labelStyle: TextStyle(color: textSmallColor, fontSize: 13),
+              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: dividerColor)),
+              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryColor)),
             ),
             items: opciones.map((o) => DropdownMenuItem(
               value: o,
               child: Text(o[0].toUpperCase() + o.substring(1),
-                  style: const TextStyle(color: AppColors.grisTexto)),
+                  style: TextStyle(color: textColor)),
             )).toList(),
             onChanged: (v) => setState(() => _mealType = v ?? ''),
           ),
@@ -400,13 +410,13 @@ class _AddMealScreenState extends State<AddMealScreen> {
           TextField(
             controller: _glucemiaCtrl,
             keyboardType: TextInputType.number,
-            style: const TextStyle(fontSize: 15, color: AppColors.grisTexto),
-            decoration: const InputDecoration(
+            style: TextStyle(fontSize: 15, color: textColor),
+            decoration: InputDecoration(
               labelText: 'Glucemia (mg/dL)',
-              labelStyle: TextStyle(color: AppColors.grisTexto, fontSize: 13),
+              labelStyle: TextStyle(color: textSmallColor, fontSize: 13),
               suffixText: 'mg/dL',
-              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
-              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
+              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: dividerColor)),
+              focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryColor)),
             ),
             onChanged: (v) => setState(() => _glucemiaText = v),
           ),
@@ -414,13 +424,18 @@ class _AddMealScreenState extends State<AddMealScreen> {
           // Indicador ratio/FSI cargado
           const SizedBox(height: 8),
           Text('Ratio HC: ${_ratioValue.toStringAsFixed(1)} g/U  •  FSI: ${_fsi.toStringAsFixed(0)} mg/dL/U',
-              style: const TextStyle(fontSize: 11, color: AppColors.grisTexto)),
+              style: TextStyle(fontSize: 11, color: textSmallColor)),
         ],
       ),
     );
   }
 
   Widget _buildFoodsCard() {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color;
+    final dividerColor = Theme.of(context).dividerColor;
+
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -428,40 +443,40 @@ class _AddMealScreenState extends State<AddMealScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Alimentos',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+              Text('Alimentos',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor)),
               ElevatedButton(
                 onPressed: _openAddFoodModal,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.azulFondo,
+                  backgroundColor: primaryColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   minimumSize: Size.zero,
                 ),
-                child: const Icon(Icons.add, color: AppColors.blanco, size: 20),
+                child: Icon(Icons.add, color: onPrimaryColor, size: 20),
               ),
             ],
           ),
           const SizedBox(height: 12),
 
           if (_addedFoods.isEmpty)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 child: Text('Pulsa + para añadir alimentos',
-                    style: TextStyle(color: AppColors.grisTexto, fontSize: 14)),
+                    style: TextStyle(color: textColor, fontSize: 14)),
               ),
             )
           else ...[
             ..._addedFoods.asMap().entries.map((e) => _buildFoodItem(e.key, e.value)),
-            const Divider(color: AppColors.grisDivider),
+            Divider(color: dividerColor),
             // Totales
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _totalChip('HC', '${_totalHc.toStringAsFixed(1)}g', AppColors.azulFondo),
+                  _totalChip('HC', '${_totalHc.toStringAsFixed(1)}g', primaryColor),
                   _totalChip('Cal', '${_totalCalories.toStringAsFixed(0)}', AppColors.ambarSuave),
                   _totalChip('Rac', _totalRations.toStringAsFixed(1), AppColors.verdesuave),
                 ],
@@ -474,26 +489,30 @@ class _AddMealScreenState extends State<AddMealScreen> {
   }
 
   Widget _buildFoodItem(int i, AddedFood food) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final dividerColor = Theme.of(context).dividerColor;
+    final cardColor = Theme.of(context).cardColor;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.blanco,
-        border: Border.all(color: AppColors.grisDivider),
+        color: cardColor,
+        border: Border.all(color: dividerColor),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Icon(Icons.restaurant, size: 24, color: AppColors.azulFondo),
+            Icon(Icons.restaurant, size: 24, color: primaryColor),
             const SizedBox(width: 8),
             Expanded(child: Text(food.name,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.azulFondo),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: primaryColor),
                 maxLines: 1, overflow: TextOverflow.ellipsis)),
             IconButton(
               padding: EdgeInsets.zero, constraints: const BoxConstraints(),
-              icon: const Icon(Icons.edit, size: 18, color: AppColors.azulFondo),
+              icon: Icon(Icons.edit, size: 18, color: primaryColor),
               onPressed: () => _editFood(i),
             ),
             const SizedBox(width: 6),
@@ -517,12 +536,12 @@ class _AddMealScreenState extends State<AddMealScreen> {
   }
 
   Widget _infoChip(String text) =>
-      Text(text, style: const TextStyle(fontSize: 11, color: AppColors.grisTexto));
+      Text(text, style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color));
 
   Widget _totalChip(String label, String value, Color color) => Column(
     children: [
       Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
-      Text(label, style: const TextStyle(fontSize: 11, color: AppColors.grisTexto)),
+      Text(label, style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
     ],
   );
 }
@@ -530,13 +549,24 @@ class _AddMealScreenState extends State<AddMealScreen> {
 class _Card extends StatelessWidget {
   final Widget child;
   const _Card({required this.child});
+  
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity, padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(
-      color: AppColors.cardBackground, borderRadius: BorderRadius.circular(24),
-      boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4))],
-    ),
-    child: child,
-  );
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity, padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor, 
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withOpacity(0.3) : const Color(0x1A000000),
+            blurRadius: 12, 
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
 }

@@ -1,82 +1,120 @@
 import 'package:flutter/material.dart';
 
+// ---------------------------------------------------------------------------
+// AppColors — constantes de color para modo claro y oscuro
+// ---------------------------------------------------------------------------
 class AppColors {
-  // Colores principales (equivalentes a las CSS variables de Ionic)
-  static const Color azulFondo = Color.fromRGBO(26, 58, 110, 1);       // --azul-fondo
-  static const Color blanco = Color(0xFFFFFFFF);           // --blanco
-  static const Color grisDivider = Color(0xFFE0E0E0);      // --gris-divider
-  static const Color grisTexto = Color(0xFF666666);        // --gris-texto
-  static const Color verdesuave = Color(0xFF4CAF50);       // --verde-suave
-  static const Color ambarSuave = Color(0xFFFFA726);       // --ambar-suave
-  static const Color rojoSuave = Color(0xFFEF5350);        // --rojo-suave
-  static const Color fondoAzulClaroActivo = Color(0xFF42A5F5); // activo tab
-  static const Color cardBackground = Color(0xFFFFFFFF);
-  static const Color progressBg = Color(0xFFDDDDDD);
+  // ── Colores de marca (siempre iguales) ────────────────────────────────── //
+  static const Color azulFondo = Color(0xFF1A3A6E); 
+  static const Color fondoAzulClaroActivo = Color(0xFF42A5F5);
+  static const Color verdesuave         = Color(0xFF4CAF50);
+  static const Color ambarSuave         = Color(0xFFFFA726);
+  static const Color rojoSuave          = Color(0xFFEF5350);
+  static const Color progressBg         = Color(0xFFDDDDDD);
 
-  static const Color cenaFondo = Color(0x66DCA7E6);
-  static const Color cenaTexto = Color(0xFF7B1FA2);
+  // ── Modo claro ────────────────────────────────────────────────────────── //
+  static const Color blanco             = Color(0xFFFFFFFF);
+  static const Color grisDivider        = Color(0xFFE0E0E0);
+  static const Color grisTexto          = Color(0xFF666666);
+  static const Color cardBackground     = Color(0xFFFFFFFF);
 
-  static const Color desayunoFondo = Color(0x33FF8000);
-  static const Color desayunoTexto = Color(0xFFFF6D00);
+  // ── Modo oscuro ───────────────────────────────────────────────────────── //
+  static const Color darkBackground     = Color(0xFF121212);
+  static const Color darkSurface        = Color(0xFF1E1E1E);
+  static const Color darkCard           = Color(0xFF2C2C2C);
+  static const Color darkDivider        = Color(0xFF3A3A3A);
+  static const Color darkTextPrimary    = Color(0xFFE0E0E0);
+  static const Color darkTextSecondary  = Color(0xFF9E9E9E);
 
-  static const Color almuerzoFondo = Color(0x3395BF40);
-  static const Color almuerzoTexto = Color(0xFF689F38); 
-
-  static const Color comidaFondo = Color(0x335299E0);
-  static const Color comidaTexto = Color(0xFF1976D2);
-
-  static const Color meriendaFondo = Color(0x33B81466);
-  static const Color meriendaTexto = Color(0xFFAD1457);
-
-  static const Color frutasFondo = Color(0x33FF8A66);   // #ff8a6633
-  static const Color frutasTexto = Color(0xFFE64A19);   // #E64A19
-  
-  static const Color carnesFondo = Color(0x33E05252);   // #e0525233
-  static const Color carnesTexto = Color(0xFFD32F2F);   // #D32F2F
-  
-  static const Color pescadosFondo = Color(0x335299E0); // #5299e033
-  static const Color pescadosTexto = Color(0xFF1976D2); // #1976D2
-  
-  static const Color mariscosFondo = Color(0x3326D9BB); // #26d9bb33
-  static const Color mariscosTexto = Color(0xFF00796B); // #00796B
-  
-  static const Color verdurasFondo = Color(0x3340BF40); // #40bf4033
-  static const Color verdurasTexto = Color(0xFF388E3C); // #388E3C
-  
-  static const Color lacteosFondo = Color(0x336633CC);  // #6633cc33
-  static const Color lacteosTexto = Color(0xFF512DA8);  // #512DA8
-  
-  static const Color cerealesFondo = Color(0x33FF9933); // #ff993333
-  static const Color cerealesTexto = Color(0xFFF57C00); // #F57C00
-  
-  static const Color bolleriaFondo = Color(0x33B81466); // #b8146633
-  static const Color bolleriaTexto = Color(0xFFAD1457); // #AD1457
-  
-  static const Color dulcesFondo = Color(0x33FF8000);   // #ff800033
-  static const Color dulcesTexto = Color(0xFFFF6D00);   // #FF6D00
-  
-  static const Color bebidasFondo = Color(0x330DA6F2);  // #0da6f233
-  static const Color bebidasTexto = Color(0xFF0288D1);  // #0288D1
-  
-  static const Color legumbresFondo = Color(0x3395BF40); // #95bf4033
-  static const Color legumbresTexto = Color(0xFF689F38); // #689F38
-  
-  static const Color frutosSecosFondo = Color(0x33CCCC33); // #cccc3333
-  static const Color frutosSecosTexto = Color(0xFFAFB42B); // #AFB42B
-  
-  static const Color platoFondo = Color(0x33B233CC);    // #b233cc33
-  static const Color platoTexto = Color(0xFF7B1FA2);    // #7B1FA2
+  // ── Helpers contextuales (usa ThemeContext en widgets) ─────────────────── //
+  static Color surface(BuildContext ctx)    => Theme.of(ctx).colorScheme.surface;
+  static Color onSurface(BuildContext ctx)  => Theme.of(ctx).colorScheme.onSurface;
+  static Color cardBg(BuildContext ctx)     => Theme.of(ctx).cardColor;
+  static Color divider(BuildContext ctx)    => Theme.of(ctx).dividerColor;
+  static Color textSecondary(BuildContext ctx) => Theme.of(ctx).textTheme.bodySmall!.color!;
 }
 
+// ---------------------------------------------------------------------------
+// AppTheme — temas claro y oscuro
+// ---------------------------------------------------------------------------
 class AppTheme {
-  static ThemeData get theme => ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.azulFondo,
-          primary: AppColors.azulFondo,
-          background: AppColors.blanco,
-        ),
-        scaffoldBackgroundColor: AppColors.blanco,
-        fontFamily: 'Roboto',
-      );
+  // ── Tema CLARO ────────────────────────────────────────────────────────── //
+  static ThemeData get light => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.light,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: AppColors.azulFondo,
+      primary:   AppColors.azulFondo,
+      surface:   AppColors.blanco,
+      onSurface: AppColors.grisTexto,
+    ),
+    scaffoldBackgroundColor: AppColors.blanco,
+    cardColor:     AppColors.blanco,
+    dividerColor:  AppColors.grisDivider,
+    fontFamily: 'Roboto',
+    appBarTheme: const AppBarTheme(
+      backgroundColor: AppColors.azulFondo,
+      foregroundColor: AppColors.blanco,
+      elevation: 2,
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor:      AppColors.blanco,
+      selectedItemColor:    AppColors.fondoAzulClaroActivo,
+      unselectedItemColor:  AppColors.azulFondo,
+      type: BottomNavigationBarType.fixed,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      labelStyle: const TextStyle(color: AppColors.grisTexto, fontSize: 13),
+      enabledBorder:  const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
+      focusedBorder:  const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
+      disabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
+    ),
+    textTheme: const TextTheme(
+      bodyLarge:  TextStyle(color: AppColors.grisTexto),
+      bodyMedium: TextStyle(color: AppColors.grisTexto),
+      bodySmall:  TextStyle(color: AppColors.grisTexto),
+    ),
+  );
+
+  // ── Tema OSCURO ───────────────────────────────────────────────────────── //
+  static ThemeData get dark => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor:  AppColors.azulFondo,
+      brightness: Brightness.dark,
+      primary:    AppColors.fondoAzulClaroActivo,
+      surface:    AppColors.darkSurface,
+      onSurface:  AppColors.darkTextPrimary,
+    ),
+    scaffoldBackgroundColor: AppColors.darkBackground,
+    cardColor:    AppColors.darkCard,
+    dividerColor: AppColors.darkDivider,
+    fontFamily: 'Roboto',
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Color(0xFF1A1A2E),
+      foregroundColor: AppColors.darkTextPrimary,
+      elevation: 2,
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor:      AppColors.darkSurface,
+      selectedItemColor:    AppColors.fondoAzulClaroActivo,
+      unselectedItemColor:  AppColors.darkTextSecondary,
+      type: BottomNavigationBarType.fixed,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      labelStyle: const TextStyle(color: AppColors.darkTextSecondary, fontSize: 13),
+      enabledBorder:  const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkDivider)),
+      focusedBorder:  const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.fondoAzulClaroActivo)),
+      disabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkDivider)),
+    ),
+    textTheme: const TextTheme(
+      bodyLarge:  TextStyle(color: AppColors.darkTextPrimary),
+      bodyMedium: TextStyle(color: AppColors.darkTextPrimary),
+      bodySmall:  TextStyle(color: AppColors.darkTextSecondary),
+    ),
+  );
+
+  // Alias mantenido por compatibilidad con código antiguo
+  static ThemeData get theme => light;
 }

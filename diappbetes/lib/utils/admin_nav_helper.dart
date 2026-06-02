@@ -30,6 +30,11 @@ class AdminNavHelper {
     required Function(int) onTap,
     required bool isAdmin,
   }) {
+    final backgroundColor = Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Theme.of(context).cardColor;
+    final selectedItemColor = Theme.of(context).bottomNavigationBarTheme.selectedItemColor ?? Theme.of(context).colorScheme.primary;
+    final unselectedItemColor = Theme.of(context).bottomNavigationBarTheme.unselectedItemColor ?? Theme.of(context).textTheme.bodySmall?.color;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     // Ítems base (siempre visibles)
     final items = <BottomNavigationBarItem>[
       const BottomNavigationBarItem(icon: Icon(Icons.refresh), label: 'Historial'),
@@ -51,14 +56,22 @@ class AdminNavHelper {
     if (!isAdmin && currentIndex >= 4) safeIndex = 1; // Volver a Home
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.blanco,
-        boxShadow: [BoxShadow(color: Color(0x1A000000), blurRadius: 6, offset: Offset(0, -2))],
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        boxShadow: [
+          BoxShadow(
+            color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : const Color(0x1A000000),
+            blurRadius: 6, 
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: BottomNavigationBar(
-        backgroundColor: AppColors.blanco,
-        selectedItemColor: AppColors.fondoAzulClaroActivo,
-        unselectedItemColor: AppColors.azulFondo,
+        backgroundColor: backgroundColor,
+        selectedItemColor: selectedItemColor,
+        unselectedItemColor: unselectedItemColor,
         currentIndex: safeIndex,
         onTap: onTap,
         items: items,

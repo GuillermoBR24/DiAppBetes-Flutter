@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 import '../services/food_service.dart';
 import 'add_food_modal.dart' show categoryBg, categoryText;
 
@@ -123,10 +122,16 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
 
   @override
   Widget build(BuildContext context) {
-    final bg   = categoryBg(widget.selectedFood.category);
-    final fg   = categoryText(widget.selectedFood.category);
+    final bg   = categoryBg(context, widget.selectedFood.category);
+    final fg   = categoryText(context, widget.selectedFood.category);
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+    final cardColor = Theme.of(context).cardColor;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+    final dividerColor = Theme.of(context).dividerColor;
 
     return Dialog(
+      backgroundColor: cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
       child: Column(
@@ -136,18 +141,18 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: const BoxDecoration(
-              color: AppColors.azulFondo,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            decoration: BoxDecoration(
+              color: primaryColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: Text('Añadir a la Comida',
-                      style: TextStyle(color: AppColors.blanco, fontSize: 16, fontWeight: FontWeight.bold)),
+                      style: TextStyle(color: onPrimaryColor, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close, color: AppColors.blanco),
+                  icon: Icon(Icons.close, color: onPrimaryColor),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -189,7 +194,7 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: fg)),
                               Text('${widget.selectedFood.carbsPer100g.toStringAsFixed(1)}g HC  •  '
                                   '${widget.selectedFood.caloriesPer100g.toStringAsFixed(0)} cal/100g',
-                                  style: const TextStyle(fontSize: 12, color: AppColors.grisTexto)),
+                                  style: TextStyle(fontSize: 12, color: textSmallColor)),
                             ],
                           ),
                         ),
@@ -207,6 +212,9 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                           controller: _gramsCtrl,
                           suffix: 'g',
                           onChanged: _onGramsChanged,
+                          primaryColor: primaryColor,
+                          textSmallColor: textSmallColor,
+                          dividerColor: dividerColor,
                         ),
                       ),
                       const SizedBox(width: 14),
@@ -216,13 +224,16 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                           controller: _racionesCtrl,
                           suffix: 'R',
                           onChanged: _onRacionesChanged,
+                          primaryColor: primaryColor,
+                          textSmallColor: textSmallColor,
+                          dividerColor: dividerColor,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  const Text('1 ración = 10g de HC',
-                      style: TextStyle(fontSize: 11, color: AppColors.grisTexto),
+                  Text('1 ración = 10g de HC',
+                      style: TextStyle(fontSize: 11, color: textSmallColor),
                       textAlign: TextAlign.right),
                   const SizedBox(height: 16),
 
@@ -239,9 +250,9 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            _summaryItem('HC', '${_hc.toStringAsFixed(1)}g', fg),
-                            _summaryItem('Calorías', '${_calories.toStringAsFixed(0)} kcal', fg),
-                            _summaryItem('Raciones', _raciones.toStringAsFixed(1), fg),
+                            _summaryItem('HC', '${_hc.toStringAsFixed(1)}g', fg, textSmallColor),
+                            _summaryItem('Calorías', '${_calories.toStringAsFixed(0)} kcal', fg, textSmallColor),
+                            _summaryItem('Raciones', _raciones.toStringAsFixed(1), fg, textSmallColor),
                           ],
                         ),
                       ],
@@ -255,14 +266,14 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                     child: ElevatedButton(
                       onPressed: _grams > 0 ? _confirm : null,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.azulFondo,
-                        disabledBackgroundColor: AppColors.grisDivider,
+                        backgroundColor: primaryColor,
+                        disabledBackgroundColor: Theme.of(context).disabledColor,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
                       child: Text(
                         widget.isEditMode ? 'Actualizar' : 'Añadir',
-                        style: const TextStyle(color: AppColors.blanco, fontSize: 16, fontWeight: FontWeight.w600),
+                        style: TextStyle(color: onPrimaryColor, fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -280,28 +291,31 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
     required TextEditingController controller,
     required String suffix,
     required ValueChanged<String> onChanged,
+    required Color primaryColor,
+    required Color? textSmallColor,
+    required Color dividerColor,
   }) {
     return TextField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.azulFondo),
+      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
       textAlign: TextAlign.center,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: AppColors.grisTexto, fontSize: 13),
+        labelStyle: TextStyle(color: textSmallColor, fontSize: 13),
         suffixText: suffix,
-        suffixStyle: const TextStyle(color: AppColors.grisTexto, fontSize: 13),
-        enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
-        focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
+        suffixStyle: TextStyle(color: textSmallColor, fontSize: 13),
+        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: dividerColor)),
+        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryColor)),
       ),
       onChanged: onChanged,
     );
   }
 
-  Widget _summaryItem(String label, String value, Color fg) => Column(
+  Widget _summaryItem(String label, String value, Color fg, Color? labelColor) => Column(
     children: [
       Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: fg)),
-      Text(label, style: const TextStyle(fontSize: 11, color: AppColors.grisTexto)),
+      Text(label, style: TextStyle(fontSize: 11, color: labelColor)),
     ],
   );
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
 import '../widgets/tir_progress_ring.dart';
 import '../services/profile_service.dart';
 import '../services/glucose_service.dart';
@@ -161,10 +160,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.blanco,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: AppColors.azulFondo,
+        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
+        foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         titleSpacing: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -174,7 +174,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: AppColors.blanco,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
@@ -192,14 +192,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 42,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) => 
-                      const Icon(Icons.image_not_supported, color: AppColors.azulFondo, size: 20),
+                      Icon(Icons.image_not_supported, color: Theme.of(context).colorScheme.primary, size: 20),
                 ),
               ),
             ),
             const SizedBox(width: 12),
-            const Text('DiAppBetes',
+            Text('DiAppBetes',
                 style: TextStyle(
-                  color: AppColors.blanco, 
+                  color: Theme.of(context).appBarTheme.foregroundColor, 
                   fontWeight: FontWeight.bold, 
                   fontSize: 20
                 )),
@@ -212,16 +212,16 @@ class _HomeScreenState extends State<HomeScreen> {
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.blanco,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.admin_panel_settings, color: AppColors.azulFondo, size: 14),
-                  SizedBox(width: 4),
+                  Icon(Icons.admin_panel_settings, color: Theme.of(context).colorScheme.primary, size: 14),
+                  const SizedBox(width: 4),
                   Text('Admin', 
                       style: TextStyle(
-                        color: AppColors.azulFondo, 
+                        color: Theme.of(context).colorScheme.primary, 
                         fontSize: 11, 
                         fontWeight: FontWeight.w600,
                       )),
@@ -229,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           IconButton(
-            icon: const Icon(Icons.settings, color: AppColors.blanco),
+            icon: Icon(Icons.settings, color: Theme.of(context).appBarTheme.foregroundColor),
             onPressed: () async {
               await Navigator.pushNamed(context, '/settings');
               _loadProfile();
@@ -239,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: RefreshIndicator(
-        color: AppColors.azulFondo,
+        color: Theme.of(context).colorScheme.primary,
         onRefresh: () async {
           await _loadAll();
           await _checkAdminRole();
@@ -251,9 +251,9 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               const SizedBox(height: 14),
               _buildProfileCard(),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: Divider(color: AppColors.grisDivider, thickness: 2),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Divider(color: Theme.of(context).dividerColor, thickness: 2),
               ),
               Expanded(flex: 6, child: _buildTirCard()),
               const SizedBox(height: 10),
@@ -283,17 +283,17 @@ class _HomeScreenState extends State<HomeScreen> {
           width: 46, height: 46,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.azulFondo, width: 3),
+            border: Border.all(color: Theme.of(context).colorScheme.primary, width: 3),
           ),
-          child: const Icon(Icons.person, size: 26, color: AppColors.azulFondo),
+          child: Icon(Icons.person, size: 26, color: Theme.of(context).colorScheme.primary),
         ),
         const SizedBox(width: 12),
         _loadingProfile
-            ? const SizedBox(width: 20, height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.azulFondo))
+            ? SizedBox(width: 20, height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.primary))
             : Text(
                 _username.isNotEmpty ? _username : '—',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.azulFondo),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
               ),
       ],
     );
@@ -305,38 +305,38 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('Tiempo en Rango',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.azulFondo),
+          Text('Tiempo en Rango',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
               textAlign: TextAlign.center),
           const SizedBox(height: 32),
           _loadingTir
-              ? const SizedBox(height: 130, child: Center(
-                  child: CircularProgressIndicator(color: AppColors.azulFondo)))
+              ? SizedBox(height: 130, child: Center(
+                  child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)))
               : TirProgressRing(percentage: _tirPercentage),
           if (!_loadingTir && _tirPercentage == 0)
-            const Padding(
-              padding: EdgeInsets.only(top: 6),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
               child: Text('Sin lecturas aún',
-                  style: TextStyle(fontSize: 11, color: AppColors.grisTexto)),
+                  style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
             ),
           const SizedBox(height: 48),
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(children: const [
-                Icon(Icons.water_drop_outlined, size: 20, color: AppColors.azulFondo),
-                SizedBox(width: 6),
+              Row(children: [
+                Icon(Icons.water_drop_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 6),
                 Text('Última Lectura',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
               ]),
               const SizedBox(height: 6),
               _loadingGlucose
-                  ? const SizedBox(height: 20, child: Center(
-                      child: LinearProgressIndicator(color: AppColors.azulFondo,
-                          backgroundColor: AppColors.grisDivider)))
+                  ? SizedBox(height: 20, child: Center(
+                      child: LinearProgressIndicator(color: Theme.of(context).colorScheme.primary,
+                          backgroundColor: Theme.of(context).dividerColor)))
                   : Text(_lastGlucoseReading,
-                      style: const TextStyle(fontSize: 18, color: AppColors.grisTexto)),
+                      style: TextStyle(fontSize: 18, color: Theme.of(context).textTheme.bodyLarge?.color)),
             ],
           ),
         ],
@@ -351,19 +351,19 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: const [
-            Icon(Icons.restaurant_outlined, size: 20, color: AppColors.azulFondo),
-            SizedBox(width: 6),
+          Row(children: [
+            Icon(Icons.restaurant_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 6),
             Text('Comidas de hoy',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
           ]),
           const SizedBox(height: 6),
           _loadingMeals
-              ? const SizedBox(height: 34, child: Center(
-                  child: LinearProgressIndicator(color: AppColors.azulFondo,
-                      backgroundColor: AppColors.grisDivider)))
+              ? SizedBox(height: 34, child: Center(
+                  child: LinearProgressIndicator(color: Theme.of(context).colorScheme.primary,
+                      backgroundColor: Theme.of(context).dividerColor)))
               : Text('$_todayMealCount',
-                  style: const TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: AppColors.grisTexto)),
+                  style: TextStyle(fontSize: 34, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
         ],
       ),
     );
@@ -376,19 +376,19 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: const [
-            Icon(Icons.lightbulb_outline, size: 20, color: AppColors.azulFondo),
-            SizedBox(width: 6),
+          Row(children: [
+            Icon(Icons.lightbulb_outline, size: 20, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 6),
             Text('Consejo de salud',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.azulFondo)),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
           ]),
           const SizedBox(height: 8),
           _loadingTip
-              ? const LinearProgressIndicator(color: AppColors.azulFondo,
-                  backgroundColor: AppColors.grisDivider)
+              ? LinearProgressIndicator(color: Theme.of(context).colorScheme.primary,
+                  backgroundColor: Theme.of(context).dividerColor)
               : Text(
                   _tipContent.isNotEmpty ? _tipContent : '—',
-                  style: const TextStyle(fontSize: 13, color: AppColors.grisTexto, height: 1.4),
+                  style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodySmall?.color, height: 1.4),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -401,13 +401,23 @@ class _HomeScreenState extends State<HomeScreen> {
 class _Card extends StatelessWidget {
   final Widget child;
   const _Card({required this.child});
+  
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
     decoration: BoxDecoration(
-      color: AppColors.cardBackground, borderRadius: BorderRadius.circular(24),
-      boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 12, offset: Offset(0, 4))],
+      color: Theme.of(context).cardColor, 
+      borderRadius: BorderRadius.circular(24),
+      boxShadow: [
+        BoxShadow(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.black.withOpacity(0.3)
+              : const Color(0x1A000000),
+          blurRadius: 12, 
+          offset: const Offset(0, 4),
+        ),
+      ],
     ),
     child: child,
   );
