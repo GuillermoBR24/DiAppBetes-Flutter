@@ -7,6 +7,7 @@ import 'package:diappbetes/screens/admin_stats_screen.dart';
 import 'package:diappbetes/screens/admin_user_screen.dart';
 import 'package:diappbetes/screens/auth_screen.dart';
 import 'package:diappbetes/screens/code_verification_screen.dart';
+import 'package:diappbetes/screens/glucose_history_screen.dart';
 import 'package:diappbetes/screens/login_screen.dart';
 import 'package:diappbetes/screens/password_changed_screen.dart';
 import 'package:diappbetes/screens/register_screen.dart';
@@ -74,6 +75,7 @@ class DiAppBetes extends StatelessWidget {
         '/admin-user':        (context) => const AdminUsersScreen(),
         '/admin-stats':       (context) => const AdminStatsScreen(),
         '/admin-config':      (context) => const AdminConfigScreen(),
+        '/glucose-history':   (context) => const GlucoseHistoryScreen(),
       },
     );
   }

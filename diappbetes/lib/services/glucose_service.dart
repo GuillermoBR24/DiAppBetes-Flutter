@@ -67,4 +67,28 @@ class GlucoseService {
       }
     }
   }
+
+  Future<List<Map<String, dynamic>>> getGlucoseReadingsByDateRange(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      final snap = await _db
+          .collection('glucose_readings')
+          .where('user_id', isEqualTo: _uid)
+          .orderBy('reading_time', descending: true)
+          .get();
+
+      return snap.docs.where((doc) {
+        final timestamp = doc.data()['reading_time'] as Timestamp?;
+        if (timestamp == null) return false;
+        final date = timestamp.toDate();
+        return date.isAfter(startDate.subtract(const Duration(days: 1))) &&
+            date.isBefore(endDate.add(const Duration(days: 1)));
+      }).map((doc) => doc.data()).toList();
+    } catch (e) {
+      print('❌ Error getting readings by range: $e');
+      return [];
+    }
+  }
 }

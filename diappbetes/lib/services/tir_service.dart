@@ -107,4 +107,33 @@ class TirService {
       return [];
     }
   }
+
+  Future<int> getTirPercentageForRange(DateTime startDate, DateTime endDate) async {
+    if (_uid == null) return 0;
+
+    try {
+      final snap = await _db
+          .collection('glucose_readings')
+          .where('user_id', isEqualTo: _uid)
+          .get();
+
+      final readings = snap.docs.where((doc) {
+        final timestamp = doc.data()['reading_time'] as Timestamp?;
+        if (timestamp == null) return false;
+        final date = timestamp.toDate();
+        return date.isAfter(startDate.subtract(const Duration(days: 1))) &&
+            date.isBefore(endDate.add(const Duration(days: 1)));
+      }).map((doc) => (doc.data()['glucose_level'] as num?)?.toDouble() ?? 0.0)
+          .where((v) => v > 0)
+          .toList();
+
+      if (readings.isEmpty) return 0;
+
+      final inRange = readings.where((v) => v >= 70 && v <= 180).length;
+      return ((inRange / readings.length) * 100).round();
+    } catch (e) {
+      print('❌ Error getting TIR for range: $e');
+      return 0;
+    }
+  }
 }

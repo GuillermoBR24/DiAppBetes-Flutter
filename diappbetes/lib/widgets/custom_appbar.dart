@@ -72,6 +72,10 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             ],
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.show_chart),
+              onPressed: () => Navigator.pushNamed(context, '/glucose-history'),
+            ),
             // Icono de escáner (solo si no hay acciones personalizadas)
             if (actions == null)
               IconButton(
