@@ -226,4 +226,9 @@ class ProfileService {
     final profile = await getMyProfile();
     return profile?['biometric_login_enabled'] == true;
   }
+
+  Future<double> getUserFsi() async {
+    final profile = await getMyProfile();
+    return (profile?['fsi'] as num?)?.toDouble() ?? 50.0;
+  }
 }

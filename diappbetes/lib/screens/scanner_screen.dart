@@ -1,11 +1,11 @@
 // lib/screens/scanner_screen.dart
 import 'dart:convert';
+import 'package:diappbetes/services/hc_ratio_service.dart';
 import 'package:diappbetes/services/profile_service.dart';
 import 'package:diappbetes/widgets/gluten_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../theme/app_theme.dart';
 
 // ---------------------------------------------------------------------------
 // Modelo del producto escaneado
@@ -501,13 +501,20 @@ class _ProductModal extends StatefulWidget {
 }
 
 class _ProductModalState extends State<_ProductModal> {
-  final _gramsCtrl    = TextEditingController(text: '100');
-  final _racionesCtrl = TextEditingController();
-
-  double _grams    = 100;
-  double _hc       = 0;
-  double _calories = 0;
+  // Cantidad
+  final TextEditingController _racionesCtrl = TextEditingController();
+  final _gramsCtrl = TextEditingController(text: '100');
+  double _grams = 100;
   double _raciones = 0;
+  double _hc = 0;
+  double _calories = 0;
+
+  // ✅ NUEVO: Glucosa e insulina
+  final _glucoseCtrl = TextEditingController(text: '100');
+  double _glucose = 100;
+  double _insulin = 0;
+  double _ratioValue = 10.0;
+  double _fsi = 50.0;
 
   bool _editingGrams = true;
   bool _celiacMode = false;
@@ -517,6 +524,7 @@ class _ProductModalState extends State<_ProductModal> {
     super.initState();
     _calcFromGrams();
     _racionesCtrl.text = _raciones.toStringAsFixed(1);
+    _loadUserData();
     _loadCeliacMode();
   }
 
@@ -524,7 +532,25 @@ class _ProductModalState extends State<_ProductModal> {
   void dispose() {
     _gramsCtrl.dispose();
     _racionesCtrl.dispose();
+    _glucoseCtrl.dispose();
     super.dispose();
+  }
+
+  // ✅ NUEVO: Cargar ratio HC y FSI del usuario
+  Future<void> _loadUserData() async {
+    final profileService = ProfileService();
+    final hcRatioService = HcRatioService();
+    
+    final ratio = await hcRatioService.getCurrentHcRatio();
+    final fsi = await profileService.getUserFsi();
+    
+    if (mounted) {
+      setState(() {
+        _ratioValue = ratio;
+        _fsi = fsi;
+        _calcInsulin();
+      });
+    }
   }
 
   Future<void> _loadCeliacMode() async {
@@ -533,17 +559,31 @@ class _ProductModalState extends State<_ProductModal> {
   }
 
   void _calcFromGrams() {
-    _hc       = double.parse((_grams * widget.product.carbsPer100g / 100).toStringAsFixed(1));
+    if (_grams < 0) _grams = 0;
+    _hc = double.parse((_grams * widget.product.carbsPer100g / 100).toStringAsFixed(1));
     _calories = double.parse((_grams * widget.product.caloriesPer100g / 100).toStringAsFixed(0));
     _raciones = double.parse((_hc / 10).toStringAsFixed(1));
+    _calcInsulin();
   }
 
   void _calcFromRaciones() {
-    _hc       = double.parse((_raciones * 10).toStringAsFixed(1));
+    if (_raciones < 0) _raciones = 0;
+    _hc = double.parse((_raciones * 10).toStringAsFixed(1));
     if (widget.product.carbsPer100g > 0) {
       _grams = double.parse((_hc * 100 / widget.product.carbsPer100g).toStringAsFixed(0));
     }
     _calories = double.parse((_grams * widget.product.caloriesPer100g / 100).toStringAsFixed(0));
+    _calcInsulin();
+  }
+
+  // ✅ NUEVO: Calcular insulina
+  void _calcInsulin() {
+    if (_ratioValue > 0 && _fsi > 0) {
+      _insulin = double.parse(
+        ((_hc / _ratioValue) + ((_glucose - 110) / _fsi)).toStringAsFixed(1)
+      );
+      if (_insulin < 0) _insulin = 0;
+    }
   }
 
   void _onGramsChanged(String v) {
@@ -565,6 +605,14 @@ class _ProductModalState extends State<_ProductModal> {
     _editingGrams = true;
   }
 
+  // ✅ NUEVO: Callback para cambio de glucosa
+  void _onGlucoseChanged(String v) {
+    setState(() {
+      _glucose = double.tryParse(v) ?? 0;
+      _calcInsulin();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -572,8 +620,6 @@ class _ProductModalState extends State<_ProductModal> {
     final cardColor = Theme.of(context).cardColor;
     final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
     final dividerColor = Theme.of(context).dividerColor;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surfaceColor = Theme.of(context).colorScheme.surface;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.88,
@@ -583,6 +629,7 @@ class _ProductModalState extends State<_ProductModal> {
       ),
       child: Column(
         children: [
+          // ── Header ────────────────────────────────────────────────── //
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -590,186 +637,247 @@ class _ProductModalState extends State<_ProductModal> {
               color: primaryColor,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
-            child: Row(children: [
-              Expanded(
-                child: Text('Producto Escaneado',
-                    style: TextStyle(color: onPrimaryColor, fontSize: 18, fontWeight: FontWeight.bold)),
-              ),
-              IconButton(
-                icon: Icon(Icons.close, color: onPrimaryColor),
-                onPressed: () {
-                  if (widget.onClose != null) {
-                    widget.onClose!();
-                  } else {
-                    Navigator.pop(context);
-                  }
-                },
-              ),
-            ]),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text('Producto Escaneado',
+                      style: TextStyle(
+                        color: onPrimaryColor, 
+                        fontSize: 18, 
+                        fontWeight: FontWeight.bold,
+                      )),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close, color: onPrimaryColor),
+                  onPressed: () {
+                    if (widget.onClose != null) {
+                      widget.onClose!();
+                    } else {
+                      Navigator.pop(context);
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
 
-          Expanded(
+          Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 72, height: 72,
-                        decoration: BoxDecoration(
-                          color: isDark 
-                              ? surfaceColor.withOpacity(0.5)
-                              : const Color(0xFFF5F5F5),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: widget.product.imageUrl != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(widget.product.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) =>
-                                        Icon(Icons.fastfood, size: 36, color: primaryColor)))
-                            : Icon(Icons.fastfood, size: 36, color: primaryColor),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(widget.product.name,
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-                                    color: primaryColor),
-                                maxLines: 2, overflow: TextOverflow.ellipsis),
-                            if (widget.product.brand.isNotEmpty)
-                              Text(widget.product.brand,
-                                  style: TextStyle(fontSize: 12, color: textSmallColor)),
-                            if (_celiacMode && widget.product.containsGluten != null) ...[
-                              const SizedBox(height: 6),
-                              GlutenIndicator(
-                                containsGluten: widget.product.containsGluten,
-                                size: 14,
-                              ),
-                            ],
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: primaryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text('Cód: ${widget.product.barcode}',
-                                  style: TextStyle(fontSize: 11, color: primaryColor)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
+                  // ── Info del producto ────────────────────────────────── //
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: isDark 
-                          ? surfaceColor.withOpacity(0.5)
-                          : const Color(0xFFF8F9FA),
+                      color: primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Text('Valores nutricionales por 100g',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold,
-                                color: primaryColor)),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _macroCol('HC', '${widget.product.carbsPer100g.toStringAsFixed(1)}g',
-                                AppColors.ambarSuave, textSmallColor),
-                            _macroCol('Calorías',
-                                '${widget.product.caloriesPer100g.toStringAsFixed(0)} kcal',
-                                AppColors.rojoSuave, textSmallColor),
-                            _macroCol('Grasas', '${widget.product.fatPer100g.toStringAsFixed(1)}g',
-                                AppColors.verdesuave, textSmallColor),
-                            _macroCol('Proteínas',
-                                '${widget.product.proteinPer100g.toStringAsFixed(1)}g',
-                                primaryColor, textSmallColor),
-                          ],
+                        Container(
+                          width: 60, height: 60,
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: widget.product.imageUrl != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.network(widget.product.imageUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Icon(
+                                          Icons.restaurant, color: primaryColor, size: 28)),
+                                )
+                              : Icon(Icons.restaurant, color: primaryColor, size: 28),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(widget.product.name,
+                                  style: TextStyle(
+                                    fontSize: 15, 
+                                    fontWeight: FontWeight.bold, 
+                                    color: primaryColor,
+                                  ),
+                                  maxLines: 2, 
+                                  overflow: TextOverflow.ellipsis),
+                              if (widget.product.brand.isNotEmpty)
+                                Text(widget.product.brand,
+                                    style: TextStyle(fontSize: 12, color: textSmallColor)),
+                              const SizedBox(height: 4),
+                              Text('${widget.product.carbsPer100g.toStringAsFixed(1)}g HC · '
+                                  '${widget.product.caloriesPer100g.toStringAsFixed(0)} cal/100g',
+                                  style: TextStyle(fontSize: 12, color: textSmallColor)),
+                              // ✅ Indicador de gluten
+                              if (_celiacMode && widget.product.containsGluten != null) ...[
+                                const SizedBox(height: 6),
+                                GlutenIndicator(
+                                  containsGluten: widget.product.containsGluten,
+                                  size: 12,
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
 
-                  Text('Calculadora de raciones',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,
-                          color: primaryColor)),
+                  // ── Campos bidireccionales ──────────────────────────── //
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _inputField(
+                          label: 'Gramos',
+                          controller: _gramsCtrl,
+                          suffix: 'g',
+                          onChanged: _onGramsChanged,
+                          primaryColor: primaryColor,
+                          textSmallColor: textSmallColor,
+                          dividerColor: dividerColor,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: _inputField(
+                          label: 'Raciones',
+                          controller: _racionesCtrl,
+                          suffix: 'R',
+                          onChanged: _onRacionesChanged,
+                          primaryColor: primaryColor,
+                          textSmallColor: textSmallColor,
+                          dividerColor: dividerColor,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 4),
-                  Text('Introduce los gramos o las raciones — el otro campo se calcula solo.',
-                      style: TextStyle(fontSize: 12, color: textSmallColor)),
-                  const SizedBox(height: 14),
-
-                  Row(children: [
-                    Expanded(child: _inputField(
-                      label: 'Gramos',
-                      suffix: 'g',
-                      controller: _gramsCtrl,
-                      onChanged: _onGramsChanged,
-                      primaryColor: primaryColor,
-                      textSmallColor: textSmallColor,
-                      dividerColor: dividerColor,
-                    )),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Icon(Icons.swap_horiz, color: primaryColor),
-                    ),
-                    Expanded(child: _inputField(
-                      label: 'Raciones',
-                      suffix: 'R',
-                      controller: _racionesCtrl,
-                      onChanged: _onRacionesChanged,
-                      primaryColor: primaryColor,
-                      textSmallColor: textSmallColor,
-                      dividerColor: dividerColor,
-                    )),
-                  ]),
-                  const SizedBox(height: 4),
-                  Text('1 ración = 10g HC',
+                  Text('1 ración = 10g de HC',
                       style: TextStyle(fontSize: 11, color: textSmallColor),
                       textAlign: TextAlign.right),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
+                  // ✅ NUEVO: Campo de glucosa
+                  _inputField(
+                    label: 'Glucosa actual',
+                    controller: _glucoseCtrl,
+                    suffix: 'mg/dL',
+                    onChanged: _onGlucoseChanged,
+                    primaryColor: primaryColor,
+                    textSmallColor: textSmallColor,
+                    dividerColor: dividerColor,
+                  ),
+                  const SizedBox(height: 4),
+                  Text('Objetivo: 110 mg/dL',
+                      style: TextStyle(fontSize: 11, color: textSmallColor),
+                      textAlign: TextAlign.right),
+                  const SizedBox(height: 20),
+
+                  // ── Resumen nutricional ─────────────────────────────── //
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: primaryColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _resultCol('HC total', '${_hc.toStringAsFixed(1)}g', AppColors.ambarSuave, textSmallColor),
-                        _resultCol('Calorías', '${_calories.toStringAsFixed(0)} kcal', AppColors.rojoSuave, textSmallColor),
-                        _resultCol('Raciones', _raciones.toStringAsFixed(1), primaryColor, textSmallColor),
+                        Text('Resumen Nutricional',
+                            style: TextStyle(
+                              fontSize: 15, 
+                              fontWeight: FontWeight.bold, 
+                              color: primaryColor,
+                            )),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _nutrientColumn('HC', '${_hc.toStringAsFixed(1)}g', primaryColor),
+                            _nutrientColumn('Calorías', '${_calories.toStringAsFixed(0)} kcal', primaryColor),
+                            _nutrientColumn('Raciones', _raciones.toStringAsFixed(1), primaryColor),
+                          ],
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
+                  // ✅ NUEVO: Cálculo de insulina destacado
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          primaryColor,
+                          primaryColor.withOpacity(0.8),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryColor.withOpacity(0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.vaccines, color: onPrimaryColor, size: 24),
+                            const SizedBox(width: 8),
+                            Text('Insulina necesaria',
+                                style: TextStyle(
+                                  color: onPrimaryColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                )),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text('${_insulin.toStringAsFixed(1)} U',
+                            style: TextStyle(
+                              color: onPrimaryColor,
+                              fontSize: 42,
+                              fontWeight: FontWeight.bold,
+                            )),
+                        const SizedBox(height: 8),
+                        Text('Ratio: ${_ratioValue.toStringAsFixed(1)} g/U  •  FSI: ${_fsi.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              color: onPrimaryColor.withOpacity(0.8),
+                              fontSize: 11,
+                            )),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Botones de acción ───────────────────────────────── //
                   SizedBox(
                     height: 50,
-                    child: OutlinedButton.icon(
+                    child: ElevatedButton.icon(
                       onPressed: widget.onRescan,
-                      icon: Icon(Icons.qr_code_scanner, color: primaryColor),
+                      icon: Icon(Icons.qr_code_scanner, color: onPrimaryColor),
                       label: Text('Escanear otro producto',
-                          style: TextStyle(color: primaryColor, fontWeight: FontWeight.w600)),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: primaryColor),
+                          style: TextStyle(
+                            color: onPrimaryColor, 
+                            fontSize: 16, 
+                            fontWeight: FontWeight.w600,
+                          )),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
                       ),
                     ),
                   ),
@@ -782,41 +890,47 @@ class _ProductModalState extends State<_ProductModal> {
     );
   }
 
-  Widget _macroCol(String label, String value, Color color, Color? labelColor) => Column(
-    children: [
-      Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
-      Text(label, style: TextStyle(fontSize: 10, color: labelColor)),
-    ],
-  );
-
-  Widget _resultCol(String label, String value, Color color, Color? labelColor) => Column(
-    children: [
-      Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-      Text(label, style: TextStyle(fontSize: 11, color: labelColor)),
-    ],
-  );
-
   Widget _inputField({
     required String label,
-    required String suffix,
     required TextEditingController controller,
+    required String suffix,
     required ValueChanged<String> onChanged,
     required Color primaryColor,
     required Color? textSmallColor,
     required Color dividerColor,
-  }) => TextField(
-    controller: controller,
-    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-    textAlign: TextAlign.center,
-    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor),
-    decoration: InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: textSmallColor, fontSize: 13),
-      suffixText: suffix,
-      suffixStyle: TextStyle(color: textSmallColor, fontSize: 13),
-      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: dividerColor)),
-      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryColor)),
-    ),
-    onChanged: onChanged,
-  );
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryColor),
+      textAlign: TextAlign.center,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: textSmallColor, fontSize: 13),
+        suffixText: suffix,
+        suffixStyle: TextStyle(color: textSmallColor, fontSize: 13),
+        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: dividerColor)),
+        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: primaryColor)),
+      ),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _nutrientColumn(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(value,
+            style: TextStyle(
+              fontSize: 18, 
+              fontWeight: FontWeight.bold, 
+              color: color,
+            )),
+        Text(label,
+            style: TextStyle(
+              fontSize: 11, 
+              color: Theme.of(context).textTheme.bodySmall?.color,
+            )),
+      ],
+    );
+  }
 }

@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 import '../services/glucose_service.dart';
 import '../services/tir_service.dart';
-import '../widgets/custom_appbar.dart';
 import '../utils/admin_nav_helper.dart';
 
 class GlucoseHistoryScreen extends StatefulWidget {
@@ -30,11 +29,10 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
   double _averageGlucose = 0;
   double _minGlucose = 0;
   double _maxGlucose = 0;
-  int _totalReadings = 0;
   int _tirPercentage = 0;
   
   // Estado para navegación
-  int _selectedTab = 0;
+  // ignore: unused_field
   bool _isAdmin = false;
 
   @override
@@ -69,7 +67,6 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
         _averageGlucose = values.reduce((a, b) => a + b) / values.length;
         _minGlucose = values.reduce((a, b) => a < b ? a : b);
         _maxGlucose = values.reduce((a, b) => a > b ? a : b);
-        _totalReadings = readings.length;
       }
 
       if (mounted) {
