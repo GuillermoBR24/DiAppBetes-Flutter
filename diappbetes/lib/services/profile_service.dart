@@ -212,4 +212,18 @@ class ProfileService {
     final profile = await getMyProfile();
     return profile?['celiac_mode'] == true;
   }
+
+  Future<void> setBiometricLoginEnabled(bool enabled) async {
+    if (_uid == null) return;
+    await _db.collection('profiles').doc(_uid).update({
+      'biometric_login_enabled': enabled,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+    print('✅ [PROFILE] Biometric login: $enabled');
+  }
+
+  Future<bool> isBiometricLoginEnabled() async {
+    final profile = await getMyProfile();
+    return profile?['biometric_login_enabled'] == true;
+  }
 }

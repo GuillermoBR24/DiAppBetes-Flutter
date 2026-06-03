@@ -1,4 +1,5 @@
 // lib/services/auth_service.dart
+import 'package:diappbetes/services/biometric_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -202,6 +203,17 @@ class AuthService {
       'email_verified': true,
       'updated_at': FieldValue.serverTimestamp(),
     });
+
+    final biometricService = BiometricService();
+    final isEnabled = await biometricService.isCurrentUserBiometricEnabled(freshUser.uid);
+    if (isEnabled) {
+      print(' [AUTH] Usuario tiene huella activa, guardando credenciales');
+      await biometricService.enableForUser(
+        userId: freshUser.uid,
+        email: email,
+        password: password,
+      );
+    }
 
     return credential;
   }

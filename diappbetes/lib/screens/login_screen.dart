@@ -1,4 +1,5 @@
 // lib/screens/login_screen.dart
+import 'package:diappbetes/services/biometric_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
@@ -22,12 +23,28 @@ class _LoginScreenState extends State<LoginScreen> {
   String _error = '';
   bool _obscurePassword = true;
   bool _loading = false;
+  bool _biometricEnabled = false;
+  final _biometricService = BiometricService();
+
+  @override 
+  void initState() {
+    super.initState();
+    _checkBiometricLogin();
+  }
 
   @override
   void dispose() {
     _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+  
+  void _showSnack(String msg, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: isError ? AppColors.rojoSuave : AppColors.verdesuave,
+    ));
   }
 
   void _clearError() => setState(() => _error = '');
@@ -43,8 +60,6 @@ class _LoginScreenState extends State<LoginScreen> {
       print('═══════════════════════════════════════════════════════');
       print('🔍 [LOGIN] Intentando login con: ${_identifierController.text.trim()}');
       
-      // 1. Login exitoso con Firebase Auth
-      print('📡 [LOGIN] Llamando a _authService.login()...');
       await _authService.login(
         identifier: _identifierController.text.trim(),
         password:   _passwordController.text,
@@ -53,19 +68,16 @@ class _LoginScreenState extends State<LoginScreen> {
       print('✅ [LOGIN] Login exitoso con Firebase Auth');
       print('👤 [LOGIN] Usuario autenticado: ${FirebaseAuth.instance.currentUser?.uid}');
       
-      // 2. ✅ Login OK - Ahora verificar modo mantenimiento
-      print('\n🔧 [LOGIN] Verificando modo mantenimiento...');
       final maintenanceMsg = await _maintenanceService.checkMaintenanceMode();
       
       print('\n🔍 [LOGIN] Resultado de checkMaintenanceMode(): ${maintenanceMsg ?? "null (PERMITIR)"}');
       
       if (maintenanceMsg != null) {
-        // ❌ Modo mantenimiento activo y usuario NO es admin
         print('🚫 [LOGIN] BLOQUEADO por modo mantenimiento');
         print('🚫 [LOGIN] Mensaje: $maintenanceMsg');
         print('📡 [LOGIN] Cerrando sesión...');
         
-        await FirebaseAuth.instance.signOut(); // Cerrar sesión
+        await FirebaseAuth.instance.signOut();
         
         print('✅ [LOGIN] Sesión cerrada');
         
@@ -78,7 +90,11 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
       
-      // ✅ Todo OK - Redirigir al home
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId != null) {
+        await _biometricService.updateCredentialsIfEnabled(currentUserId);
+      }
+      
       print('✅ [LOGIN] Todo OK - Redirigiendo al home');
       print('═══════════════════════════════════════════════════════\n');
       if (mounted) Navigator.pushReplacementNamed(context, '/home');
@@ -94,6 +110,92 @@ class _LoginScreenState extends State<LoginScreen> {
       
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  // ── Verificar si puede usar login biométrico ─────────────────────────── //
+  Future<void> _checkBiometricLogin() async {
+    final biometricService = BiometricService();
+    final canUse = await biometricService.canCheckBiometrics();
+    final isAvailable = await biometricService.isBiometricAvailable();
+    final isEnabled = await biometricService.isEnabled();
+    
+    // Solo mostrar botón si hay credenciales guardadas
+    final credentials = await biometricService.getCredentials();
+    final hasCredentials = credentials != null;
+    
+    if (mounted) {
+      setState(() {
+        _biometricEnabled = canUse && isAvailable && isEnabled && hasCredentials;
+      });
+    }
+  }
+
+  // ── Login con huella ─────────────────────────────────────────────────── //
+  Future<void> _loginWithBiometric() async {
+    setState(() => _loading = true);
+    
+    try {
+      final authenticated = await _biometricService.authenticate();
+      
+      if (!mounted) return;
+      
+      if (authenticated) {
+        final credentials = await _biometricService.getCredentials();
+        
+        if (credentials != null) {
+          final email = credentials['email'];
+          final password = credentials['password'];
+          
+          if (email != null && password != null) {
+            print('🔐 [BIOMETRIC] Login automático con: $email');
+            
+            try {
+              // Login automático con credenciales guardadas
+              await _authService.login(
+                identifier: email,
+                password: password,
+              );
+              
+              print('✅ [BIOMETRIC] Login exitoso');
+              
+              // Verificar modo mantenimiento
+              final maintenanceMsg = await _maintenanceService.checkMaintenanceMode();
+              
+              if (maintenanceMsg != null) {
+                await FirebaseAuth.instance.signOut();
+                if (!mounted) return;
+                setState(() => _loading = false);
+                _showMaintenanceDialog(maintenanceMsg);
+                return;
+              }
+              
+              if (mounted) {
+                Navigator.pushReplacementNamed(context, '/home');
+              }
+              
+            } catch (e) {
+              print('❌ [BIOMETRIC] Error en login automático: $e');
+              if (mounted) {
+                setState(() => _loading = false);
+                _showSnack('Error al iniciar sesión automáticamente', isError: true);
+              }
+            }
+          }
+        } else {
+          // No hay credenciales, no debería pasar
+          setState(() => _loading = false);
+          _showSnack('No hay credenciales guardadas', isError: true);
+        }
+      } else {
+        setState(() => _loading = false);
+        _showSnack('Autenticación cancelada', isError: true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        _showSnack('Error en autenticación: $e', isError: true);
+      }
     }
   }
 
@@ -167,8 +269,7 @@ class _LoginScreenState extends State<LoginScreen> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                Navigator.pop(ctx); // Cerrar diálogo
-                // Se queda en la pantalla de login
+                Navigator.pop(ctx);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryColor,
@@ -207,6 +308,7 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.blanco,
       body: Stack(
         children: [
+          // ✅ CORREGIDO: Pasar el color al painter
           SizedBox.expand(
             child: CustomPaint(
               painter: _BackgroundPainter(
@@ -224,6 +326,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(height: screenHeight * 0.01),
+                      // ✅ CORREGIDO: Pasar todos los parámetros
                       _buildLogo(context, cardColor, isDark),
                       const SizedBox(height: 30),
                       _buildLoginCard(
@@ -233,15 +336,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         textColor,
                         textSmallColor,
                         dividerColor,
-                        isDark,
                       ),
                       const SizedBox(height: 16),
                       TextButton(
                         onPressed: () => Navigator.pushReplacementNamed(context, '/auth'),
                         child: Text('Volver',
                             style: TextStyle(
-                              color: primaryColor, 
-                              fontSize: 14, 
+                              color: primaryColor,
+                              fontSize: 14,
                               fontWeight: FontWeight.w500,
                             )),
                       ),
@@ -283,6 +385,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // ✅ CORREGIDO: Recibir todos los parámetros necesarios
   Widget _buildLoginCard(
     BuildContext context,
     Color primaryColor,
@@ -290,8 +393,9 @@ class _LoginScreenState extends State<LoginScreen> {
     Color? textColor,
     Color? textSmallColor,
     Color dividerColor,
-    bool isDark,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       width: double.infinity,
       constraints: const BoxConstraints(maxWidth: 300),
@@ -360,7 +464,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
             const SizedBox(height: 20),
 
-            // Botón Login
+            // Botón Login con contraseña
             SizedBox(
               height: 50,
               child: ElevatedButton(
@@ -381,6 +485,30 @@ class _LoginScreenState extends State<LoginScreen> {
                         )),
               ),
             ),
+            
+            const SizedBox(height: 12),
+            
+            // ✅ Botón de huella dactilar (si está disponible)
+            if (_biometricEnabled) ...[
+              SizedBox(
+                height: 50,
+                child: OutlinedButton.icon(
+                  onPressed: _loading ? null : _loginWithBiometric,
+                  icon: Icon(Icons.fingerprint, color: primaryColor, size: 24),
+                  label: Text('Iniciar con huella',
+                      style: TextStyle(
+                        color: primaryColor, 
+                        fontSize: 16, 
+                        fontWeight: FontWeight.w600,
+                      )),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: primaryColor, width: 2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+            
             const SizedBox(height: 16),
 
             // ¿Olvidaste tu contraseña?

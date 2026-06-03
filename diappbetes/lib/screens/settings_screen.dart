@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:diappbetes/providers/theme_provider.dart';
+import 'package:diappbetes/services/biometric_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -84,6 +85,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _savingPersonal = false;
   bool _savingDiabetes = false;
   bool _uploadingAvatar = false;
+  bool _biometricEnabled = false;
+  bool _canUseBiometric = false;
+  bool _loadingBiometric = true;
 
   String _username  = '';
   String _email     = '';
@@ -116,6 +120,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _birthDateCtrl = TextEditingController();
     _fsiCtrl       = TextEditingController();
     _loadData();
+    _loadBiometricState();
   }
 
   @override
@@ -186,6 +191,125 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } finally {
       if (mounted) setState(() => _loadingProfile = false);
     }
+  }
+
+  Future<void> _loadBiometricState() async {
+    final biometricService = BiometricService();
+    
+    final canUse = await biometricService.canCheckBiometrics();
+    final isAvailable = await biometricService.isBiometricAvailable();
+    final userId = _authService.currentUser?.uid;
+    
+    // Solo está activo si el usuario actual tiene huella habilitada
+    final isEnabled = userId != null 
+        ? await biometricService.isCurrentUserBiometricEnabled(userId)
+        : false;
+    
+    if (mounted) {
+      setState(() {
+        _canUseBiometric = canUse && isAvailable;
+        _biometricEnabled = isEnabled;
+        _loadingBiometric = false;
+      });
+    }
+  }
+
+  // ── Toggle de autenticación biométrica ────────────────────────────────── //
+  Future<void> _toggleBiometric() async {
+    if (!_canUseBiometric) return;
+    
+    final biometricService = BiometricService();
+    final userId = _authService.currentUser?.uid;
+    final userEmail = _authService.currentUser?.email;
+    
+    if (userId == null || userEmail == null) return;
+
+    if (!_biometricEnabled) {
+      // Activar: pedir contraseña
+      final password = await _askPasswordForBiometric();
+      
+      if (password == null || password.isEmpty) {
+        _showSnack('Se requiere contraseña para activar la huella', isError: true);
+        return;
+      }
+      
+      // Verificar huella
+      final authenticated = await biometricService.authenticate();
+      if (authenticated && mounted) {
+        // Guardar credenciales para ESTE usuario
+        await biometricService.enableForUser(
+          userId: userId,
+          email: userEmail,
+          password: password,
+        );
+        await _profileService.setBiometricLoginEnabled(true);
+        setState(() => _biometricEnabled = true);
+        _showSnack('Autenticación biométrica activada');
+      }
+    } else {
+      // Desactivar: borrar credenciales
+      await biometricService.disable();
+      await _profileService.setBiometricLoginEnabled(false);
+      setState(() => _biometricEnabled = false);
+      _showSnack('Autenticación biométrica desactivada');
+    }
+  }
+
+  Future<String?> _askPasswordForBiometric() async {
+    final ctrl = TextEditingController();
+    bool obs = true;
+    
+    final r = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          backgroundColor: Theme.of(ctx).cardColor,
+          title: Text('Activar huella dactilar',
+              style: TextStyle(
+                color: Theme.of(ctx).colorScheme.primary, 
+                fontWeight: FontWeight.bold,
+              )),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Introduce tu contraseña para guardarla de forma segura y poder iniciar sesión con tu huella.',
+                  style: TextStyle(color: Theme.of(ctx).textTheme.bodyMedium?.color, fontSize: 13)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: ctrl,
+                obscureText: obs,
+                autofocus: true,
+                style: TextStyle(color: Theme.of(ctx).textTheme.bodyLarge?.color),
+                decoration: InputDecoration(
+                  labelText: 'Contraseña',
+                  labelStyle: TextStyle(color: Theme.of(ctx).textTheme.bodySmall?.color),
+                  enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Theme.of(ctx).dividerColor)),
+                  focusedBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Theme.of(ctx).colorScheme.primary)),
+                  suffixIcon: IconButton(
+                    icon: Icon(obs ? Icons.visibility_off : Icons.visibility, 
+                        color: Theme.of(ctx).textTheme.bodySmall?.color, size: 20),
+                    onPressed: () => setS(() => obs = !obs),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), 
+                child: Text('Cancelar', 
+                    style: TextStyle(color: Theme.of(ctx).textTheme.bodySmall?.color))),
+            TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text),
+                child: const Text('Guardar', 
+                    style: TextStyle(color: AppColors.verdesuave, fontWeight: FontWeight.bold))),
+          ],
+        ),
+      ),
+    );
+    ctrl.dispose();
+    return r;
   }
 
   // ── Guardar info personal ─────────────────────────────────────────────── //
@@ -707,7 +831,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 12),
                   _buildAppearanceCard(context),
                   const SizedBox(height: 12),
-                  _buildCeliacCard(),  // ✅ NUEVO: Tarjeta de modo celíaco
+                  _buildCeliacCard(),
+                  const SizedBox(height: 12),
+                  _buildBiometricCard(),
                   const SizedBox(height: 12),
                   _buildDiabetesCard(),
                 ],
@@ -777,6 +903,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Expanded(
                     child: Text(
                       'Se mostrará un indicador junto a cada alimento indicando si contiene gluten.',
+                      style: TextStyle(fontSize: 12, color: textColor),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBiometricCard() {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color;
+    final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
+
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.fingerprint, color: primaryColor, size: 24),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Iniciar sesión con huella',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: primaryColor,
+                        )),
+                    Text('Usa tu huella dactilar para acceder',
+                        style: TextStyle(fontSize: 12, color: textSmallColor)),
+                  ],
+                ),
+              ),
+              if (_loadingBiometric)
+                SizedBox(
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2, color: primaryColor),
+                )
+              else
+                Switch(
+                  value: _canUseBiometric && _biometricEnabled,
+                  onChanged: _canUseBiometric ? (v) => _toggleBiometric() : null,
+                  activeColor: primaryColor,
+                ),
+            ],
+          ),
+          if (!_canUseBiometric) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 18, color: Colors.orange),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Tu dispositivo no soporta autenticación biométrica o no tienes huella configurada.',
                       style: TextStyle(fontSize: 12, color: textColor),
                     ),
                   ),
