@@ -270,11 +270,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)))
               : TirProgressRing(percentage: _tirPercentage),
           if (!_loadingTir && _tirPercentage == 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text('Sin lecturas aún',
-                  style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
-            ),
+            
           const SizedBox(height: 48),
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
