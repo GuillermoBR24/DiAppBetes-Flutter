@@ -24,6 +24,8 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _loading = false;
   bool _biometricEnabled = false;
+  bool _useBiometric = false;
+  bool _rememberMe = false; // ── "Recuérdame" ──────────────────────────── //
   final _biometricService = BiometricService();
 
   @override 
@@ -59,10 +61,12 @@ class _LoginScreenState extends State<LoginScreen> {
       print('🔐 [LOGIN] Iniciando proceso de login');
       print('═══════════════════════════════════════════════════════');
       print('🔍 [LOGIN] Intentando login con: ${_identifierController.text.trim()}');
+      print('🔍 [LOGIN] Recuérdame: $_rememberMe');
       
       await _authService.login(
         identifier: _identifierController.text.trim(),
         password:   _passwordController.text,
+        rememberMe: _rememberMe,
       );
       
       print('✅ [LOGIN] Login exitoso con Firebase Auth');
@@ -90,11 +94,6 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
       
-      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-      if (currentUserId != null) {
-        await _biometricService.updateCredentialsIfEnabled(currentUserId);
-      }
-      
       print('✅ [LOGIN] Todo OK - Redirigiendo al home');
       print('═══════════════════════════════════════════════════════\n');
       if (mounted) Navigator.pushReplacementNamed(context, '/home');
@@ -112,84 +111,81 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) setState(() => _loading = false);
     }
   }
-
+  
   // ── Verificar si puede usar login biométrico ─────────────────────────── //
+  // NOTA: en LoginScreen aún no hay sesión de Firebase activa, así que no
+  // comparamos con currentUserId — solo comprobamos si HAY un usuario con
+  // biometría activada guardada en este dispositivo (getUserId() != null).
   Future<void> _checkBiometricLogin() async {
-    final biometricService = BiometricService();
-    final canUse = await biometricService.canCheckBiometrics();
-    final isAvailable = await biometricService.isBiometricAvailable();
-    final isEnabled = await biometricService.isEnabled();
-    
-    // Solo mostrar botón si hay credenciales guardadas
-    final credentials = await biometricService.getCredentials();
-    final hasCredentials = credentials != null;
-    
+    final canUse      = await _biometricService.canCheckBiometrics();
+    final isAvailable = await _biometricService.isBiometricAvailable();
+    final isEnabled    = await _biometricService.isEnabled();
+    final savedUserId  = await _biometricService.getUserId();
+
     if (mounted) {
       setState(() {
-        _biometricEnabled = canUse && isAvailable && isEnabled && hasCredentials;
+        _biometricEnabled = canUse && isAvailable && isEnabled && savedUserId != null;
+        _useBiometric = _biometricEnabled;
       });
+
+      // Si hay credenciales guardadas, ofrece login automático con huella
+      if (_useBiometric) {
+        await _loginWithBiometric();
+      }
     }
   }
 
   // ── Login con huella ─────────────────────────────────────────────────── //
+  // Usa las credenciales (email/password) guardadas de forma segura por
+  // BiometricService tras verificar la huella, y hace el login normal
+  // de Firebase con ellas.
   Future<void> _loginWithBiometric() async {
     setState(() => _loading = true);
-    
+
     try {
       final authenticated = await _biometricService.authenticate();
-      
+
       if (!mounted) return;
-      
-      if (authenticated) {
-        final credentials = await _biometricService.getCredentials();
-        
-        if (credentials != null) {
-          final email = credentials['email'];
-          final password = credentials['password'];
-          
-          if (email != null && password != null) {
-            print('🔐 [BIOMETRIC] Login automático con: $email');
-            
-            try {
-              // Login automático con credenciales guardadas
-              await _authService.login(
-                identifier: email,
-                password: password,
-              );
-              
-              print('✅ [BIOMETRIC] Login exitoso');
-              
-              // Verificar modo mantenimiento
-              final maintenanceMsg = await _maintenanceService.checkMaintenanceMode();
-              
-              if (maintenanceMsg != null) {
-                await FirebaseAuth.instance.signOut();
-                if (!mounted) return;
-                setState(() => _loading = false);
-                _showMaintenanceDialog(maintenanceMsg);
-                return;
-              }
-              
-              if (mounted) {
-                Navigator.pushReplacementNamed(context, '/home');
-              }
-              
-            } catch (e) {
-              print('❌ [BIOMETRIC] Error en login automático: $e');
-              if (mounted) {
-                setState(() => _loading = false);
-                _showSnack('Error al iniciar sesión automáticamente', isError: true);
-              }
-            }
-          }
-        } else {
-          // No hay credenciales, no debería pasar
-          setState(() => _loading = false);
-          _showSnack('No hay credenciales guardadas', isError: true);
-        }
-      } else {
+
+      if (!authenticated) {
         setState(() => _loading = false);
         _showSnack('Autenticación cancelada', isError: true);
+        return;
+      }
+
+      final creds = await _biometricService.getCredentials();
+      if (creds == null || creds['email'] == null || creds['password'] == null) {
+        setState(() => _loading = false);
+        _showSnack('No hay credenciales guardadas para huella', isError: true);
+        return;
+      }
+
+      // Login real con Firebase usando las credenciales guardadas.
+      // "rememberMe: true" porque si activó huella, asumimos que quiere
+      // sesión persistente en este dispositivo.
+      await _authService.login(
+        identifier: creds['email']!,
+        password:   creds['password']!,
+        rememberMe: true,
+      );
+
+      if (!mounted) return;
+
+      final maintenanceMsg = await _maintenanceService.checkMaintenanceMode();
+      if (maintenanceMsg != null) {
+        await FirebaseAuth.instance.signOut();
+        setState(() => _loading = false);
+        _showMaintenanceDialog(maintenanceMsg);
+        return;
+      }
+
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        _showSnack(AuthService.translateError(e), isError: true);
       }
     } catch (e) {
       if (mounted) {
@@ -308,7 +304,6 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.blanco,
       body: Stack(
         children: [
-          // ✅ CORREGIDO: Pasar el color al painter
           SizedBox.expand(
             child: CustomPaint(
               painter: _BackgroundPainter(
@@ -326,7 +321,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(height: screenHeight * 0.01),
-                      // ✅ CORREGIDO: Pasar todos los parámetros
                       _buildLogo(context, cardColor, isDark),
                       const SizedBox(height: 30),
                       _buildLoginCard(
@@ -362,19 +356,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildLogo(BuildContext context, Color cardColor, bool isDark) {
     return Container(
       width: 160, height: 160,
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: isDark 
-                ? Colors.black.withOpacity(0.3) 
-                : const Color(0x1A000000),
-            blurRadius: 6, 
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
       padding: const EdgeInsets.all(10),
       child: Image.asset('assets/LogoDiAppBetes.png', fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => Icon(
@@ -385,7 +366,6 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ✅ CORREGIDO: Recibir todos los parámetros necesarios
   Widget _buildLoginCard(
     BuildContext context,
     Color primaryColor,
@@ -455,14 +435,46 @@ class _LoginScreenState extends State<LoginScreen> {
               validator: (v) => (v == null || v.isEmpty) ? 'Campo obligatorio' : null,
             ),
 
+            // ── Checkbox "Recuérdame" ────────────────────────────────── //
+            const SizedBox(height: 4),
+            InkWell(
+              onTap: () => setState(() => _rememberMe = !_rememberMe),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: Checkbox(
+                        value: _rememberMe,
+                        onChanged: (v) => setState(() => _rememberMe = v ?? false),
+                        activeColor: primaryColor,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Recuérdame',
+                        style: TextStyle(color: textColor, fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             // Error
             if (_error.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(_error,
                   style: const TextStyle(color: AppColors.rojoSuave, fontSize: 13),
                   textAlign: TextAlign.center),
             ],
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Botón Login con contraseña
             SizedBox(
@@ -507,6 +519,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              Text('o usa tu huella dactilar',
+                  style: TextStyle(color: textSmallColor, fontSize: 12),
+                  textAlign: TextAlign.center),
             ],
             
             const SizedBox(height: 16),
