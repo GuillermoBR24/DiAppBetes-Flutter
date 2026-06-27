@@ -34,34 +34,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(width: 16),
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(
-                    'assets/favicon.png',
-                    width: 42,
-                    height: 42,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => 
-                        Icon(Icons.image_not_supported, 
-                            color: Theme.of(context).colorScheme.primary, size: 20),
-                  ),
-                ),
-              ),
               const SizedBox(width: 12),
               Text(title,
                   style: TextStyle(
