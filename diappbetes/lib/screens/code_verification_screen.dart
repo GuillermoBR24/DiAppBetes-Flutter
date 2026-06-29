@@ -180,6 +180,19 @@ class _CodeVerificationScreenState extends State<CodeVerificationScreen> {
     return Container(
       width: 160,
       height: 160,
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: isDark 
+                ? Colors.black.withOpacity(0.3) 
+                : const Color(0x1A000000),
+            blurRadius: 6, 
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       padding: const EdgeInsets.all(10),
       child: Image.asset(
         'assets/LogoDiAppBetes.png',
