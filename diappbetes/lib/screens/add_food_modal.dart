@@ -12,7 +12,7 @@ import '../services/food_service.dart';
 // ---------------------------------------------------------------------------
 Color categoryBg(BuildContext context, String cat) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  
+
   if (isDark) {
     const map = {
       'frutas':       Color(0xFF3E2723),
@@ -52,7 +52,7 @@ Color categoryBg(BuildContext context, String cat) {
 
 Color categoryText(BuildContext context, String cat) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  
+
   if (isDark) {
     const map = {
       'frutas':       Color(0xFFFFB74D),
@@ -91,7 +91,14 @@ Color categoryText(BuildContext context, String cat) {
 }
 
 // ---------------------------------------------------------------------------
-// AddFoodModal — búsqueda con OpenFoodFacts + fallback local + escáner
+// AddFoodModal
+//
+// Dos catálogos, dos caminos:
+//  1) Búsqueda por texto → SOLO el catálogo genérico local (FoodService),
+//     instantánea, sin red, sin marcas. Cubre el uso diario normal.
+//  2) Escáner de código de barras → consulta OpenFoodFacts en directo,
+//     para cuando el usuario tiene el envase en la mano y quiere el dato
+//     exacto de ESE producto concreto.
 // ---------------------------------------------------------------------------
 class AddFoodModal extends StatefulWidget {
   final void Function(Map<String, dynamic> foodData)? onFoodAdded;
@@ -103,14 +110,12 @@ class AddFoodModal extends StatefulWidget {
 }
 
 class _AddFoodModalState extends State<AddFoodModal> {
-  final _foodService    = FoodService();
-  final _searchCtrl     = TextEditingController();
-  bool _celiacMode = false;
+  final _foodService = FoodService();
+  final _searchCtrl  = TextEditingController();
+  bool _celiacMode   = false;
 
-  List<Food> _foods        = [];
-  bool       _loading      = false;
-  bool       _searching    = false;
-  String     _searchTerm   = '';
+  List<Food> _foods      = [];
+  String     _searchTerm = '';
 
   // ── Estado del escáner ──────────────────────────────────────────────── //
   bool _scanning = false;
@@ -118,12 +123,10 @@ class _AddFoodModalState extends State<AddFoodModal> {
   bool _scanningLoading = false;
   MobileScannerController? _scannerController;
 
-  DateTime? _lastKeyPress;
-
   @override
   void initState() {
     super.initState();
-    setState(() => _foods = _foodService.getLocalFoods());
+    _foods = _foodService.getLocalFoods();
     _loadCeliacMode();
   }
 
@@ -139,28 +142,12 @@ class _AddFoodModalState extends State<AddFoodModal> {
     if (mounted) setState(() => _celiacMode = celiac);
   }
 
-  // ── Búsqueda con debounce de 600ms ───────────────────────────────────── //
+  // ── Búsqueda — síncrona, solo sobre el catálogo genérico local ────────── //
+  // Sin debounce, sin red: se filtra al instante en cada tecla.
   void _onSearchChanged(String term) {
-    setState(() => _searchTerm = term);
-    _lastKeyPress = DateTime.now();
-
-    if (term.trim().isEmpty) {
-      setState(() {
-        _foods    = _foodService.getLocalFoods();
-        _searching = false;
-      });
-      return;
-    }
-
-    Future.delayed(const Duration(milliseconds: 600), () async {
-      if (!mounted) return;
-      final elapsed = DateTime.now().difference(_lastKeyPress!);
-      if (elapsed.inMilliseconds < 590) return;
-
-      setState(() { _loading = true; _searching = true; });
-      final results = await _foodService.searchFoods(term.trim());
-      if (!mounted) return;
-      setState(() { _foods = results; _loading = false; });
+    setState(() {
+      _searchTerm = term;
+      _foods = _foodService.searchFoods(term);
     });
   }
 
@@ -177,7 +164,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
   }
 
   // ═══════════════════════════════════════════════════════════════════════
-  // ESCÁNER
+  // ESCÁNER — único punto de contacto con OpenFoodFacts (productos de marca)
   // ═══════════════════════════════════════════════════════════════════════
 
   void _startScanner() {
@@ -213,11 +200,10 @@ class _AddFoodModalState extends State<AddFoodModal> {
     try {
       final food = await _fetchProductFromBarcode(barcode);
       if (!mounted) return;
-      
+
       _stopScanner();
 
       if (food != null) {
-        // Cerrar el modal de añadir alimento y abrir el de detalles
         Navigator.pop(context);
         showDialog(
           context: context,
@@ -236,7 +222,9 @@ class _AddFoodModalState extends State<AddFoodModal> {
     }
   }
 
-  /// Consulta OpenFoodFacts y convierte el resultado a un objeto Food
+  /// Consulta OpenFoodFacts y convierte el resultado a un objeto Food.
+  /// Esta es la ÚNICA llamada de red a OpenFoodFacts en todo el flujo de
+  /// añadir alimentos — solo se dispara al escanear un código de barras.
   Future<Food?> _fetchProductFromBarcode(String barcode) async {
     final url = Uri.parse(
         'https://world.openfoodfacts.org/api/v2/product/$barcode.json'
@@ -255,10 +243,16 @@ class _AddFoodModalState extends State<AddFoodModal> {
     final product    = json['product'] as Map<String, dynamic>? ?? {};
     final nutriments = product['nutriments'] as Map<String, dynamic>? ?? {};
 
-    final name = product['product_name']?.toString()
+    final brand = product['brands']?.toString();
+    final rawName = product['product_name']?.toString()
         ?? product['product_name_es']?.toString()
         ?? product['product_name_en']?.toString()
         ?? 'Producto desconocido';
+    // Aquí sí mostramos marca: es justo lo que distingue a un producto
+    // concreto escaneado del genérico de la lista local.
+    final name = (brand != null && brand.isNotEmpty && !rawName.toLowerCase().contains(brand.toLowerCase()))
+        ? '$rawName ($brand)'
+        : rawName;
 
     final carbs = (nutriments['carbohydrates_100g'] as num?)?.toDouble()
         ?? (nutriments['carbohydrates'] as num?)?.toDouble()
@@ -268,7 +262,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
         ?? (nutriments['energy-kcal'] as num?)?.toDouble()
         ?? ((nutriments['energy_100g'] as num?)?.toDouble() ?? 0.0) / 4.184;
 
-    // ✅ Mejorar detección de gluten
     final bool? hasGluten = _detectGluten(product);
 
     return Food(
@@ -284,35 +277,31 @@ class _AddFoodModalState extends State<AddFoodModal> {
   }
 
   bool? _detectGluten(Map<String, dynamic> product) {
-    // 1. Buscar en allergens_tags (el más fiable)
     final allergensTags = product['allergens_tags'] as List?;
     if (allergensTags != null) {
       for (final tag in allergensTags) {
         final tagStr = tag.toString().toLowerCase();
-        if (tagStr.contains('en:gluten') || 
-            tagStr.contains('en:wheat') || 
-            tagStr.contains('en:barley') || 
+        if (tagStr.contains('en:gluten') ||
+            tagStr.contains('en:wheat') ||
+            tagStr.contains('en:barley') ||
             tagStr.contains('en:rye') ||
             tagStr.contains('en:oats')) {
           return true;
         }
       }
-      // Si hay tags pero ninguno es gluten, probablemente no tiene
       if (allergensTags.isNotEmpty) return false;
     }
 
-    // 2. Buscar en allergens (texto plano)
     final allergens = product['allergens']?.toString().toLowerCase() ?? '';
-    if (allergens.contains('gluten') || 
-        allergens.contains('trigo') || 
-        allergens.contains('wheat') || 
+    if (allergens.contains('gluten') ||
+        allergens.contains('trigo') ||
+        allergens.contains('wheat') ||
         allergens.contains('barley') ||
         allergens.contains('centeño') ||
         allergens.contains('cebada')) {
       return true;
     }
 
-    // 3. Buscar en ingredients_analysis_tags
     final analysisTags = product['ingredients_analysis_tags'] as List?;
     if (analysisTags != null) {
       for (final tag in analysisTags) {
@@ -321,12 +310,11 @@ class _AddFoodModalState extends State<AddFoodModal> {
       }
     }
 
-    // 4. Buscar en ingredients_text (más lento pero exhaustivo)
     final ingredients = (product['ingredients_text']?.toString().toLowerCase() ?? '') +
-                       ' ' + 
-                       (product['ingredients_text_es']?.toString().toLowerCase() ?? '');
-    
-    if (ingredients.contains('trigo') || 
+        ' ' +
+        (product['ingredients_text_es']?.toString().toLowerCase() ?? '');
+
+    if (ingredients.contains('trigo') ||
         ingredients.contains('harina de trigo') ||
         ingredients.contains('gluten') ||
         ingredients.contains('cebada') ||
@@ -335,12 +323,10 @@ class _AddFoodModalState extends State<AddFoodModal> {
       return true;
     }
 
-    // Si no hay información, devolver null (desconocido)
     if (allergens.isEmpty && allergensTags == null && ingredients.isEmpty) {
       return null;
     }
-    
-    // Si hay info de alérgenos pero no menciona gluten, probablemente no tiene
+
     return false;
   }
 
@@ -368,7 +354,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              // Reanudar el escáner para intentar de nuevo
               _scannerController?.start();
               setState(() {
                 _scanningLoading = false;
@@ -426,7 +411,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
                   child: Text('Añadir Alimento',
                       style: TextStyle(color: onPrimaryColor, fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
-                // ✅ Botón escanear
                 IconButton(
                   icon: Icon(
                     _scanning ? Icons.keyboard : Icons.qr_code_scanner,
@@ -468,7 +452,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
     );
   }
 
-  // ── Vista de búsqueda (original) ────────────────────────────────────── //
+  // ── Vista de búsqueda (catálogo genérico local) ──────────────────────── //
   Widget _buildSearchView({
     required Color primaryColor,
     required Color cardColor,
@@ -488,22 +472,17 @@ class _AddFoodModalState extends State<AddFoodModal> {
             onChanged: _onSearchChanged,
             style: TextStyle(fontSize: 15, color: textColor),
             decoration: InputDecoration(
-              hintText: 'Buscar alimento...',
+              hintText: 'Buscar alimento (ej. pollo, pasta, manzana)...',
               hintStyle: TextStyle(color: textSmallColor),
               prefixIcon: Icon(Icons.search, color: primaryColor),
-              suffixIcon: _loading
-                  ? Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: SizedBox(width: 20, height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: primaryColor)))
-                  : (_searchTerm.isNotEmpty
-                      ? IconButton(
-                          icon: Icon(Icons.clear, color: textSmallColor),
-                          onPressed: () {
-                            _searchCtrl.clear();
-                            _onSearchChanged('');
-                          })
-                      : null),
+              suffixIcon: _searchTerm.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear, color: textSmallColor),
+                      onPressed: () {
+                        _searchCtrl.clear();
+                        _onSearchChanged('');
+                      })
+                  : null,
               filled: true,
               fillColor: isDark
                   ? surfaceColor.withOpacity(0.5)
@@ -515,38 +494,11 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
         ),
 
-        // ── Indicador de fuente ───────────────────────────────────── //
-        if (_searching && !_loading)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              _foods.isEmpty
-                  ? 'Sin resultados para "$_searchTerm"'
-                  : '${_foods.length} resultados de OpenFoodFacts',
-              style: TextStyle(fontSize: 11, color: textSmallColor),
-              textAlign: TextAlign.center,
-            ),
-          ),
-
-        // ── Lista ─────────────────────────────────────────────────── //
+        // ── Lista o estado vacío ──────────────────────────────────── //
         Expanded(
-          child: _foods.isEmpty && !_loading
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.search_off, size: 48, color: dividerColor),
-                      const SizedBox(height: 8),
-                      Text(
-                        _searchTerm.isNotEmpty
-                            ? 'Sin resultados para "$_searchTerm"'
-                            : 'Escribe para buscar alimentos',
-                        style: TextStyle(color: textColor, fontSize: 14),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                )
+          child: _foods.isEmpty
+              ? _buildEmptyState(primaryColor, onPrimaryColor: Theme.of(context).colorScheme.onPrimary,
+                  textColor: textColor, dividerColor: dividerColor)
               : ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   itemCount: _foods.length,
@@ -559,11 +511,54 @@ class _AddFoodModalState extends State<AddFoodModal> {
     );
   }
 
+  // ── Estado sin resultados: invita a escanear el producto concreto ─────── //
+  Widget _buildEmptyState(Color primaryColor,
+      {required Color onPrimaryColor, required Color? textColor, required Color dividerColor}) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search_off, size: 48, color: dividerColor),
+            const SizedBox(height: 12),
+            Text(
+              _searchTerm.isNotEmpty
+                  ? 'No encontramos "${_searchTerm}" en el catálogo general'
+                  : 'Escribe para buscar alimentos',
+              style: TextStyle(color: textColor, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            if (_searchTerm.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                '¿Tienes el envase a mano? Escanea su código de barras\npara obtener el dato exacto del producto.',
+                style: TextStyle(color: textColor?.withOpacity(0.7), fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 14),
+              ElevatedButton.icon(
+                onPressed: _startScanner,
+                icon: Icon(Icons.qr_code_scanner, color: onPrimaryColor, size: 18),
+                label: Text('Escanear producto',
+                    style: TextStyle(color: onPrimaryColor, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryColor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Vista del escáner ───────────────────────────────────────────────── //
   Widget _buildScannerView(Color primaryColor, Color onPrimaryColor) {
     return Stack(
       children: [
-        // Cámara
         ClipRRect(
           borderRadius: const BorderRadius.only(
             bottomLeft: Radius.circular(24),
@@ -575,13 +570,11 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
         ),
 
-        // Overlay con recuadro guía
         CustomPaint(
           size: Size.infinite,
           painter: _ScanFramePainter(primaryColor),
         ),
 
-        // Texto superior
         const Positioned(
           top: 20,
           left: 0, right: 0,
@@ -592,7 +585,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
         ),
 
-        // Botón linterna
         Positioned(
           bottom: 30,
           left: 0, right: 0,
@@ -619,7 +611,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
         ),
 
-        // Loading al procesar código
         if (_scanningLoading)
           Container(
             color: Colors.black54,
@@ -639,7 +630,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
     );
   }
 
-    Widget _buildFoodRow(Food food) {
+  Widget _buildFoodRow(Food food) {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
     final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
@@ -650,26 +641,8 @@ class _AddFoodModalState extends State<AddFoodModal> {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          // Thumbnail o icono de categoría
-          Container(
-            width: 42, height: 42,
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: food.iconUrl != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(food.iconUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(Icons.restaurant,
-                            color: fg, size: 22)),
-                  )
-                : Icon(Icons.restaurant, color: fg, size: 22),
-          ),
           const SizedBox(width: 10),
 
-          // Nombre + macros
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -686,7 +659,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
           const SizedBox(width: 8),
 
-          // Chip categoría
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -698,7 +670,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
           const SizedBox(width: 8),
 
-          // ✅ Indicador de gluten (solo si el modo celíaco está activo y hay info)
           if (_celiacMode && food.containsGluten != null) ...[
             GlutenIndicator(
               containsGluten: food.containsGluten,
@@ -708,7 +679,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
             const SizedBox(width: 6),
           ],
 
-          // Botón añadir
           GestureDetector(
             onTap: () => _selectFood(food),
             child: Container(

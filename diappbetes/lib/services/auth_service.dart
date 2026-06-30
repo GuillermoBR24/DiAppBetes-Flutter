@@ -36,7 +36,8 @@ class AuthService {
 
     await _db.collection('profiles').doc(uid).set({
       'id':             uid,
-      'username':       resolvedUsername.toLowerCase(),
+      'username':       resolvedUsername,
+      'username_lower': resolvedUsername.toLowerCase(),
       'email':          email,
       'birth_date':     birthDate.isEmpty ? null : birthDate,
       'role':           'Usuario',
@@ -62,18 +63,17 @@ class AuthService {
     String email = identifier;
 
     if (!identifier.contains('@')) {
-      print('🔎 Buscando usuario: $identifier');
+      final cleanIdentifier = identifier.trim().toLowerCase(); // 🟢 Limpiamos y pasamos a minúsculas
+      print('🔎 Buscando usuario: $cleanIdentifier');
+      
       try {
         final query = await _db
             .collection('profiles')
-            .where('username', isEqualTo: identifier.toLowerCase())
+            .where('username_lower', isEqualTo: cleanIdentifier) // 🟢 Buscamos en el campo de minúsculas
             .limit(1)
             .get();
 
-        print('📄 Documentos encontrados: ${query.docs.length}');
-
         if (query.docs.isEmpty) {
-          print('❌ No se encontró el usuario en Firestore');
           throw FirebaseAuthException(
             code: 'user-not-found',
             message: 'No se encontró ningún usuario con ese nombre.',
@@ -81,8 +81,8 @@ class AuthService {
         }
 
         final userData = query.docs.first.data();
-        print('✅ Usuario encontrado: ${userData['email']}');
         email = userData['email'] as String;
+        print('✅ Usuario encontrado: $email');
       } catch (e) {
         print('❌ Error buscando en Firestore: $e');
         rethrow;
