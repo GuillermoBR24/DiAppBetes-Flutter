@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../services/profile_service.dart';
 import '../services/hc_ratio_service.dart';
 import '../services/auth_service.dart';
+import '../screens/report_issue_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Modelo HcRatio
@@ -800,15 +801,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
         foregroundColor: Theme.of(context).appBarTheme.foregroundColor,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, 
+          icon: Icon(Icons.arrow_back,
               color: Theme.of(context).appBarTheme.foregroundColor),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('DiAppBetes',
             style: TextStyle(
-              color: Theme.of(context).appBarTheme.foregroundColor, 
+              color: Theme.of(context).appBarTheme.foregroundColor,
               fontWeight: FontWeight.bold,
             )),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.report_problem_outlined,
+                color: Theme.of(context).appBarTheme.foregroundColor),
+            tooltip: 'Reportar incidencia',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ReportIssueScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: _loadingProfile
           ? Center(child: CircularProgressIndicator(
