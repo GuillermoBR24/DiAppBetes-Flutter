@@ -1,11 +1,16 @@
+import 'dart:convert';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 import 'remember_me_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
   AuthService._internal();
+  
+  static const String _baseUrl = 'http://localhost:8080/api/auth';
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -24,6 +29,7 @@ class AuthService {
     String username = '',
     String birthDate = '',
   }) async {
+    // 1. Firebase Auth crea el usuario (esto sigue siendo del cliente)
     final credential = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
@@ -31,22 +37,24 @@ class AuthService {
 
     await credential.user!.sendEmailVerification();
 
-    final uid = credential.user!.uid;
-    final resolvedUsername = username.isNotEmpty ? username : email.split('@').first;
+    final idToken = await credential.user!.getIdToken();
 
-    await _db.collection('profiles').doc(uid).set({
-      'id':             uid,
-      'username':       resolvedUsername,
-      'username_lower': resolvedUsername.toLowerCase(),
-      'email':          email,
-      'birth_date':     birthDate.isEmpty ? null : birthDate,
-      'role':           'Usuario',
-      'fsi':            50.0,
-      'avatar_base64':  null,
-      'email_verified': false,
-      'created_at':     FieldValue.serverTimestamp(),
-      'updated_at':     FieldValue.serverTimestamp(),
-    });
+    // 2. El backend Java crea el perfil en Firestore con valores seguros
+    final response = await http.post(
+      Uri.parse('$_baseUrl/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'idToken': idToken,
+        'username': username,
+        'birthDate': birthDate,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      // Si falla la creación del perfil, revertimos el registro
+      await credential.user!.delete();
+      throw Exception('No se pudo crear el perfil: ${response.body}');
+    }
 
     await _auth.signOut();
   }
@@ -62,35 +70,24 @@ class AuthService {
   }) async {
     String email = identifier;
 
+    // 1. Si es un username, se lo pedimos al backend
     if (!identifier.contains('@')) {
-      final cleanIdentifier = identifier.trim().toLowerCase(); // 🟢 Limpiamos y pasamos a minúsculas
-      print('🔎 Buscando usuario: $cleanIdentifier');
-      
-      try {
-        final query = await _db
-            .collection('profiles')
-            .where('username_lower', isEqualTo: cleanIdentifier) // 🟢 Buscamos en el campo de minúsculas
-            .limit(1)
-            .get();
+      final resp = await http.get(
+        Uri.parse('$_baseUrl/resolve-email?username=${Uri.encodeQueryComponent(identifier.trim())}'),
+      );
 
-        if (query.docs.isEmpty) {
-          throw FirebaseAuthException(
-            code: 'user-not-found',
-            message: 'No se encontró ningún usuario con ese nombre.',
-          );
-        }
-
-        final userData = query.docs.first.data();
-        email = userData['email'] as String;
-        print('✅ Usuario encontrado: $email');
-      } catch (e) {
-        print('❌ Error buscando en Firestore: $e');
-        rethrow;
+      if (resp.statusCode != 200) {
+        throw FirebaseAuthException(
+          code: 'user-not-found',
+          message: 'No se encontró ningún usuario con ese nombre.',
+        );
       }
+
+      final data = jsonDecode(resp.body);
+      email = data['email'];
     }
 
-    print('🔑 Intentando login con email: $email');
-
+    // 2. Firebase Auth verifica la contraseña (esto sigue siendo del cliente)
     final credential = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
@@ -107,12 +104,19 @@ class AuthService {
       );
     }
 
-    await _db.collection('profiles').doc(freshUser.uid).update({
-      'email_verified': true,
-      'updated_at': FieldValue.serverTimestamp(),
-    });
+    // 3. El backend confirma el login y sincroniza el perfil
+    final idToken = await freshUser.getIdToken();
+    final resp = await http.post(
+      Uri.parse('$_baseUrl/login-confirm'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'idToken': idToken}),
+    );
 
-    // ── Guardar preferencia "Recuérdame" para este dispositivo ─────────── //
+    if (resp.statusCode != 200) {
+      await _auth.signOut();
+      throw Exception('Error confirmando login: ${resp.body}');
+    }
+
     await _rememberMeService.setRememberMe(rememberMe);
 
     return credential;
