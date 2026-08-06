@@ -1,6 +1,9 @@
 
+import 'dart:convert';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
 import 'remember_me_service.dart';
 
 class AuthService {
@@ -11,6 +14,7 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _rememberMeService = RememberMeService();
+  static const _workerUrl = 'https://diapp-email-worker.diappbetes.workers.dev';
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -26,7 +30,8 @@ class AuthService {
     String birthDate = '',
   }) async {
     final credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
-    await credential.user!.sendEmailVerification();
+    //await credential.user!.sendEmailVerification();
+    await _sendCustomEmail('verify', email);
 
     final uid = credential.user!.uid;
     await FirebaseFirestore.instance.collection('profiles').doc(uid).set({
@@ -130,7 +135,8 @@ class AuthService {
 
   // ── RESET PASSWORD ────────────────────────────────────────────────────── //
   Future<void> sendPasswordResetEmail(String email) async {
-    await _auth.sendPasswordResetEmail(email: email);
+    //await _auth.sendPasswordResetEmail(email: email);
+    await _sendCustomEmail('reset', email);
   }
 
   // ── PERFIL ────────────────────────────────────────────────────────────── //
@@ -179,6 +185,17 @@ class AuthService {
         return 'No se pudo conectar con el servidor.';
       default:
         return 'Error: ${e.message}';
+    }
+  }
+
+  Future<void> _sendCustomEmail(String type, String email) async {
+    final res = await http.post(
+      Uri.parse(_workerUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'type': type, 'email': email}),
+    );
+    if (res.statusCode != 200) {
+      throw Exception('No se pudo enviar el correo');
     }
   }
 }
