@@ -1,6 +1,5 @@
 import 'package:diappbetes/services/report_service.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 
 enum IssueType { bug, error, suggestion, other }
@@ -33,8 +32,6 @@ class ReportIssueScreen extends StatefulWidget {
 }
 
 class _ReportIssueScreenState extends State<ReportIssueScreen> {
-  static const String _supportEmail = 'diappbetes0@gmail.com';
-
   IssueType _selectedType = IssueType.bug;
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();

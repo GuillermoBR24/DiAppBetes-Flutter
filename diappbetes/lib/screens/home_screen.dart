@@ -259,23 +259,23 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTirCard() {
     return _Card(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.start, // antes: .center
         children: [
+          SizedBox(height: 12),
           Text('Tiempo en Rango',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
               textAlign: TextAlign.center),
-          const SizedBox(height: 32),
+          const SizedBox(height: 32), // antes: 32
           _loadingTir
               ? SizedBox(height: 130, child: Center(
                   child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)))
               : TirProgressRing(percentage: _tirPercentage),
-          if (!_loadingTir && _tirPercentage == 0)
-            
-          const SizedBox(height: 48),
+          const SizedBox(height: 24), // reemplaza el "if" roto: espacio fijo y consistente
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SizedBox(height: 18),
               Row(children: [
                 Icon(Icons.water_drop_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 6),
