@@ -2,6 +2,7 @@ import 'package:diappbetes/firebase_options.dart';
 import 'package:diappbetes/screens/add_meal_screen.dart';
 import 'package:diappbetes/screens/admin_screen.dart';
 import 'package:diappbetes/screens/auth_screen.dart';
+import 'package:diappbetes/screens/glucose_history_screen.dart';
 import 'package:diappbetes/screens/login_screen.dart';
 import 'package:diappbetes/screens/register_screen.dart';
 import 'package:diappbetes/screens/remember_password_screen.dart';
@@ -64,6 +65,7 @@ class DiAppBetes extends StatelessWidget {
         '/remember-password': (context) => const RememberPasswordScreen(),
         '/scanner':           (context) => const ScannerScreen(),
         '/admin':             (context) => const AdminScreen(),
+        '/glucose-history':   (context) => const GlucoseHistoryScreen(),
       },
     );
   }
