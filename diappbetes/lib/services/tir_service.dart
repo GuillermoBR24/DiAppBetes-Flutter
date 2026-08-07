@@ -1,6 +1,7 @@
 // lib/services/tir_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class TirService {
   static final TirService _instance = TirService._internal();
@@ -20,7 +21,7 @@ class TirService {
         return doc.data()!;
       }
     } catch (e) {
-      print('⚠️ [TIR] Error obteniendo config global: $e');
+      debugPrint('⚠️ [TIR] Error obteniendo config global: $e');
     }
     // Valores por defecto si no existe el documento
     return {
@@ -38,7 +39,7 @@ class TirService {
     final glucoseMin = (config['default_glucose_min'] as num?)?.toDouble() ?? 70.0;
     final glucoseMax = (config['default_glucose_max'] as num?)?.toDouble() ?? 180.0;
     
-    print('📊 [TIR] Rangos de glucosa configurados: $glucoseMin - $glucoseMax mg/dL');
+    debugPrint('📊 [TIR] Rangos de glucosa configurados: $glucoseMin - $glucoseMax mg/dL');
 
     final since = DateTime.now().subtract(const Duration(days: 7));
 
@@ -132,7 +133,7 @@ class TirService {
       final inRange = readings.where((v) => v >= 70 && v <= 180).length;
       return ((inRange / readings.length) * 100).round();
     } catch (e) {
-      print('❌ Error getting TIR for range: $e');
+      debugPrint('❌ Error getting TIR for range: $e');
       return 0;
     }
   }

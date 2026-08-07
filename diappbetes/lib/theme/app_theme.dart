@@ -63,11 +63,11 @@ class AppTheme {
       unselectedItemColor:  AppColors.azulFondo,
       type: BottomNavigationBarType.fixed,
     ),
-    inputDecorationTheme: InputDecorationTheme(
-      labelStyle: const TextStyle(color: AppColors.grisTexto, fontSize: 13),
-      enabledBorder:  const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
-      focusedBorder:  const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
-      disabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
+    inputDecorationTheme: const InputDecorationTheme(
+      labelStyle: TextStyle(color: AppColors.grisTexto, fontSize: 13),
+      enabledBorder:  UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
+      focusedBorder:  UnderlineInputBorder(borderSide: BorderSide(color: AppColors.azulFondo)),
+      disabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.grisDivider)),
     ),
     textTheme: const TextTheme(
       bodyLarge:  TextStyle(color: AppColors.grisTexto),
@@ -102,11 +102,11 @@ class AppTheme {
       unselectedItemColor:  AppColors.darkTextSecondary,
       type: BottomNavigationBarType.fixed,
     ),
-    inputDecorationTheme: InputDecorationTheme(
-      labelStyle: const TextStyle(color: AppColors.darkTextSecondary, fontSize: 13),
-      enabledBorder:  const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkDivider)),
-      focusedBorder:  const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.fondoAzulClaroActivo)),
-      disabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkDivider)),
+    inputDecorationTheme: const InputDecorationTheme(
+      labelStyle: TextStyle(color: AppColors.darkTextSecondary, fontSize: 13),
+      enabledBorder:  UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkDivider)),
+      focusedBorder:  UnderlineInputBorder(borderSide: BorderSide(color: AppColors.fondoAzulClaroActivo)),
+      disabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkDivider)),
     ),
     textTheme: const TextTheme(
       bodyLarge:  TextStyle(color: AppColors.darkTextPrimary),

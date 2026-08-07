@@ -104,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
         try {
           avatarBytes = base64Decode(avatarBase64);
         } catch (e) {
-          print('❌ [HOME] Error decodificando avatar: $e');
+          debugPrint('❌ [HOME] Error decodificando avatar: $e');
         }
       }
       
@@ -261,7 +261,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start, // antes: .center
         children: [
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Text('Tiempo en Rango',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
               textAlign: TextAlign.center),
@@ -275,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 18),
+              const SizedBox(height: 18),
               Row(children: [
                 Icon(Icons.water_drop_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 6),
@@ -364,7 +364,7 @@ class _Card extends StatelessWidget {
       boxShadow: [
         BoxShadow(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.black.withOpacity(0.3)
+              ? Colors.black.withValues(alpha: 0.3)
               : const Color(0x1A000000),
           blurRadius: 12, 
           offset: const Offset(0, 4),

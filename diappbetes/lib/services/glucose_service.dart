@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class GlucoseService {
   static final GlucoseService _instance = GlucoseService._internal();
@@ -87,7 +88,7 @@ class GlucoseService {
             date.isBefore(endDate.add(const Duration(days: 1)));
       }).map((doc) => doc.data()).toList();
     } catch (e) {
-      print('❌ Error getting readings by range: $e');
+      debugPrint('❌ Error getting readings by range: $e');
       return [];
     }
   }

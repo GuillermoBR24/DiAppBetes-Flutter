@@ -148,7 +148,7 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
         boxShadow: [
           BoxShadow(
             color: isDark 
-                ? Colors.black.withOpacity(0.3) 
+                ? Colors.black.withValues(alpha: 0.3)
                 : const Color(0x1A000000),
             blurRadius: 6, 
             offset: const Offset(0, 2),
@@ -277,7 +277,7 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
+              color: primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -375,7 +375,7 @@ class _Card extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark 
-                ? Colors.black.withOpacity(0.3) 
+                ? Colors.black.withValues(alpha: 0.3)
                 : const Color(0x1A000000),
             blurRadius: 12, 
             offset: const Offset(0, 4),

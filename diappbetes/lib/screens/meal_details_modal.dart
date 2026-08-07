@@ -156,7 +156,7 @@ class MealDetailsModal extends StatelessWidget {
                   _row(label: 'HC Totales',
                       labelColor: textSmallColor,
                       child: Text('${meal.totalHc.toStringAsFixed(1)}g',
-                          style: TextStyle(color: AppColors.verdesuave, fontWeight: FontWeight.bold, fontSize: 15))),
+                          style: const TextStyle(color: AppColors.verdesuave, fontWeight: FontWeight.bold, fontSize: 15))),
 
                   _row(label: 'Calorías',
                       labelColor: textSmallColor,
@@ -231,7 +231,7 @@ class MealDetailsModal extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: fg.withOpacity(0.3)),
+        border: Border.all(color: fg.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

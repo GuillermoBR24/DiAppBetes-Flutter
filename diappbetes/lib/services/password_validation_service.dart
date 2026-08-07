@@ -1,5 +1,6 @@
 // lib/services/password_validation_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 class PasswordValidationService {
   static final PasswordValidationService _instance = PasswordValidationService._internal();
@@ -15,7 +16,7 @@ class PasswordValidationService {
       if (!doc.exists) return true; // Por defecto, requerir contraseña fuerte
       return doc.data()?['require_strong_password'] ?? true;
     } catch (e) {
-      print('⚠️ [PASSWORD] Error obteniendo config: $e');
+      debugPrint('⚠️ [PASSWORD] Error obteniendo config: $e');
       return true; // Por seguridad, si falla, requerir contraseña fuerte
     }
   }
@@ -25,16 +26,16 @@ class PasswordValidationService {
   Future<String?> validatePassword(String password) async {
     final requireStrong = await isStrongPasswordRequired();
     
-    print('🔐 [PASSWORD] Validando contraseña...');
-    print('🔐 [PASSWORD] ¿Requiere contraseña fuerte?: $requireStrong');
+    debugPrint('🔐 [PASSWORD] Validando contraseña...');
+    debugPrint('🔐 [PASSWORD] ¿Requiere contraseña fuerte?: $requireStrong');
     
     if (!requireStrong) {
       // Validación básica (solo Firebase Auth)
       if (password.length < 6) {
-        print('❌ [PASSWORD] Contraseña demasiado corta (mínimo 6 caracteres)');
+        debugPrint('❌ [PASSWORD] Contraseña demasiado corta (mínimo 6 caracteres)');
         return 'La contraseña debe tener al menos 6 caracteres';
       }
-      print('✅ [PASSWORD] Contraseña válida (modo básico)');
+      debugPrint('✅ [PASSWORD] Contraseña válida (modo básico)');
       return null;
     }
 
@@ -68,11 +69,11 @@ class PasswordValidationService {
 
     if (errors.isNotEmpty) {
       final message = 'La contraseña debe contener: ${errors.join(', ')}';
-      print('❌ [PASSWORD] Contraseña inválida: $message');
+      debugPrint('❌ [PASSWORD] Contraseña inválida: $message');
       return message;
     }
 
-    print('✅ [PASSWORD] Contraseña válida (modo fuerte)');
+    debugPrint('✅ [PASSWORD] Contraseña válida (modo fuerte)');
     return null;
   }
 

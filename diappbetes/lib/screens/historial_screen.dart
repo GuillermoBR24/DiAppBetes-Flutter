@@ -185,7 +185,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: CustomAppBar(
+      appBar: const CustomAppBar(
         title: 'DiAppBetes',
       ),
       body: _loading
@@ -212,7 +212,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
+                          color: primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -322,7 +322,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: fg.withOpacity(0.4)),
+          border: Border.all(color: fg.withValues(alpha: 0.4)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,7 +394,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
             children: [
               _statItem(Icons.restaurant,    'Comidas Totales', '$_totalMeals'),
               _statItem(Icons.fastfood,       'HC Totales',      '${_totalHc}g'),
-              _statItem(Icons.bolt,           'Calorías',        '${_totalCalories.toStringAsFixed(0)}'),
+              _statItem(Icons.bolt,           'Calorías',        _totalCalories.toStringAsFixed(0)),
               _statItem(Icons.analytics,      'HC Media',        '${_avgHc}g'),
             ],
           ),
@@ -412,7 +412,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: isDark 
-            ? Theme.of(context).colorScheme.surface.withOpacity(0.5)
+            ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.5)
             : const Color(0xFFF8F9FA),
         borderRadius: BorderRadius.circular(12),
       ),
@@ -451,7 +451,7 @@ class _Card extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.3) : const Color(0x1A000000),
+            color: isDark ? Colors.black.withValues(alpha: 0.3) : const Color(0x1A000000),
             blurRadius: 12, 
             offset: const Offset(0, 4),
           ),

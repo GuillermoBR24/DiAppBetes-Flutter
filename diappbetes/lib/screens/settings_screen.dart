@@ -154,9 +154,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (avatarBase64 != null && avatarBase64.isNotEmpty) {
         try {
           avatarBytes = base64Decode(avatarBase64);
-          print('✅ [AVATAR] Avatar cargado: ${avatarBytes.length} bytes');
+          debugPrint('✅ [AVATAR] Avatar cargado: ${avatarBytes.length} bytes');
         } catch (e) {
-          print('❌ [AVATAR] Error decodificando avatar: $e');
+          debugPrint('❌ [AVATAR] Error decodificando avatar: $e');
         }
       }
 
@@ -607,7 +607,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() => _uploadingAvatar = true);
 
       final Uint8List imageBytes = await image.readAsBytes();
-      print('📏 [AVATAR] Tamaño: ${(imageBytes.length / 1024).toStringAsFixed(1)} KB');
+      debugPrint('📏 [AVATAR] Tamaño: ${(imageBytes.length / 1024).toStringAsFixed(1)} KB');
 
       final success = await _profileService.updateAvatarBase64(imageBytes);
 
@@ -624,7 +624,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _showSnack('Error al guardar la imagen', isError: true);
       }
     } catch (e) {
-      print('❌ [AVATAR] Error: $e');
+      debugPrint('❌ [AVATAR] Error: $e');
       if (mounted) {
         setState(() => _uploadingAvatar = false);
         _showSnack('Error: $e', isError: true);
@@ -771,7 +771,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Text('Cancelar', 
                     style: TextStyle(color: Theme.of(ctx).textTheme.bodySmall?.color))),
             TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text),
-                child: Text('Confirmar', 
+                child: const Text('Confirmar', 
                     style: TextStyle(color: AppColors.rojoSuave, fontWeight: FontWeight.bold))),
           ],
         ),
@@ -906,9 +906,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
+                color: primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: primaryColor.withOpacity(0.3)),
+                border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -976,13 +976,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Colors.orange.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: 18, color: Colors.orange),
+                  const Icon(Icons.info_outline, size: 18, color: Colors.orange),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -1055,7 +1055,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
+                      color: Colors.black.withValues(alpha: 0.5),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -1091,7 +1091,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
             decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                 border: Border.all(color: Theme.of(context).colorScheme.primary), 
                 borderRadius: BorderRadius.circular(20)),
             child: Text(_role, 
@@ -1137,7 +1137,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
+                ? Colors.black.withValues(alpha: 0.3)
                 : const Color(0x1A000000),
             blurRadius: 12, 
             offset: const Offset(0, 4),
@@ -1313,7 +1313,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
+                ? Colors.black.withValues(alpha: 0.3)
                 : const Color(0x1A000000),
             blurRadius: 6, 
             offset: const Offset(0, 2),
@@ -1385,13 +1385,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
           color: tappable 
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.1) 
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
               : Theme.of(context).brightness == Brightness.dark
                   ? AppColors.darkSurface
                   : const Color(0xFFF5F5F5),
           borderRadius: BorderRadius.circular(8),
           border: tappable 
-              ? Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.4)) 
+              ? Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)) 
               : null,
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -1426,7 +1426,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               fontSize: 15,
               color: enabled 
                   ? Theme.of(context).textTheme.bodyLarge?.color 
-                  : Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.6),
+                  : Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: 0.6),
             ),
             decoration: InputDecoration(
               labelText: label, 
@@ -1464,7 +1464,7 @@ class _Card extends StatelessWidget {
       boxShadow: [
         BoxShadow(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.black.withOpacity(0.3)
+              ? Colors.black.withValues(alpha: 0.3)
               : const Color(0x1A000000),
           blurRadius: 12, 
           offset: const Offset(0, 4),

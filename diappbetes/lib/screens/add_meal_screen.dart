@@ -9,6 +9,7 @@ import '../services/meal_create_service.dart';
 import '../utils/admin_nav_helper.dart';
 import 'add_food_modal.dart';
 import 'add_meal_summary_modal.dart';
+import 'confirm_insulin_modal.dart';
 
 // ---------------------------------------------------------------------------
 // Modelo AddedFood
@@ -53,14 +54,19 @@ class _AddMealScreenState extends State<AddMealScreen> {
   final _mealService = MealCreateService();
   bool _celiacMode = false;
 
+  // ── Fecha/hora de la comida ────────────────────────────────────────────── //
+  // _selectedDateTime es la fuente de verdad; _mealTime es su representación
+  // en texto con el mismo formato que se usaba antes ('yyyy-MM-dd  HH:mm').
+  late DateTime _selectedDateTime;
   late String _mealTime;
+
   String _mealType    = '';
   String _glucemiaText = '';
 
   double _ratioValue = 10.0;
   double _fsi        = 50.0;
 
-  List<AddedFood> _addedFoods = [];
+  final List<AddedFood> _addedFoods = [];
   bool _saving = false;
   
   // ── Estado para navegación con AdminNavHelper ────────────────────────── //
@@ -109,10 +115,59 @@ class _AddMealScreenState extends State<AddMealScreen> {
   }
 
   void _setNow() {
-    final now = DateTime.now();
-    _mealTime = '${now.year}-${_p(now.month)}-${_p(now.day)}  ${_p(now.hour)}:${_p(now.minute)}';
+    _selectedDateTime = DateTime.now();
+    _mealTime = _formatDateTime(_selectedDateTime);
   }
+
+  String _formatDateTime(DateTime dt) =>
+      '${dt.year}-${_p(dt.month)}-${_p(dt.day)}  ${_p(dt.hour)}:${_p(dt.minute)}';
+
   String _p(int n) => n.toString().padLeft(2, '0');
+
+  // ── Selector de fecha y hora ───────────────────────────────────────────── //
+  // Por defecto muestra el momento actual (ya seleccionado en _setNow),
+  // pero el usuario puede elegir cualquier fecha/hora. Mantiene el mismo
+  // formato de visualización que antes.
+  Future<void> _pickDateTime() async {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDateTime,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: primaryColor),
+        ),
+        child: child!,
+      ),
+    );
+    if (pickedDate == null || !mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_selectedDateTime),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: primaryColor),
+        ),
+        child: child!,
+      ),
+    );
+    if (pickedTime == null || !mounted) return;
+
+    setState(() {
+      _selectedDateTime = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+      _mealTime = _formatDateTime(_selectedDateTime);
+    });
+  }
 
   bool get _isFormValid =>
       _mealType.isNotEmpty &&
@@ -180,17 +235,37 @@ class _AddMealScreenState extends State<AddMealScreen> {
 
   void _removeFood(int index) => setState(() => _addedFoods.removeAt(index));
 
-  // ── Crear comida → guarda en Firestore → muestra resumen ─────────────── //
+  // ── Crear comida → confirma insulina → guarda en Firestore → resumen ─── //
   Future<void> _createMeal() async {
     if (!_isFormValid || _saving) return;
-    setState(() => _saving = true);
 
     final glucemia = double.tryParse(_glucemiaText) ?? 0;
-    double totalInsulin = 0;
+    double calculatedInsulin = 0;
     if (_ratioValue > 0 && _fsi > 0) {
-      totalInsulin = double.parse(
+      calculatedInsulin = double.parse(
           ((_totalHc / _ratioValue) + ((glucemia - 110) / _fsi)).toStringAsFixed(1));
     }
+    if (calculatedInsulin < 0) calculatedInsulin = 0;
+
+    // ── Paso previo: mostrar y permitir ajustar la insulina antes de guardar ── //
+    final confirmedInsulin = await showDialog<double>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ConfirmInsulinModal(
+        totalHc: _totalHc,
+        totalCalories: _totalCalories,
+        totalRations: _totalRations,
+        glucoseLevel: glucemia,
+        calculatedInsulin: calculatedInsulin,
+      ),
+    );
+
+    // Si el usuario cancela el diálogo, no se crea la comida
+    if (confirmedInsulin == null) return;
+
+    final wasAdjusted = (confirmedInsulin - calculatedInsulin).abs() > 0.01;
+
+    setState(() => _saving = true);
 
     try {
       final mealData = await _mealService.createMeal(
@@ -199,8 +274,10 @@ class _AddMealScreenState extends State<AddMealScreen> {
         totalHc:       _totalHc,
         totalCalories: _totalCalories,
         totalRations:  _totalRations,
-        totalInsulin:  totalInsulin,
+        totalInsulin:  confirmedInsulin,
+        insulinManuallyAdjusted: wasAdjusted,
         foods:         _addedFoods,
+        mealDateTime:  _selectedDateTime,
       );
 
       if (!mounted) return;
@@ -267,7 +344,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: CustomAppBar(
+      appBar: const CustomAppBar(
         title: 'DiAppBetes',
       ),
       body: SingleChildScrollView(
@@ -322,12 +399,21 @@ class _AddMealScreenState extends State<AddMealScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor)),
           const SizedBox(height: 14),
 
-          // Fecha/hora readonly
-          Row(children: [
-            Icon(Icons.access_time, size: 16, color: primaryColor),
-            const SizedBox(width: 6),
-            Text(_mealTime, style: TextStyle(fontSize: 14, color: textColor)),
-          ]),
+          // Fecha/hora — ahora seleccionable, con la hora actual por defecto
+          InkWell(
+            onTap: _pickDateTime,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(children: [
+                Icon(Icons.access_time, size: 16, color: primaryColor),
+                const SizedBox(width: 6),
+                Text(_mealTime, style: TextStyle(fontSize: 14, color: textColor)),
+                const SizedBox(width: 6),
+                Icon(Icons.edit, size: 14, color: textSmallColor),
+              ]),
+            ),
+          ),
           Divider(color: dividerColor),
           const SizedBox(height: 8),
 
@@ -422,7 +508,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _totalChip('HC', '${_totalHc.toStringAsFixed(1)}g', primaryColor),
-                  _totalChip('Cal', '${_totalCalories.toStringAsFixed(0)}', AppColors.ambarSuave),
+                  _totalChip('Cal', _totalCalories.toStringAsFixed(0), AppColors.ambarSuave),
                   _totalChip('Rac', _totalRations.toStringAsFixed(1), AppColors.verdesuave),
                 ],
               ),
@@ -513,7 +599,7 @@ class _Card extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.3) : const Color(0x1A000000),
+            color: isDark ? Colors.black.withValues(alpha: 0.3) : const Color(0x1A000000),
             blurRadius: 12, 
             offset: const Offset(0, 4),
           ),

@@ -310,9 +310,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
       }
     }
 
-    final ingredients = (product['ingredients_text']?.toString().toLowerCase() ?? '') +
-        ' ' +
-        (product['ingredients_text_es']?.toString().toLowerCase() ?? '');
+    final ingredients = '${product['ingredients_text']?.toString().toLowerCase() ?? ''} ${product['ingredients_text_es']?.toString().toLowerCase() ?? ''}';
 
     if (ingredients.contains('trigo') ||
         ingredients.contains('harina de trigo') ||
@@ -485,7 +483,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
                   : null,
               filled: true,
               fillColor: isDark
-                  ? surfaceColor.withOpacity(0.5)
+                  ? surfaceColor.withValues(alpha: 0.5)
                   : const Color(0xFFF5F5F5),
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -524,7 +522,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
             const SizedBox(height: 12),
             Text(
               _searchTerm.isNotEmpty
-                  ? 'No encontramos "${_searchTerm}" en el catálogo general'
+                  ? 'No encontramos "$_searchTerm" en el catálogo general'
                   : 'Escribe para buscar alimentos',
               style: TextStyle(color: textColor, fontSize: 14),
               textAlign: TextAlign.center,
@@ -533,7 +531,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
               const SizedBox(height: 16),
               Text(
                 '¿Tienes el envase a mano? Escanea su código de barras\npara obtener el dato exacto del producto.',
-                style: TextStyle(color: textColor?.withOpacity(0.7), fontSize: 12),
+                style: TextStyle(color: textColor?.withValues(alpha: 0.7), fontSize: 12),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 14),
@@ -709,7 +707,7 @@ class _ScanFramePainter extends CustomPainter {
     final left   = (w - frameW) / 2;
     final top    = (h - frameH) / 2;
 
-    final overlay = Paint()..color = Colors.black.withOpacity(0.55);
+    final overlay = Paint()..color = Colors.black.withValues(alpha: 0.55);
     final clear   = Paint()..blendMode = BlendMode.clear;
     final border  = Paint()
       ..color = borderColor

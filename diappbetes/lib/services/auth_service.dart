@@ -1,6 +1,7 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'remember_me_service.dart';
 
 class AuthService {
@@ -58,7 +59,7 @@ class AuthService {
       String email = identifier;
       if (!identifier.contains('@')) {
         final cleanIdentifier = identifier.trim().toLowerCase(); // 🟢 Limpiamos y pasamos a minúsculas
-        print('🔎 Buscando usuario: $cleanIdentifier');
+        debugPrint('🔎 Buscando usuario: $cleanIdentifier');
         
         try {
           final query = await _db
@@ -76,13 +77,13 @@ class AuthService {
 
           final userData = query.docs.first.data();
           email = userData['email'] as String;
-          print('✅ Usuario encontrado: $email');
+          debugPrint('✅ Usuario encontrado: $email');
         } catch (e) {
-          print('❌ Error buscando en Firestore: $e');
+          debugPrint('❌ Error buscando en Firestore: $e');
           rethrow;
         }
       }
-      print('🔑 Intentando login con email: $email');
+      debugPrint('🔑 Intentando login con email: $email');
 
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,

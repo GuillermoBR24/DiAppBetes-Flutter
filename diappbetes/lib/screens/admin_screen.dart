@@ -150,7 +150,7 @@ class _AdminScreenState extends State<AdminScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.lock_outline, size: 80, color: AppColors.rojoSuave),
+                const Icon(Icons.lock_outline, size: 80, color: AppColors.rojoSuave),
                 const SizedBox(height: 24),
                 Text(
                   '🔒 Acceso Restringido',
@@ -259,7 +259,7 @@ class _AdminScreenState extends State<AdminScreen> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: primaryColor.withOpacity(0.3),
+                  color: primaryColor.withValues(alpha: 0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -270,25 +270,25 @@ class _AdminScreenState extends State<AdminScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),  // ← Cambiado: blanco fijo para mejor contraste
+                    color: Colors.white.withValues(alpha: 0.2),  // ← Cambiado: blanco fijo para mejor contraste
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.admin_panel_settings,  // ← Cambiado: const
                       color: Colors.white, size: 32),  // ← Cambiado: blanco fijo
                 ),
                 const SizedBox(width: 16),
-                Expanded(
+                const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Bienvenido, Administrador',  // ← Cambiado: const
+                      Text('Bienvenido, Administrador',  // ← Cambiado: const
                           style: TextStyle(
                             color: Colors.white,  // ← Cambiado: blanco fijo
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           )),
-                      const SizedBox(height: 4),
-                      const Text('Gestiona usuarios, contenido y configuración',  // ← Cambiado: const
+                      SizedBox(height: 4),
+                      Text('Gestiona usuarios, contenido y configuración',  // ← Cambiado: const
                           style: TextStyle(
                             color: Colors.white70,  // ← Cambiado: blanco con opacidad
                             fontSize: 13,
@@ -373,9 +373,9 @@ class _AdminScreenState extends State<AdminScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
+              color: primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: primaryColor.withOpacity(0.3)),
+              border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -421,8 +421,8 @@ class _AdminScreenState extends State<AdminScreen> {
           boxShadow: [
             BoxShadow(
               color: isDark 
-                  ? Colors.black.withOpacity(0.3) 
-                  : Colors.black.withOpacity(0.05),
+                  ? Colors.black.withValues(alpha: 0.3) 
+                  : Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -433,7 +433,7 @@ class _AdminScreenState extends State<AdminScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: primaryColor.withOpacity(0.1),
+                color: primaryColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: primaryColor, size: 24),
@@ -459,7 +459,7 @@ class _AdminScreenState extends State<AdminScreen> {
               ),
             ),
             Icon(Icons.arrow_forward_ios, 
-                color: textSmallColor?.withOpacity(0.5), size: 16),
+                color: textSmallColor?.withValues(alpha: 0.5), size: 16),
           ],
         ),
       )

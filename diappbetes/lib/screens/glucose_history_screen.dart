@@ -77,7 +77,7 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
         });
       }
     } catch (e) {
-      print('❌ Error loading data: $e');
+      debugPrint('❌ Error loading data: $e');
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -205,13 +205,13 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
           children: [
             Expanded(child: _statCard('Media', '${_averageGlucose.toStringAsFixed(1)} mg/dL', Icons.show_chart, primaryColor)),
             const SizedBox(width: 8),
-            Expanded(child: _statCard('Mín', '${_minGlucose.toStringAsFixed(0)}', Icons.arrow_downward, AppColors.rojoSuave)),
+            Expanded(child: _statCard('Mín', _minGlucose.toStringAsFixed(0), Icons.arrow_downward, AppColors.rojoSuave)),
           ],
         ),
         const SizedBox(height: 8),
         Row(
           children: [
-            Expanded(child: _statCard('Máx', '${_maxGlucose.toStringAsFixed(0)}', Icons.arrow_upward, Colors.orange)),
+            Expanded(child: _statCard('Máx', _maxGlucose.toStringAsFixed(0), Icons.arrow_upward, Colors.orange)),
             const SizedBox(width: 8),
             Expanded(child: _statCard('TIR', '$_tirPercentage%', Icons.tablet, AppColors.verdesuave)),
           ],
@@ -229,7 +229,7 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
+                ? Colors.black.withValues(alpha: 0.3)
                 : const Color(0x1A000000),
             blurRadius: 8,
             offset: const Offset(0, 2),
@@ -269,7 +269,7 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
+                ? Colors.black.withValues(alpha: 0.3)
                 : const Color(0x1A000000),
             blurRadius: 12,
             offset: const Offset(0, 4),
@@ -391,8 +391,8 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
                             show: true,
                             gradient: LinearGradient(
                               colors: [
-                                primaryColor.withOpacity(0.3),
-                                primaryColor.withOpacity(0.0),
+                                primaryColor.withValues(alpha: 0.3),
+                                primaryColor.withValues(alpha: 0.0),
                               ],
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
@@ -451,7 +451,7 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
+                ? Colors.black.withValues(alpha: 0.3)
                 : const Color(0x1A000000),
             blurRadius: 12,
             offset: const Offset(0, 4),
@@ -580,7 +580,7 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
+                ? Colors.black.withValues(alpha: 0.3)
                 : const Color(0x1A000000),
             blurRadius: 12,
             offset: const Offset(0, 4),
@@ -639,7 +639,7 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
+                          color: statusColor.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -670,7 +670,7 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
+                          color: statusColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(

@@ -64,8 +64,8 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
     _loadCeliacMode();
     
     // ✅ DEBUG: Verificar datos del alimento
-    print('🔍 [DEBUG] Alimento: ${widget.selectedFood.name}');
-    print('🔍 [DEBUG] containsGluten: ${widget.selectedFood.containsGluten}');
+    debugPrint('🔍 [DEBUG] Alimento: ${widget.selectedFood.name}');
+    debugPrint('🔍 [DEBUG] containsGluten: ${widget.selectedFood.containsGluten}');
   }
 
   @override
@@ -77,7 +77,7 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
 
   Future<void> _loadCeliacMode() async {
     final celiac = await ProfileService().getCeliacMode();
-    print('🔍 [DEBUG] Modo celíaco cargado: $celiac');
+    debugPrint('🔍 [DEBUG] Modo celíaco cargado: $celiac');
     if (mounted) setState(() => _celiacMode = celiac);
   }
 
@@ -191,7 +191,7 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                         Container(
                           width: 44, height: 44,
                           decoration: BoxDecoration(
-                              color: fg.withOpacity(0.15),
+                              color: fg.withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(8)),
                           child: widget.selectedFood.iconUrl != null
                               ? ClipRRect(

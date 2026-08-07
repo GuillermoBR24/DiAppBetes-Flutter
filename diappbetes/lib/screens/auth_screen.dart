@@ -75,7 +75,7 @@ class AuthScreen extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark 
-                ? Colors.black.withOpacity(0.3) 
+                ? Colors.black.withValues(alpha: 0.3) 
                 : const Color(0x1A000000),
             blurRadius: 6, 
             offset: const Offset(0, 2),
@@ -117,7 +117,7 @@ class AuthScreen extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: isDark 
-                ? Colors.black.withOpacity(0.3) 
+                ? Colors.black.withValues(alpha: 0.3)
                 : const Color(0x1A000000),
             blurRadius: 12, 
             offset: const Offset(0, 4),

@@ -195,9 +195,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   Color _roleBg(String? role, Color primaryColor) {
     if (role?.toLowerCase() == 'administrador' || role?.toLowerCase() == 'admin') {
-      return AppColors.ambarSuave.withOpacity(0.15);
+      return AppColors.ambarSuave.withValues(alpha: 0.15);
     }
-    return primaryColor.withOpacity(0.1);
+    return primaryColor.withValues(alpha: 0.1);
   }
 
   String _formatDate(dynamic ts) {
@@ -331,7 +331,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.3)
+                ? Colors.black.withValues(alpha: 0.3)
                 : const Color(0x0F000000),
             blurRadius: 8, 
             offset: const Offset(0, 2),
@@ -369,7 +369,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             decoration: BoxDecoration(
               color: _roleBg(role, primaryColor),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _roleColor(role, primaryColor).withOpacity(0.4)),
+              border: Border.all(color: _roleColor(role, primaryColor).withValues(alpha: 0.4)),
             ),
             child: Text(role[0].toUpperCase() + role.substring(1),
                 style: TextStyle(fontSize: 10, color: _roleColor(role, primaryColor), fontWeight: FontWeight.bold)),

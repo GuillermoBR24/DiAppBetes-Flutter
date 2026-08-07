@@ -57,11 +57,11 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() { _error = ''; _loading = true; });
 
     try {
-      print('\n═══════════════════════════════════════════════════════');
-      print('🔐 [LOGIN] Iniciando proceso de login');
-      print('═══════════════════════════════════════════════════════');
-      print('🔍 [LOGIN] Intentando login con: ${_identifierController.text.trim()}');
-      print('🔍 [LOGIN] Recuérdame: $_rememberMe');
+      debugPrint('\n═══════════════════════════════════════════════════════');
+      debugPrint('🔐 [LOGIN] Iniciando proceso de login');
+      debugPrint('═══════════════════════════════════════════════════════');
+      debugPrint('🔍 [LOGIN] Intentando login con: ${_identifierController.text.trim()}');
+      debugPrint('🔍 [LOGIN] Recuérdame: $_rememberMe');
       
       await _authService.login(
         identifier: _identifierController.text.trim(),
@@ -69,42 +69,42 @@ class _LoginScreenState extends State<LoginScreen> {
         rememberMe: _rememberMe,
       );
       
-      print('✅ [LOGIN] Login exitoso con Firebase Auth');
-      print('👤 [LOGIN] Usuario autenticado: ${FirebaseAuth.instance.currentUser?.uid}');
+      debugPrint('✅ [LOGIN] Login exitoso con Firebase Auth');
+      debugPrint('👤 [LOGIN] Usuario autenticado: ${FirebaseAuth.instance.currentUser?.uid}');
       
       final maintenanceMsg = await _maintenanceService.checkMaintenanceMode();
       
-      print('\n🔍 [LOGIN] Resultado de checkMaintenanceMode(): ${maintenanceMsg ?? "null (PERMITIR)"}');
+      debugPrint('\n🔍 [LOGIN] Resultado de checkMaintenanceMode(): ${maintenanceMsg ?? "null (PERMITIR)"}');
       
       if (maintenanceMsg != null) {
-        print('🚫 [LOGIN] BLOQUEADO por modo mantenimiento');
-        print('🚫 [LOGIN] Mensaje: $maintenanceMsg');
-        print('📡 [LOGIN] Cerrando sesión...');
+        debugPrint('🚫 [LOGIN] BLOQUEADO por modo mantenimiento');
+        debugPrint('🚫 [LOGIN] Mensaje: $maintenanceMsg');
+        debugPrint('📡 [LOGIN] Cerrando sesión...');
         
         await FirebaseAuth.instance.signOut();
         
-        print('✅ [LOGIN] Sesión cerrada');
+        debugPrint('✅ [LOGIN] Sesión cerrada');
         
         if (!mounted) return;
         setState(() => _loading = false);
         
-        print('📱 [LOGIN] Mostrando diálogo de mantenimiento...');
+        debugPrint('📱 [LOGIN] Mostrando diálogo de mantenimiento...');
         _showMaintenanceDialog(maintenanceMsg);
-        print('═══════════════════════════════════════════════════════\n');
+        debugPrint('═══════════════════════════════════════════════════════\n');
         return;
       }
       
-      print('✅ [LOGIN] Todo OK - Redirigiendo al home');
-      print('═══════════════════════════════════════════════════════\n');
+      debugPrint('✅ [LOGIN] Todo OK - Redirigiendo al home');
+      debugPrint('═══════════════════════════════════════════════════════\n');
       if (mounted) Navigator.pushReplacementNamed(context, '/home');
       
     } on FirebaseAuthException catch (e) {
-      print('❌ [LOGIN] FirebaseAuthException: ${e.code} - ${e.message}');
+      debugPrint('❌ [LOGIN] FirebaseAuthException: ${e.code} - ${e.message}');
       setState(() => _error = AuthService.translateError(e));
       
     } catch (e, stackTrace) {
-      print('❌ [LOGIN] ERROR GENERAL: $e');
-      print('📋 [LOGIN] STACK TRACE: $stackTrace');
+      debugPrint('❌ [LOGIN] ERROR GENERAL: $e');
+      debugPrint('📋 [LOGIN] STACK TRACE: $stackTrace');
       setState(() => _error = 'Error: ${e.toString()}');
       
     } finally {
@@ -213,7 +213,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.ambarSuave.withOpacity(0.15),
+                color: AppColors.ambarSuave.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.build, color: AppColors.ambarSuave, size: 22),
@@ -238,9 +238,9 @@ class _LoginScreenState extends State<LoginScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.ambarSuave.withOpacity(0.1),
+                color: AppColors.ambarSuave.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.ambarSuave.withOpacity(0.3)),
+                border: Border.all(color: AppColors.ambarSuave.withValues(alpha: 0.3)),
               ),
               child: Column(
                 children: [
@@ -362,7 +362,7 @@ class _LoginScreenState extends State<LoginScreen> {
         boxShadow: [
           BoxShadow(
             color: isDark 
-                ? Colors.black.withOpacity(0.3) 
+                ? Colors.black.withValues(alpha: 0.3) 
                 : const Color(0x1A000000),
             blurRadius: 6, 
             offset: const Offset(0, 2),
@@ -400,7 +400,7 @@ class _LoginScreenState extends State<LoginScreen> {
         boxShadow: [
           BoxShadow(
             color: isDark 
-                ? Colors.black.withOpacity(0.3) 
+                ? Colors.black.withValues(alpha: 0.3)
                 : const Color(0x1A000000),
             blurRadius: 12, 
             offset: const Offset(0, 4),

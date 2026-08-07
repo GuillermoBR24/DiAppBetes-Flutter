@@ -148,7 +148,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     try {
       await _controller.stop();
     } catch (e) {
-      print('⚠️ [SCANNER] Error al detener tras detección: $e');
+      debugPrint('⚠️ [SCANNER] Error al detener tras detección: $e');
     }
     
     if (!mounted) return;
@@ -193,13 +193,13 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
   // ── Reanuda la cámara ─────────────────────────────────────────────────── //
   void _resumeScanner() {
-    print('🔄 [SCANNER] Reanudando scanner...');
+    debugPrint('🔄 [SCANNER] Reanudando scanner...');
     
     // Detener primero por si acaso
     try {
       _controller.stop();
     } catch (e) {
-      print('⚠️ [SCANNER] Error al detener: $e');
+      debugPrint('⚠️ [SCANNER] Error al detener: $e');
     }
     
     setState(() {
@@ -219,9 +219,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
       // Iniciar el controlador
       try {
         _controller.start();
-        print('✅ [SCANNER] Scanner reanudado correctamente');
+        debugPrint('✅ [SCANNER] Scanner reanudado correctamente');
       } catch (e) {
-        print('❌ [SCANNER] Error al reanudar: $e');
+        debugPrint('❌ [SCANNER] Error al reanudar: $e');
         // Si falla, intentar recrear el controlador
         _recreateController();
       }
@@ -229,7 +229,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
   }
 
   void _recreateController() {
-    print('🔧 [SCANNER] Recreando controlador...');
+    debugPrint('🔧 [SCANNER] Recreando controlador...');
     try {
       _controller.dispose();
     } catch (_) {}
@@ -269,7 +269,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     ).then((_) {
       // Fallback: si el modal se cierra de forma inesperada, reanudar scanner
       if (mounted && !_scanning) {
-        print('🔄 [SCANNER] Modal cerrado inesperadamente, reanudando scanner...');
+        debugPrint('🔄 [SCANNER] Modal cerrado inesperadamente, reanudando scanner...');
         _resumeScanner();
       }
     });
@@ -317,7 +317,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     ).then((_) {
       // Fallback: si el diálogo se cierra de forma inesperada, reanudar scanner
       if (mounted && !_scanning) {
-        print('🔄 [SCANNER] Diálogo cerrado inesperadamente, reanudando scanner...');
+        debugPrint('🔄 [SCANNER] Diálogo cerrado inesperadamente, reanudando scanner...');
         _resumeScanner();
       }
     });
@@ -439,7 +439,7 @@ class _ScanFramePainter extends CustomPainter {
     final left   = (w - frameW) / 2;
     final top    = (h - frameH) / 2;
 
-    final overlay = Paint()..color = Colors.black.withOpacity(0.55);
+    final overlay = Paint()..color = Colors.black.withValues(alpha: 0.55);
     final clear   = Paint()..blendMode = BlendMode.clear;
     final border  = Paint()
       ..color = borderColor
@@ -671,7 +671,7 @@ class _ProductModalState extends State<_ProductModal> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
+                      color: primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
@@ -782,7 +782,7 @@ class _ProductModalState extends State<_ProductModal> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
+                      color: primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Column(
@@ -815,7 +815,7 @@ class _ProductModalState extends State<_ProductModal> {
                       gradient: LinearGradient(
                         colors: [
                           primaryColor,
-                          primaryColor.withOpacity(0.8),
+                          primaryColor.withValues(alpha: 0.8),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -823,7 +823,7 @@ class _ProductModalState extends State<_ProductModal> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: primaryColor.withOpacity(0.3),
+                          color: primaryColor.withValues(alpha: 0.3),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),
@@ -854,7 +854,7 @@ class _ProductModalState extends State<_ProductModal> {
                         const SizedBox(height: 8),
                         Text('Ratio: ${_ratioValue.toStringAsFixed(1)} g/U  •  FSI: ${_fsi.toStringAsFixed(0)}',
                             style: TextStyle(
-                              color: onPrimaryColor.withOpacity(0.8),
+                              color: onPrimaryColor.withValues(alpha: 0.8),
                               fontSize: 11,
                             )),
                       ],

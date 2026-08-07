@@ -215,14 +215,14 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
                           icon: Icons.restaurant,
                           title: 'Total Comidas',
                           value: '$_totalMeals',
-                          subtitle: _avgMealsPerUser.toStringAsFixed(1) + ' por usuario',
+                          subtitle: '${_avgMealsPerUser.toStringAsFixed(1)} por usuario',
                           color: AppColors.ambarSuave,
                         ),
                         _statCard(
                           icon: Icons.bloodtype,
                           title: 'Lecturas Glucosa',
                           value: '$_totalGlucoseReadings',
-                          subtitle: _avgGlucosePerUser.toStringAsFixed(1) + ' por usuario',
+                          subtitle: '${_avgGlucosePerUser.toStringAsFixed(1)} por usuario',
                           color: AppColors.rojoSuave,
                         ),
                       ],
@@ -248,8 +248,8 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
                         boxShadow: [
                           BoxShadow(
                             color: isDark 
-                                ? Colors.black.withOpacity(0.3) 
-                                : Colors.black.withOpacity(0.05),
+                                ? Colors.black.withValues(alpha: 0.3) 
+                                : Colors.black.withValues(alpha: 0.05),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -354,8 +354,8 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
                         boxShadow: [
                           BoxShadow(
                             color: isDark 
-                                ? Colors.black.withOpacity(0.3) 
-                                : Colors.black.withOpacity(0.05),
+                                ? Colors.black.withValues(alpha: 0.3) 
+                                : Colors.black.withValues(alpha: 0.05),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -444,8 +444,8 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
         boxShadow: [
           BoxShadow(
             color: isDark 
-                ? Colors.black.withOpacity(0.3) 
-                : Colors.black.withOpacity(0.05),
+                ? Colors.black.withValues(alpha: 0.3)
+                : Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

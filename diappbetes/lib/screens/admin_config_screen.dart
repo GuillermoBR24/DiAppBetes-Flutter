@@ -224,6 +224,8 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
         ],
       ),
     );
+
+    if (!mounted) return; 
     
     if (confirmed == true) {
       setState(() {
@@ -457,9 +459,9 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: primaryColor.withOpacity(0.1),
+                                      color: primaryColor.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: primaryColor.withOpacity(0.3)),
+                                      border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -497,9 +499,9 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
-                                      color: primaryColor.withOpacity(0.1),
+                                      color: primaryColor.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: primaryColor.withOpacity(0.3)),
+                                      border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -630,7 +632,7 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.05),
+            color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),

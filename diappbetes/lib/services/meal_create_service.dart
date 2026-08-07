@@ -16,6 +16,8 @@ class MealCreateService {
   String? get _uid => _auth.currentUser?.uid;
 
   // ── Crear comida completa con sus alimentos ───────────────────────────── //
+  // [mealDateTime]: fecha/hora elegida por el usuario para la comida. Si no
+  // se indica, se usa el momento actual (comportamiento anterior).
   Future<Map<String, dynamic>> createMeal({
     required String mealType,
     required double glucoseLevel,
@@ -24,12 +26,17 @@ class MealCreateService {
     required double totalRations,
     required double totalInsulin,
     required List<AddedFood> foods,
+    bool insulinManuallyAdjusted = false,
+    DateTime? mealDateTime,
   }) async {
     if (_uid == null) throw Exception('Usuario no autenticado');
 
+    final effectiveDateTime = mealDateTime ?? DateTime.now();
+    final createdAtTimestamp = Timestamp.fromDate(effectiveDateTime);
+
     // 1. Crear documento de comida
     final mealRef = _db.collection('meals').doc();
-    final now = FieldValue.serverTimestamp();
+    final updatedAt = FieldValue.serverTimestamp();
 
     final mealData = {
       'user_id':        _uid,
@@ -39,8 +46,9 @@ class MealCreateService {
       'total_calories': totalCalories,
       'total_rations':  totalRations,
       'total_insulin':  totalInsulin,
-      'created_at':     now,
-      'updated_at':     now,
+      'insulin_manually_adjusted': insulinManuallyAdjusted,
+      'created_at':     createdAtTimestamp,
+      'updated_at':     updatedAt,
     };
 
     final batch = _db.batch();
@@ -57,7 +65,7 @@ class MealCreateService {
         'calculated_hc':       food.calculatedHc,
         'calculated_calories': food.calculatedCalories,
         'calculated_rations':  food.calculatedRations,
-        'created_at':          now,
+        'created_at':          createdAtTimestamp,
       });
     }
 
@@ -67,8 +75,8 @@ class MealCreateService {
       'user_id':       _uid,
       'meal_id':       mealRef.id,
       'glucose_level': glucoseLevel,
-      'reading_time':  now,
-      'created_at':    now,
+      'reading_time':  createdAtTimestamp,
+      'created_at':    createdAtTimestamp,
     });
 
     await batch.commit();
@@ -81,7 +89,7 @@ class MealCreateService {
       'total_calories': totalCalories,
       'total_rations':  totalRations,
       'total_insulin':  totalInsulin,
-      'created_at':     DateTime.now().toIso8601String(),
+      'created_at':     effectiveDateTime.toIso8601String(),
     };
   }
 

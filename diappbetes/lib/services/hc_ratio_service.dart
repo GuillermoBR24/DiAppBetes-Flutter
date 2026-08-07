@@ -53,7 +53,9 @@ class HcRatioService {
         .collection('hc_ratios')
         .where('user_id', isEqualTo: _uid)
         .get();
-    for (final doc in existing.docs) batch.delete(doc.reference);
+    for (final doc in existing.docs) {
+      batch.delete(doc.reference);
+    }
 
     // Crear los nuevos
     for (final ratio in ratios) {

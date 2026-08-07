@@ -1,4 +1,5 @@
 // lib/services/biometric_service.dart
+import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -25,7 +26,7 @@ class BiometricService {
       final biometrics = await _auth.getAvailableBiometrics();
       return biometrics.isNotEmpty;
     } catch (e) {
-      print('❌ [BIOMETRIC] Error al verificar soporte: $e');
+      debugPrint('❌ [BIOMETRIC] Error al verificar soporte: $e');
       return false;
     }
   }
@@ -37,7 +38,7 @@ class BiometricService {
       final biometrics = await _auth.getAvailableBiometrics();
       return available && biometrics.isNotEmpty;
     } catch (e) {
-      print('❌ [BIOMETRIC] Error al verificar disponibilidad: $e');
+      debugPrint('❌ [BIOMETRIC] Error al verificar disponibilidad: $e');
       return false;
     }
   }
@@ -52,10 +53,10 @@ class BiometricService {
           biometricOnly: false,
         ),
       );
-      print('✅ [BIOMETRIC] Autenticación: $authenticated');
+      debugPrint('✅ [BIOMETRIC] Autenticación: $authenticated');
       return authenticated;
     } catch (e) {
-      print('❌ [BIOMETRIC] Error en autenticación: $e');
+      debugPrint('❌ [BIOMETRIC] Error en autenticación: $e');
       return false;
     }
   }
@@ -72,7 +73,7 @@ class BiometricService {
     await prefs.setString(_biometricUserIdKey, userId);
     await _secureStorage.write(key: _secureEmailKey, value: email);
     await _secureStorage.write(key: _securePasswordKey, value: password);
-    print('✅ [BIOMETRIC] Habilitado para userId: $userId, email: $email');
+    debugPrint('✅ [BIOMETRIC] Habilitado para userId: $userId, email: $email');
   }
 
   /// Desactiva biometría completamente
@@ -82,7 +83,7 @@ class BiometricService {
     await prefs.remove(_biometricUserIdKey);
     await _secureStorage.delete(key: _secureEmailKey);
     await _secureStorage.delete(key: _securePasswordKey);
-    print('✅ [BIOMETRIC] Deshabilitado completamente');
+    debugPrint('✅ [BIOMETRIC] Deshabilitado completamente');
   }
 
   /// Verifica si la biometría está activada
@@ -121,7 +122,7 @@ class BiometricService {
     
     // Solo actualizar si la biometría está activa Y es para el mismo usuario
     if (enabled && savedUserId == userId) {
-      print('🔄 [BIOMETRIC] Actualizando credenciales para userId: $userId');
+      debugPrint('🔄 [BIOMETRIC] Actualizando credenciales para userId: $userId');
       // Las credenciales ya están guardadas, no necesitamos hacer nada
       // pero podríamos refrescar el password si cambió
     }
