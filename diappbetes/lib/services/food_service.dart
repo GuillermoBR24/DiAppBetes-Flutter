@@ -9,6 +9,7 @@ class Food {
   final double caloriesPer100g;
   final String? iconUrl;
   final bool? containsGluten;
+  final bool isCustom; // ← NUEVO: true si es un alimento personal del usuario
 
   const Food({
     required this.id,
@@ -18,6 +19,7 @@ class Food {
     required this.caloriesPer100g,
     this.iconUrl,
     this.containsGluten,
+    this.isCustom = false,
   });
 
   factory Food.fromMap(Map<String, dynamic> map) {
@@ -29,8 +31,37 @@ class Food {
       caloriesPer100g: (map['calories_per_100g'] as num?)?.toDouble() ?? 0,
       iconUrl: map['icon_url']?.toString(),
       containsGluten: map['contains_gluten'] as bool?,
+      isCustom: map['is_custom'] as bool? ?? false,
     );
   }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'name': name,
+    'category': category,
+    'carbs_per_100g': carbsPer100g,
+    'calories_per_100g': caloriesPer100g,
+    'icon_url': iconUrl,
+    'contains_gluten': containsGluten,
+    'is_custom': isCustom,
+  };
+
+  Food copyWith({
+    String? name,
+    String? category,
+    double? carbsPer100g,
+    double? caloriesPer100g,
+    bool? containsGluten,
+  }) => Food(
+    id: id,
+    name: name ?? this.name,
+    category: category ?? this.category,
+    carbsPer100g: carbsPer100g ?? this.carbsPer100g,
+    caloriesPer100g: caloriesPer100g ?? this.caloriesPer100g,
+    iconUrl: iconUrl,
+    containsGluten: containsGluten ?? this.containsGluten,
+    isCustom: isCustom,
+  );
 }
 
 // ---------------------------------------------------------------------------

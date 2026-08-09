@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'package:diappbetes/screens/add_custom_food_modal.dart';
 import 'package:diappbetes/screens/add_food_detail_modal.dart';
+import 'package:diappbetes/services/custom_food_service.dart';
 import 'package:diappbetes/services/profile_service.dart';
+import 'package:diappbetes/theme/app_theme.dart';
 import 'package:diappbetes/widgets/gluten_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -90,6 +93,8 @@ Color categoryText(BuildContext context, String cat) {
   }
 }
 
+
+
 // ---------------------------------------------------------------------------
 // AddFoodModal
 //
@@ -111,6 +116,7 @@ class AddFoodModal extends StatefulWidget {
 
 class _AddFoodModalState extends State<AddFoodModal> {
   final _foodService = FoodService();
+  final _customFoodService = CustomFoodService();
   final _searchCtrl  = TextEditingController();
   bool _celiacMode   = false;
 
@@ -126,8 +132,49 @@ class _AddFoodModalState extends State<AddFoodModal> {
   @override
   void initState() {
     super.initState();
-    _foods = _foodService.getLocalFoods();
+    _loadFoods();
     _loadCeliacMode();
+  }
+
+  Future<void> _openAddCustomFood({Food? editing}) async {
+    final result = await showDialog<Food>(
+      context: context,
+      builder: (_) => AddCustomFoodModal(editingFood: editing),
+    );
+    if (result != null) {
+      await _loadFoods();
+    }
+  }
+
+  Future<void> _deleteCustomFood(Food food) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(ctx).cardColor,
+        title: const Text('Eliminar alimento'),
+        content: Text('¿Eliminar "${food.name}" de tus alimentos personales?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar', style: TextStyle(color: AppColors.rojoSuave)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _customFoodService.deleteCustomFood(food.id);
+      await _loadFoods();
+    }
+  }
+
+  Future<void> _loadFoods() async {
+    final custom = await _customFoodService.getCustomFoods();
+    if (mounted) {
+      setState(() {
+        _foods = [...custom, ..._foodService.getLocalFoods()];
+      });
+    }
   }
 
   @override
@@ -144,10 +191,12 @@ class _AddFoodModalState extends State<AddFoodModal> {
 
   // ── Búsqueda — síncrona, solo sobre el catálogo genérico local ────────── //
   // Sin debounce, sin red: se filtra al instante en cada tecla.
-  void _onSearchChanged(String term) {
+  void _onSearchChanged(String term) async {
+    final customMatches = await _customFoodService.searchCustomFoods(term);
+    final localMatches = _foodService.searchFoods(term);
     setState(() {
       _searchTerm = term;
-      _foods = _foodService.searchFoods(term);
+      _foods = [...customMatches, ...localMatches]; // personales primero
     });
   }
 
@@ -424,6 +473,11 @@ class _AddFoodModalState extends State<AddFoodModal> {
                   },
                 ),
                 IconButton(
+                  icon: Icon(Icons.add_circle_outline, color: onPrimaryColor),
+                  tooltip: 'Añadir alimento personal',
+                  onPressed: _openAddCustomFood,
+                ),
+                IconButton(
                   icon: Icon(Icons.close, color: onPrimaryColor),
                   onPressed: () => Navigator.pop(context),
                 ),
@@ -640,14 +694,30 @@ class _AddFoodModalState extends State<AddFoodModal> {
       child: Row(
         children: [
           const SizedBox(width: 10),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(food.name,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: primaryColor),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(food.name,
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: primaryColor),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    if (food.isCustom) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text('Personal', style: TextStyle(fontSize: 9, color: primaryColor, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ],
+                ),
                 const SizedBox(height: 2),
                 Text('${food.carbsPer100g.toStringAsFixed(1)}g HC  •  '
                     '${food.caloriesPer100g.toStringAsFixed(0)} cal/100g',
@@ -659,22 +729,30 @@ class _AddFoodModalState extends State<AddFoodModal> {
 
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(food.category,
-                style: TextStyle(fontSize: 10, color: fg, fontWeight: FontWeight.w500)),
+            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+            child: Text(food.category, style: TextStyle(fontSize: 10, color: fg, fontWeight: FontWeight.w500)),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
 
           if (_celiacMode && food.containsGluten != null) ...[
-            GlutenIndicator(
-              containsGluten: food.containsGluten,
-              size: 12,
-              showLabel: false,
+            GlutenIndicator(containsGluten: food.containsGluten, size: 12, showLabel: false),
+            const SizedBox(width: 4),
+          ],
+
+          // Editar / borrar — solo para alimentos personales
+          if (food.isCustom) ...[
+            IconButton(
+              padding: EdgeInsets.zero, constraints: const BoxConstraints(),
+              icon: Icon(Icons.edit, size: 16, color: textSmallColor),
+              onPressed: () => _openAddCustomFood(editing: food),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
+            IconButton(
+              padding: EdgeInsets.zero, constraints: const BoxConstraints(),
+              icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.rojoSuave),
+              onPressed: () => _deleteCustomFood(food),
+            ),
+            const SizedBox(width: 4),
           ],
 
           GestureDetector(
