@@ -1,4 +1,3 @@
-// lib/screens/login_screen.dart
 import 'package:diappbetes/services/biometric_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   bool _biometricEnabled = false;
   bool _useBiometric = false;
-  bool _rememberMe = false; // ── "Recuérdame" ──────────────────────────── //
+  bool _rememberMe = false;
   final _biometricService = BiometricService();
 
   @override 
@@ -51,60 +50,33 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _clearError() => setState(() => _error = '');
 
-  // ── Login con verificación de modo mantenimiento ──────────────────────── //
   Future<void> _onLogin() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _error = ''; _loading = true; });
 
     try {
-      debugPrint('\n═══════════════════════════════════════════════════════');
-      debugPrint('🔐 [LOGIN] Iniciando proceso de login');
-      debugPrint('═══════════════════════════════════════════════════════');
-      debugPrint('🔍 [LOGIN] Intentando login con: ${_identifierController.text.trim()}');
-      debugPrint('🔍 [LOGIN] Recuérdame: $_rememberMe');
-      
       await _authService.login(
         identifier: _identifierController.text.trim(),
         password:   _passwordController.text,
         rememberMe: _rememberMe,
       );
-      
-      debugPrint('✅ [LOGIN] Login exitoso con Firebase Auth');
-      debugPrint('👤 [LOGIN] Usuario autenticado: ${FirebaseAuth.instance.currentUser?.uid}');
-      
+
       final maintenanceMsg = await _maintenanceService.checkMaintenanceMode();
       
-      debugPrint('\n🔍 [LOGIN] Resultado de checkMaintenanceMode(): ${maintenanceMsg ?? "null (PERMITIR)"}');
-      
       if (maintenanceMsg != null) {
-        debugPrint('🚫 [LOGIN] BLOQUEADO por modo mantenimiento');
-        debugPrint('🚫 [LOGIN] Mensaje: $maintenanceMsg');
-        debugPrint('📡 [LOGIN] Cerrando sesión...');
-        
         await FirebaseAuth.instance.signOut();
-        
-        debugPrint('✅ [LOGIN] Sesión cerrada');
-        
         if (!mounted) return;
         setState(() => _loading = false);
-        
-        debugPrint('📱 [LOGIN] Mostrando diálogo de mantenimiento...');
         _showMaintenanceDialog(maintenanceMsg);
-        debugPrint('═══════════════════════════════════════════════════════\n');
         return;
       }
       
-      debugPrint('✅ [LOGIN] Todo OK - Redirigiendo al home');
-      debugPrint('═══════════════════════════════════════════════════════\n');
       if (mounted) Navigator.pushReplacementNamed(context, '/home');
       
     } on FirebaseAuthException catch (e) {
-      debugPrint('❌ [LOGIN] FirebaseAuthException: ${e.code} - ${e.message}');
       setState(() => _error = AuthService.translateError(e));
       
-    } catch (e, stackTrace) {
-      debugPrint('❌ [LOGIN] ERROR GENERAL: $e');
-      debugPrint('📋 [LOGIN] STACK TRACE: $stackTrace');
+    } catch (e) {
       setState(() => _error = 'Error: ${e.toString()}');
       
     } finally {
@@ -112,10 +84,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
   
-  // ── Verificar si puede usar login biométrico ─────────────────────────── //
-  // NOTA: en LoginScreen aún no hay sesión de Firebase activa, así que no
-  // comparamos con currentUserId — solo comprobamos si HAY un usuario con
-  // biometría activada guardada en este dispositivo (getUserId() != null).
   Future<void> _checkBiometricLogin() async {
     final canUse      = await _biometricService.canCheckBiometrics();
     final isAvailable = await _biometricService.isBiometricAvailable();
@@ -128,17 +96,12 @@ class _LoginScreenState extends State<LoginScreen> {
         _useBiometric = _biometricEnabled;
       });
 
-      // Si hay credenciales guardadas, ofrece login automático con huella
       if (_useBiometric) {
         await _loginWithBiometric();
       }
     }
   }
 
-  // ── Login con huella ─────────────────────────────────────────────────── //
-  // Usa las credenciales (email/password) guardadas de forma segura por
-  // BiometricService tras verificar la huella, y hace el login normal
-  // de Firebase con ellas.
   Future<void> _loginWithBiometric() async {
     setState(() => _loading = true);
 
@@ -160,9 +123,6 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      // Login real con Firebase usando las credenciales guardadas.
-      // "rememberMe: true" porque si activó huella, asumimos que quiere
-      // sesión persistente en este dispositivo.
       await _authService.login(
         identifier: creds['email']!,
         password:   creds['password']!,
@@ -195,7 +155,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ── Diálogo de modo mantenimiento ─────────────────────────────────────── //
   void _showMaintenanceDialog(String message) {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
@@ -412,7 +371,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Login',
+            Text('Iniciar Sesión',
                 style: TextStyle(
                   fontSize: 22, 
                   fontWeight: FontWeight.bold, 
@@ -421,7 +380,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 textAlign: TextAlign.center),
             const SizedBox(height: 20),
 
-            // Email / Usuario
             TextFormField(
               controller: _identifierController,
               keyboardType: TextInputType.emailAddress,
@@ -432,7 +390,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Contraseña
             TextFormField(
               controller: _passwordController,
               obscureText: _obscurePassword,
@@ -448,7 +405,6 @@ class _LoginScreenState extends State<LoginScreen> {
               validator: (v) => (v == null || v.isEmpty) ? 'Campo obligatorio' : null,
             ),
 
-            // ── Checkbox "Recuérdame" ────────────────────────────────── //
             const SizedBox(height: 4),
             InkWell(
               onTap: () => setState(() => _rememberMe = !_rememberMe),
@@ -480,7 +436,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
 
-            // Error
             if (_error.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(_error,
@@ -489,7 +444,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ],
             const SizedBox(height: 16),
 
-            // Botón Login con contraseña
             SizedBox(
               height: 50,
               child: ElevatedButton(
@@ -502,7 +456,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: _loading
                     ? SizedBox(width: 22, height: 22,
                         child: CircularProgressIndicator(color: onPrimaryColor, strokeWidth: 2))
-                    : Text('Login',
+                    : Text('Iniciar Sesión',
                         style: TextStyle(
                           color: onPrimaryColor, 
                           fontSize: 16, 
@@ -513,7 +467,6 @@ class _LoginScreenState extends State<LoginScreen> {
             
             const SizedBox(height: 12),
             
-            // ✅ Botón de huella dactilar (si está disponible)
             if (_biometricEnabled) ...[
               SizedBox(
                 height: 50,
@@ -540,7 +493,6 @@ class _LoginScreenState extends State<LoginScreen> {
             
             const SizedBox(height: 16),
 
-            // ¿Olvidaste tu contraseña?
             GestureDetector(
               onTap: () => Navigator.pushNamed(context, '/remember-password'),
               child: Text('¿Olvidaste tu contraseña?',

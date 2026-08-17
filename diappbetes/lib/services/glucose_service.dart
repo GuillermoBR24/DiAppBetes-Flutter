@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 
 class GlucoseService {
   static final GlucoseService _instance = GlucoseService._internal();
@@ -12,8 +11,6 @@ class GlucoseService {
 
   String? get _uid => _auth.currentUser?.uid;
 
-  // ── Última lectura de glucosa ─────────────────────────────────────────── //
-  // Lee directamente de glucose_readings ordenado por reading_time desc
   Future<String> getLatestGlucoseFormatted() async {
     if (_uid == null) return 'Sin lecturas';
     try {
@@ -37,7 +34,6 @@ class GlucoseService {
       final m = time.minute.toString().padLeft(2, '0');
       return '$level mg/dL — $h:$m';
     } catch (e) {
-      // Si falta el índice compuesto, intenta sin orderBy como fallback
       try {
         final snap = await _db
             .collection('glucose_readings')
@@ -46,7 +42,6 @@ class GlucoseService {
 
         if (snap.docs.isEmpty) return 'Sin lecturas recientes';
 
-        // Ordena en cliente
         final docs = snap.docs.toList()
           ..sort((a, b) {
             final ta = a.data()['reading_time'] as Timestamp?;
@@ -88,7 +83,6 @@ class GlucoseService {
             date.isBefore(endDate.add(const Duration(days: 1)));
       }).map((doc) => doc.data()).toList();
     } catch (e) {
-      debugPrint('❌ Error getting readings by range: $e');
       return [];
     }
   }

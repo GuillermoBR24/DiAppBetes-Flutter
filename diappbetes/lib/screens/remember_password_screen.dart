@@ -43,7 +43,6 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
     }
   }
 
-  // ── Reenviar (cooldown gestionado por Firebase — máx 1 por minuto) ───── //
   Future<void> _onResend() async {
     setState(() { _error = ''; _loading = true; });
     try {
@@ -120,7 +119,7 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
                       TextButton(
                         onPressed: () =>
                             Navigator.pushReplacementNamed(context, '/login'),
-                        child: Text('Volver al Login',
+                        child: Text('Volver al Inicio de Sesión',
                             style: TextStyle(
                                 color: primaryColor,
                                 fontSize: 14,
@@ -138,7 +137,6 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
     );
   }
 
-  // ── Logo ─────────────────────────────────────────────────────────────── //
   Widget _buildLogo(BuildContext context, Color cardColor, bool isDark) {
     return Container(
       width: 160, height: 160,
@@ -164,7 +162,6 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
     );
   }
 
-  // ── Formulario ───────────────────────────────────────────────────────── //
   Widget _buildFormCard(
     BuildContext context,
     Color primaryColor,
@@ -243,7 +240,6 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
     );
   }
 
-  // ── Pantalla de confirmación (después de enviar) ──────────────────────── //
   Widget _buildSuccessCard(
     BuildContext context,
     Color primaryColor,
@@ -257,7 +253,6 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Icono de email enviado
           const Center(
             child: Icon(Icons.mark_email_read_rounded,
                 size: 72, color: AppColors.verdesuave),
@@ -273,7 +268,6 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
               textAlign: TextAlign.center),
           const SizedBox(height: 10),
 
-          // Email destacado
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
@@ -298,7 +292,6 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Botón principal → login
           SizedBox(
             height: 50,
             child: ElevatedButton(
@@ -308,7 +301,7 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: Text('Ir al Login',
+              child: Text('Ir al Inicio de Sesión',
                   style: TextStyle(
                     color: onPrimaryColor, 
                     fontSize: 15, 
@@ -318,7 +311,6 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
           ),
           const SizedBox(height: 10),
 
-          // Botón secundario → reenviar
           SizedBox(
             height: 46,
             child: OutlinedButton.icon(
@@ -356,7 +348,6 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
       );
 }
 
-// ── Tarjeta reutilizable ──────────────────────────────────────────────────── //
 class _Card extends StatelessWidget {
   final Widget child;
   final bool isDark;

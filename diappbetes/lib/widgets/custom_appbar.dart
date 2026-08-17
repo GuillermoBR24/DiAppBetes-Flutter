@@ -1,4 +1,3 @@
-// lib/widgets/custom_app_bar.dart
 import 'package:flutter/material.dart';
 import '../utils/admin_nav_helper.dart';
 
@@ -76,23 +75,20 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               icon: const Icon(Icons.show_chart),
               onPressed: () => Navigator.pushNamed(context, '/glucose-history'),
             ),
-            // Icono de escáner (solo si no hay acciones personalizadas)
             if (actions == null)
               IconButton(
                 icon: Icon(Icons.qr_code_scanner, 
                     color: Theme.of(context).appBarTheme.foregroundColor),
-                onPressed: () => Navigator.pushNamed(context, '/scanner'), // ← CAMBIO: pushNamed
+                onPressed: () => Navigator.pushNamed(context, '/scanner'),
               ),
             
-            // Icono de admin (solo si es admin y no hay acciones personalizadas)
             if (isAdmin && actions == null)
               IconButton(
                 icon: Icon(Icons.admin_panel_settings, 
                     color: Theme.of(context).appBarTheme.foregroundColor),
-                onPressed: () => Navigator.pushNamed(context, '/admin'), // ← CAMBIO: pushNamed
+                onPressed: () => Navigator.pushNamed(context, '/admin'),
               ),
             
-            // Icono de settings (solo si no hay acciones personalizadas)
             if (actions == null)
               IconButton(
                 icon: Icon(Icons.settings, 
@@ -100,7 +96,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                 onPressed: onSettingsPressed ?? () => Navigator.pushNamed(context, '/settings'),
               ),
             
-            // Acciones personalizadas
             if (actions != null) ...actions!,
           ],
         );

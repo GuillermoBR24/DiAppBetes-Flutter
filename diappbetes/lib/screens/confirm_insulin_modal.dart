@@ -1,11 +1,5 @@
 import 'package:flutter/material.dart';
 
-// ---------------------------------------------------------------------------
-// ConfirmInsulinModal — paso previo a guardar la comida.
-// Muestra la insulina calculada automáticamente y permite ajustarla antes
-// de confirmar la creación. Devuelve (via Navigator.pop) el valor final
-// de insulina, o null si el usuario cancela.
-// ---------------------------------------------------------------------------
 class ConfirmInsulinModal extends StatefulWidget {
   final double totalHc;
   final double totalCalories;
@@ -82,7 +76,6 @@ class _ConfirmInsulinModalState extends State<ConfirmInsulinModal> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Header ────────────────────────────────────────────────── //
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -108,7 +101,6 @@ class _ConfirmInsulinModalState extends State<ConfirmInsulinModal> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Resumen breve del contexto
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -133,7 +125,6 @@ class _ConfirmInsulinModalState extends State<ConfirmInsulinModal> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ── Campo editable de insulina, destacado ───────────── //
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -167,7 +158,6 @@ class _ConfirmInsulinModalState extends State<ConfirmInsulinModal> {
                   ),
                   const SizedBox(height: 10),
 
-                  // Indicador de ajuste manual + botón para restaurar
                   if (_wasModified)
                     Center(
                       child: Column(
@@ -193,12 +183,11 @@ class _ConfirmInsulinModalState extends State<ConfirmInsulinModal> {
 
                   const SizedBox(height: 20),
 
-                  // ── Botones ──────────────────────────────────────────── //
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context), // cancela → devuelve null
+                          onPressed: () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(color: dividerColor),
                             padding: const EdgeInsets.symmetric(vertical: 14),

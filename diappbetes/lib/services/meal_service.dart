@@ -11,8 +11,6 @@ class MealService {
 
   String? get _uid => _auth.currentUser?.uid;
 
-  // ── Comidas registradas HOY ───────────────────────────────────────────── //
-  // Usa el campo created_at que graba meal_create_service
   Future<int> getTodayMealCount() async {
     if (_uid == null) return 0;
 
@@ -21,7 +19,6 @@ class MealService {
     final end   = start.add(const Duration(days: 1));
 
     try {
-      // Query con índice compuesto (user_id + created_at)
       final snap = await _db
           .collection('meals')
           .where('user_id', isEqualTo: _uid)
@@ -30,7 +27,6 @@ class MealService {
           .get();
       return snap.docs.length;
     } catch (_) {
-      // Fallback sin rango de fechas si falta índice — filtra en cliente
       try {
         final snap = await _db
             .collection('meals')

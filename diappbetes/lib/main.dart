@@ -71,12 +71,6 @@ class DiAppBetes extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// _AuthWrapper — escucha el estado de sesión de Firebase y aplica la
-// lógica de "Recuérdame": si el usuario no marcó la opción y ha pasado
-// el tiempo límite de inactividad, fuerza el cierre de sesión y manda
-// a /auth en lugar de /home, aunque Firebase aún tenga el token guardado.
-// ---------------------------------------------------------------------------
 class _AuthWrapper extends StatefulWidget {
   const _AuthWrapper();
 
@@ -99,8 +93,6 @@ class _AuthWrapperState extends State<_AuthWrapper> with WidgetsBindingObserver 
     super.dispose();
   }
 
-  // Cada vez que la app vuelve a primer plano, refresca la marca de actividad
-  // (solo importa si "Recuérdame" no está activo; si lo está, no afecta).
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -122,8 +114,6 @@ class _AuthWrapperState extends State<_AuthWrapper> with WidgetsBindingObserver 
         }
 
         if (snapshot.hasData && snapshot.data != null) {
-          // Hay sesión de Firebase activa — comprobamos si debe expirar
-          // por inactividad cuando "Recuérdame" no estaba marcado.
           return FutureBuilder<bool>(
             future: _rememberMeService.shouldExpireSession(),
             builder: (context, expireSnap) {
@@ -136,13 +126,11 @@ class _AuthWrapperState extends State<_AuthWrapper> with WidgetsBindingObserver 
               }
 
               if (expireSnap.data == true) {
-                // Sesión expirada por inactividad: cerrar y mandar a /auth
                 FirebaseAuth.instance.signOut();
                 _rememberMeService.clear();
                 return const AuthScreen();
               }
 
-              // Sesión válida: refresca la marca de actividad y entra
               _rememberMeService.touchActivity();
               return const HomeScreen();
             },

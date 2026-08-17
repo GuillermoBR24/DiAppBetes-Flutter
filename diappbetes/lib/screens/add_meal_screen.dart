@@ -11,9 +11,6 @@ import 'add_food_modal.dart';
 import 'add_meal_summary_modal.dart';
 import 'confirm_insulin_modal.dart';
 
-// ---------------------------------------------------------------------------
-// Modelo AddedFood
-// ---------------------------------------------------------------------------
 class AddedFood {
   final String id;
   String name;
@@ -40,9 +37,6 @@ class AddedFood {
   });
 }
 
-// ---------------------------------------------------------------------------
-// AddMealScreen
-// ---------------------------------------------------------------------------
 class AddMealScreen extends StatefulWidget {
   const AddMealScreen({super.key});
 
@@ -54,9 +48,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
   final _mealService = MealCreateService();
   bool _celiacMode = false;
 
-  // ── Fecha/hora de la comida ────────────────────────────────────────────── //
-  // _selectedDateTime es la fuente de verdad; _mealTime es su representación
-  // en texto con el mismo formato que se usaba antes ('yyyy-MM-dd  HH:mm').
   late DateTime _selectedDateTime;
   late String _mealTime;
 
@@ -69,7 +60,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
   final List<AddedFood> _addedFoods = [];
   bool _saving = false;
   
-  // ── Estado para navegación con AdminNavHelper ────────────────────────── //
   int _selectedTab = 2;
   bool _isAdmin = false;
 
@@ -101,13 +91,11 @@ class _AddMealScreenState extends State<AddMealScreen> {
     if (mounted) setState(() => _celiacMode = celiac);
   }
 
-  // ── Verificar rol de administrador ───────────────────────────────────── //
   Future<void> _checkAdminRole() async {
     final isAdmin = await AdminNavHelper.getIsAdmin();
     if (mounted) setState(() => _isAdmin = isAdmin);
   }
 
-  // ── Cargar ratio HC actual y FSI del usuario ──────────────────────────── //
   Future<void> _loadUserData() async {
     final ratio = await _mealService.getCurrentHcRatio();
     final fsi   = await _mealService.getUserFsi();
@@ -124,10 +112,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
 
   String _p(int n) => n.toString().padLeft(2, '0');
 
-  // ── Selector de fecha y hora ───────────────────────────────────────────── //
-  // Por defecto muestra el momento actual (ya seleccionado en _setNow),
-  // pero el usuario puede elegir cualquier fecha/hora. Mantiene el mismo
-  // formato de visualización que antes.
   Future<void> _pickDateTime() async {
     final primaryColor = Theme.of(context).colorScheme.primary;
 
@@ -178,7 +162,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
   double get _totalCalories => _addedFoods.fold(0, (s, f) => s + f.calculatedCalories);
   double get _totalRations  => _addedFoods.fold(0, (s, f) => s + f.calculatedRations);
 
-  // ── Añadir alimento ───────────────────────────────────────────────────── //
   void _openAddFoodModal() {
     showModalBottomSheet(
       context: context,
@@ -203,7 +186,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
     );
   }
 
-  // ── Editar alimento ───────────────────────────────────────────────────── //
   void _editFood(int index) {
     final food = _addedFoods[index];
     showDialog(
@@ -235,7 +217,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
 
   void _removeFood(int index) => setState(() => _addedFoods.removeAt(index));
 
-  // ── Crear comida → confirma insulina → guarda en Firestore → resumen ─── //
   Future<void> _createMeal() async {
     if (!_isFormValid || _saving) return;
 
@@ -247,7 +228,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
     }
     if (calculatedInsulin < 0) calculatedInsulin = 0;
 
-    // ── Paso previo: mostrar y permitir ajustar la insulina antes de guardar ── //
     final confirmedInsulin = await showDialog<double>(
       context: context,
       barrierDismissible: false,
@@ -260,7 +240,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
       ),
     );
 
-    // Si el usuario cancela el diálogo, no se crea la comida
     if (confirmedInsulin == null) return;
 
     final wasAdjusted = (confirmedInsulin - calculatedInsulin).abs() > 0.01;
@@ -319,7 +298,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
     }
   }
 
-  // ── Manejo de tabs con AdminNavHelper ────────────────────────────────── //
   void _onTabTapped(int index) {
     AdminNavHelper.handleTabTap(
       context: context,
@@ -330,13 +308,11 @@ class _AddMealScreenState extends State<AddMealScreen> {
         switch (validIndex) {
           case 0: Navigator.pushReplacementNamed(context, '/historial'); break;
           case 1: Navigator.pushReplacementNamed(context, '/home'); break;
-          // case 3 (Add Meal) no hace nada, ya está aquí
         }
       },
     );
   }
 
-  // =========================================================================
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -399,7 +375,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor)),
           const SizedBox(height: 14),
 
-          // Fecha/hora — ahora seleccionable, con la hora actual por defecto
           InkWell(
             onTap: _pickDateTime,
             borderRadius: BorderRadius.circular(8),
@@ -417,7 +392,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
           Divider(color: dividerColor),
           const SizedBox(height: 8),
 
-          // Tipo de comida
           DropdownButtonFormField<String>(
             value: _mealType.isEmpty ? null : _mealType,
             hint: Text('Seleccionar tipo', style: TextStyle(color: textColor, fontSize: 14)),
@@ -437,7 +411,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Glucemia
           TextField(
             controller: _glucemiaCtrl,
             keyboardType: TextInputType.number,
@@ -452,7 +425,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
             onChanged: (v) => setState(() => _glucemiaText = v),
           ),
 
-          // Indicador ratio/FSI cargado
           const SizedBox(height: 8),
           Text('Ratio HC: ${_ratioValue.toStringAsFixed(1)} g/U  •  FSI: ${_fsi.toStringAsFixed(0)} mg/dL/U',
               style: TextStyle(fontSize: 11, color: textSmallColor)),
@@ -501,7 +473,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
           else ...[
             ..._addedFoods.asMap().entries.map((e) => _buildFoodItem(e.key, e.value)),
             Divider(color: dividerColor),
-            // Totales
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Row(

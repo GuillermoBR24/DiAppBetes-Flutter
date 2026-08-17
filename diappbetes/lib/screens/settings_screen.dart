@@ -12,9 +12,6 @@ import '../services/hc_ratio_service.dart';
 import '../services/auth_service.dart';
 import '../screens/report_issue_screen.dart';
 
-// ---------------------------------------------------------------------------
-// Modelo HcRatio
-// ---------------------------------------------------------------------------
 class HcRatio {
   String id;
   int startMins;
@@ -46,9 +43,6 @@ class HcRatio {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Helpers de validación de ratios
-// ---------------------------------------------------------------------------
 List<HcRatio> _enforceFullDay(List<HcRatio> ratios) {
   if (ratios.isEmpty) {
     return [HcRatio(startMins: 0, endMins: 1440, ratioValue: 10.0)];
@@ -66,9 +60,6 @@ List<HcRatio> _enforceFullDay(List<HcRatio> ratios) {
   return r;
 }
 
-// ---------------------------------------------------------------------------
-// SettingsScreen
-// ---------------------------------------------------------------------------
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -97,7 +88,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   double _fsi       = 50.0;
   Uint8List? _avatarBytes;
 
-  // ✅ MODO CELÍACO: declaración única
   bool _celiacMode = false;
   bool _savingCeliac = false;
 
@@ -136,7 +126,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _txt(TextEditingController? c) { try { return c?.text; } catch(_) { return null; } }
   void _set(TextEditingController? c, String v) { try { c?.text = v; } catch(_) {} }
 
-  // ── Carga datos ──────────────────────────────────────────────────────── //
   Future<void> _loadData() async {
     if (!mounted) return;
     setState(() => _loadingProfile = true);
@@ -148,19 +137,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (profile == null) throw Exception('Perfil no encontrado');
       if (!mounted) return;
 
-      // Decodificar avatar si existe
       Uint8List? avatarBytes;
       final avatarBase64 = profile['avatar_base64'] as String?;
       if (avatarBase64 != null && avatarBase64.isNotEmpty) {
         try {
           avatarBytes = base64Decode(avatarBase64);
-          debugPrint('✅ [AVATAR] Avatar cargado: ${avatarBytes.length} bytes');
         } catch (e) {
           debugPrint('❌ [AVATAR] Error decodificando avatar: $e');
         }
       }
 
-      // ✅ MODO CELÍACO: cargar dentro del setState
       setState(() {
         _username  = profile['username']?.toString() ?? '';
         _email     = profile['email']?.toString() ?? '';
@@ -168,7 +154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _role      = profile['role']?.toString() ?? 'Usuario';
         _fsi       = (profile['fsi'] as num?)?.toDouble() ?? 50.0;
         _avatarBytes = avatarBytes;
-        _celiacMode = profile['celiac_mode'] == true;  // ✅ Aquí va la asignación
+        _celiacMode = profile['celiac_mode'] == true;
 
         _set(_usernameCtrl,  _username);
         _set(_emailCtrl,     _email);
@@ -201,7 +187,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isAvailable = await biometricService.isBiometricAvailable();
     final userId = _authService.currentUser?.uid;
     
-    // Solo está activo si el usuario actual tiene huella habilitada
     final isEnabled = userId != null 
         ? await biometricService.isCurrentUserBiometricEnabled(userId)
         : false;
@@ -215,7 +200,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ── Toggle de autenticación biométrica ────────────────────────────────── //
   Future<void> _toggleBiometric() async {
     if (!_canUseBiometric) return;
     
@@ -226,7 +210,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (userId == null || userEmail == null) return;
 
     if (!_biometricEnabled) {
-      // Activar: pedir contraseña
       final password = await _askPasswordForBiometric();
       
       if (password == null || password.isEmpty) {
@@ -234,10 +217,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return;
       }
       
-      // Verificar huella
       final authenticated = await biometricService.authenticate();
       if (authenticated && mounted) {
-        // Guardar credenciales para ESTE usuario
         await biometricService.enableForUser(
           userId: userId,
           email: userEmail,
@@ -248,7 +229,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _showSnack('Autenticación biométrica activada');
       }
     } else {
-      // Desactivar: borrar credenciales
       await biometricService.disable();
       await _profileService.setBiometricLoginEnabled(false);
       setState(() => _biometricEnabled = false);
@@ -313,7 +293,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return r;
   }
 
-  // ── Guardar info personal ─────────────────────────────────────────────── //
   Future<void> _savePersonalInfo() async {
     setState(() => _errorPersonal = '');
     final u = _txt(_usernameCtrl)?.trim() ?? '';
@@ -338,7 +317,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ─ Guardar diabetes ──────────────────────────────────────────────────── //
   Future<void> _saveDiabetes() async {
     setState(() => _errorDiabetes = '');
     final fsiVal = double.tryParse(_txt(_fsiCtrl) ?? '');
@@ -359,9 +337,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ═══════════════════════════════════════════════════════════════════════
-  // MODO CELÍACO
-  // ══════════════════════════════════════════════════════════════════════
   Future<void> _toggleCeliacMode(bool value) async {
     setState(() => _savingCeliac = true);
     try {
@@ -380,10 +355,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
   }
-
-  // =========================================================================
-  // LÓGICA DE RATIOS HC
-  // =========================================================================
 
   void _changeEndTime(int i, int newEndMins) {
     setState(() {
@@ -454,7 +425,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  // ─ TimePicker ────────────────────────────────────────────────────────── //
   Future<int?> _pickTime(int currentMins) async {
     final picked = await showTimePicker(
       context: context,
@@ -483,7 +453,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return picked.hour * 60 + picked.minute;
   }
 
-  // ── DatePicker ────────────────────────────────────────────────────────── //
   Future<void> _pickBirthDate() async {
     DateTime? init;
     try {
@@ -519,10 +488,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() { _set(_birthDateCtrl, f); _birthDate = f; });
     }
   }
-
-  // =========================================================================
-  // SISTEMA DE AVATAR (base64 en Firestore)
-  // =========================================================================
 
   Future<void> _showAvatarOptions() async {
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -607,7 +572,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() => _uploadingAvatar = true);
 
       final Uint8List imageBytes = await image.readAsBytes();
-      debugPrint('📏 [AVATAR] Tamaño: ${(imageBytes.length / 1024).toStringAsFixed(1)} KB');
 
       final success = await _profileService.updateAvatarBase64(imageBytes);
 
@@ -624,7 +588,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _showSnack('Error al guardar la imagen', isError: true);
       }
     } catch (e) {
-      debugPrint('❌ [AVATAR] Error: $e');
       if (mounted) {
         setState(() => _uploadingAvatar = false);
         _showSnack('Error: $e', isError: true);
@@ -679,7 +642,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ── Logout / Delete ───────────────────────────────────────────────────── //
   Future<void> _logout() async {
     final ok = await _confirm('Cierre de Sesión', '¿Estás seguro de cerrar sesión?',
         'Cerrar Sesión', AppColors.rojoSuave);
@@ -792,7 +754,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  // =========================================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -856,9 +817,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════════════════
-  // TARJETA MODO CELÍACO
-  // ══════════════════════════════════════════════════════════════════════
   Widget _buildCeliacCard() {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final textColor = Theme.of(context).textTheme.bodyMedium?.color;
@@ -999,7 +957,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Tarjeta perfil ────────────────────────────────────────────────────── //
   Widget _buildProfileCard() => _Card(
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
@@ -1211,7 +1168,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Tarjeta info personal ─────────────────────────────────────────────── //
   Widget _buildPersonalInfoCard() => _Card(
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -1247,7 +1203,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ]),
   );
 
-  // ── Tarjeta gestión diabetes ──────────────────────────────────────────── //
   Widget _buildDiabetesCard() => _Card(
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
@@ -1297,7 +1252,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ]),
   );
 
-  // ── Fila de un tramo HC ──────────────────────────────────────────────── //
   Widget _buildHcRow(int i, HcRatio ratio) {
     final isFirst = i == 0;
     final isLast  = i == _hcRatios.length - 1;

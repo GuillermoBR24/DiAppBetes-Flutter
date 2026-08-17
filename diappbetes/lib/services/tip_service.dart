@@ -9,7 +9,6 @@ class TipService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _rng = Random();
 
-  // Lista mutable (no const) para poder usar shuffle / índice aleatorio
   static final List<String> _fallbackTips = [
     'Mantén un horario regular de comidas para ayudar a estabilizar tus niveles de glucosa a lo largo del día.',
     'Beber suficiente agua ayuda a los riñones a eliminar el exceso de glucosa en la sangre.',
@@ -28,14 +27,11 @@ class TipService {
           .get();
 
       if (snap.docs.isNotEmpty) {
-        // Índice aleatorio en vez de shuffle sobre lista no modificable
         final index = _rng.nextInt(snap.docs.length);
         final content = snap.docs[index].data()['content'] as String?;
         if (content != null && content.isNotEmpty) return content;
       }
     } catch (_) {}
-
-    // Fallback local — lista mutable, shuffle seguro
     return _fallbackTips[_rng.nextInt(_fallbackTips.length)];
   }
 }

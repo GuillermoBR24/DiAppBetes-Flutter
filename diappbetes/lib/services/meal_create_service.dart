@@ -2,9 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/add_meal_screen.dart';
 
-// ---------------------------------------------------------------------------
-// MealCreateService — guarda comidas en Firestore
-// ---------------------------------------------------------------------------
 class MealCreateService {
   static final MealCreateService _instance = MealCreateService._internal();
   factory MealCreateService() => _instance;
@@ -15,9 +12,6 @@ class MealCreateService {
 
   String? get _uid => _auth.currentUser?.uid;
 
-  // ── Crear comida completa con sus alimentos ───────────────────────────── //
-  // [mealDateTime]: fecha/hora elegida por el usuario para la comida. Si no
-  // se indica, se usa el momento actual (comportamiento anterior).
   Future<Map<String, dynamic>> createMeal({
     required String mealType,
     required double glucoseLevel,
@@ -34,7 +28,6 @@ class MealCreateService {
     final effectiveDateTime = mealDateTime ?? DateTime.now();
     final createdAtTimestamp = Timestamp.fromDate(effectiveDateTime);
 
-    // 1. Crear documento de comida
     final mealRef = _db.collection('meals').doc();
     final updatedAt = FieldValue.serverTimestamp();
 
@@ -54,7 +47,6 @@ class MealCreateService {
     final batch = _db.batch();
     batch.set(mealRef, mealData);
 
-    // 2. Crear subcolección meal_foods
     for (final food in foods) {
       final foodRef = mealRef.collection('meal_foods').doc();
       batch.set(foodRef, {
@@ -69,7 +61,6 @@ class MealCreateService {
       });
     }
 
-    // 3. Crear lectura de glucosa asociada a la comida
     final glucoseRef = _db.collection('glucose_readings').doc();
     batch.set(glucoseRef, {
       'user_id':       _uid,
@@ -93,7 +84,6 @@ class MealCreateService {
     };
   }
 
-  // ── Obtener ratio HC actual según hora del día ────────────────────────── //
   Future<double> getCurrentHcRatio() async {
     if (_uid == null) return 10.0;
     try {
@@ -121,7 +111,6 @@ class MealCreateService {
     }
   }
 
-  // ── Obtener FSI del perfil ────────────────────────────────────────────── //
   Future<double> getUserFsi() async {
     if (_uid == null) return 50.0;
     try {

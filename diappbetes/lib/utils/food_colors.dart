@@ -1,4 +1,3 @@
-// lib/utils/food_colors.dart
 import 'package:flutter/material.dart';
 
 Color categoryBg(BuildContext context, String cat) {

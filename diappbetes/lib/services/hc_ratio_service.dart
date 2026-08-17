@@ -13,7 +13,6 @@ class HcRatioService {
 
   String? get _uid => _auth.currentUser?.uid;
 
-  // ── Obtener ratios HC del usuario ─────────────────────────────────────── //
   Future<List<Map<String, dynamic>>> getHcRatios() async {
     if (_uid == null) return [];
     final snap = await _db
@@ -43,12 +42,10 @@ class HcRatioService {
     return (ratios.first['ratio_value'] as num?)?.toDouble() ?? 10.0;
   }
 
-  // ── Guardar todos los ratios (borra los anteriores y crea los nuevos) ─── //
   Future<void> saveAll(List<Map<String, dynamic>> ratios) async {
     if (_uid == null) return;
     final batch = _db.batch();
 
-    // Borrar ratios existentes
     final existing = await _db
         .collection('hc_ratios')
         .where('user_id', isEqualTo: _uid)
@@ -57,7 +54,6 @@ class HcRatioService {
       batch.delete(doc.reference);
     }
 
-    // Crear los nuevos
     for (final ratio in ratios) {
       final ref = _db.collection('hc_ratios').doc();
       batch.set(ref, {

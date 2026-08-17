@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 
-// ---------------------------------------------------------------------------
-// AppColors — constantes de color para modo claro y oscuro
-// ---------------------------------------------------------------------------
 class AppColors {
   // ── Colores de marca (siempre iguales) ────────────────────────────────── //
   static const Color azulFondo = Color(0xFF1A3A6E); 
@@ -34,9 +31,6 @@ class AppColors {
   static Color textSecondary(BuildContext ctx) => Theme.of(ctx).textTheme.bodySmall!.color!;
 }
 
-// ---------------------------------------------------------------------------
-// AppTheme — temas claro y oscuro
-// ---------------------------------------------------------------------------
 class AppTheme {
   // ── Tema CLARO ────────────────────────────────────────────────────────── //
   static ThemeData get light => ThemeData(

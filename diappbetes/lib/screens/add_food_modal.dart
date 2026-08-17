@@ -10,9 +10,6 @@ import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/food_service.dart';
 
-// ---------------------------------------------------------------------------
-// Colores por categoría
-// ---------------------------------------------------------------------------
 Color categoryBg(BuildContext context, String cat) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -93,18 +90,6 @@ Color categoryText(BuildContext context, String cat) {
   }
 }
 
-
-
-// ---------------------------------------------------------------------------
-// AddFoodModal
-//
-// Dos catálogos, dos caminos:
-//  1) Búsqueda por texto → SOLO el catálogo genérico local (FoodService),
-//     instantánea, sin red, sin marcas. Cubre el uso diario normal.
-//  2) Escáner de código de barras → consulta OpenFoodFacts en directo,
-//     para cuando el usuario tiene el envase en la mano y quiere el dato
-//     exacto de ESE producto concreto.
-// ---------------------------------------------------------------------------
 class AddFoodModal extends StatefulWidget {
   final void Function(Map<String, dynamic> foodData)? onFoodAdded;
 
@@ -123,7 +108,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
   List<Food> _foods      = [];
   String     _searchTerm = '';
 
-  // ── Estado del escáner ──────────────────────────────────────────────── //
   bool _scanning = false;
   String? _lastScannedCode;
   bool _scanningLoading = false;
@@ -189,18 +173,15 @@ class _AddFoodModalState extends State<AddFoodModal> {
     if (mounted) setState(() => _celiacMode = celiac);
   }
 
-  // ── Búsqueda — síncrona, solo sobre el catálogo genérico local ────────── //
-  // Sin debounce, sin red: se filtra al instante en cada tecla.
   void _onSearchChanged(String term) async {
     final customMatches = await _customFoodService.searchCustomFoods(term);
     final localMatches = _foodService.searchFoods(term);
     setState(() {
       _searchTerm = term;
-      _foods = [...customMatches, ...localMatches]; // personales primero
+      _foods = [...customMatches, ...localMatches];
     });
   }
 
-  // ── Seleccionar alimento → abre modal de detalles ────────────────────── //
   void _selectFood(Food food) {
     Navigator.pop(context);
     showDialog(
@@ -211,10 +192,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
       ),
     );
   }
-
-  // ═══════════════════════════════════════════════════════════════════════
-  // ESCÁNER — único punto de contacto con OpenFoodFacts (productos de marca)
-  // ═══════════════════════════════════════════════════════════════════════
 
   void _startScanner() {
     _scannerController = MobileScannerController(
@@ -271,9 +248,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
     }
   }
 
-  /// Consulta OpenFoodFacts y convierte el resultado a un objeto Food.
-  /// Esta es la ÚNICA llamada de red a OpenFoodFacts en todo el flujo de
-  /// añadir alimentos — solo se dispara al escanear un código de barras.
   Future<Food?> _fetchProductFromBarcode(String barcode) async {
     final url = Uri.parse(
         'https://world.openfoodfacts.org/api/v2/product/$barcode.json'
@@ -297,8 +271,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
         ?? product['product_name_es']?.toString()
         ?? product['product_name_en']?.toString()
         ?? 'Producto desconocido';
-    // Aquí sí mostramos marca: es justo lo que distingue a un producto
-    // concreto escaneado del genérico de la lista local.
     final name = (brand != null && brand.isNotEmpty && !rawName.toLowerCase().contains(brand.toLowerCase()))
         ? '$rawName ($brand)'
         : rawName;
@@ -445,7 +417,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
       ),
       child: Column(
         children: [
-          // ── Header ────────────────────────────────────────────────── //
           Container(
             decoration: BoxDecoration(
               color: primaryColor,
@@ -485,7 +456,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
             ),
           ),
 
-          // ── Cuerpo: Scanner o Lista ───────────────────────────────── //
           Expanded(
             child: _scanning
                 ? _buildScannerView(primaryColor, onPrimaryColor)
@@ -504,7 +474,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
     );
   }
 
-  // ── Vista de búsqueda (catálogo genérico local) ──────────────────────── //
   Widget _buildSearchView({
     required Color primaryColor,
     required Color cardColor,
@@ -516,7 +485,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
   }) {
     return Column(
       children: [
-        // ── Buscador ──────────────────────────────────────────────── //
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
           child: TextField(
@@ -546,7 +514,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
         ),
 
-        // ── Lista o estado vacío ──────────────────────────────────── //
         Expanded(
           child: _foods.isEmpty
               ? _buildEmptyState(primaryColor, onPrimaryColor: Theme.of(context).colorScheme.onPrimary,
@@ -563,7 +530,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
     );
   }
 
-  // ── Estado sin resultados: invita a escanear el producto concreto ─────── //
   Widget _buildEmptyState(Color primaryColor,
       {required Color onPrimaryColor, required Color? textColor, required Color dividerColor}) {
     return Center(
@@ -607,7 +573,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
     );
   }
 
-  // ── Vista del escáner ───────────────────────────────────────────────── //
   Widget _buildScannerView(Color primaryColor, Color onPrimaryColor) {
     return Stack(
       children: [
@@ -739,7 +704,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
             const SizedBox(width: 4),
           ],
 
-          // Editar / borrar — solo para alimentos personales
           if (food.isCustom) ...[
             IconButton(
               padding: EdgeInsets.zero, constraints: const BoxConstraints(),
@@ -769,9 +733,6 @@ class _AddFoodModalState extends State<AddFoodModal> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Pintor del recuadro de escaneo
-// ---------------------------------------------------------------------------
 class _ScanFramePainter extends CustomPainter {
   final Color borderColor;
   _ScanFramePainter(this.borderColor);

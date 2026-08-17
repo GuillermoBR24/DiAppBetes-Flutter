@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Indicador visual de contenido de gluten
-/// - [containsGluten] = true → rojo (contiene gluten)
-/// - [containsGluten] = false → verde (sin gluten)
-/// - [containsGluten] = null → gris (desconocido)
 class GlutenIndicator extends StatelessWidget {
   final bool? containsGluten;
   final double size;
@@ -23,11 +19,11 @@ class GlutenIndicator extends StatelessWidget {
     final String label;
 
     if (containsGluten == true) {
-      color = const Color(0xFFD32F2F); // Rojo
+      color = const Color(0xFFD32F2F);
       icon = Icons.warning_amber_rounded;
       label = 'Con gluten';
     } else if (containsGluten == false) {
-      color = const Color(0xFF388E3C); // Verde
+      color = const Color(0xFF388E3C);
       icon = Icons.check_circle_outline;
       label = 'Sin gluten';
     } else {

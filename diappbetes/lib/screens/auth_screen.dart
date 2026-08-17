@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-// ---------------------------------------------------------------------------
-// AuthScreen — pantalla de bienvenida
-// Equivalente a AuthPage de Angular/Ionic
-// ---------------------------------------------------------------------------
 class AuthScreen extends StatelessWidget {
   const AuthScreen({super.key});
 
@@ -22,7 +18,6 @@ class AuthScreen extends StatelessWidget {
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.blanco,
       body: Stack(
         children: [
-          // Fondo dinámico (azul en claro, oscuro en dark mode)
           SizedBox.expand(
             child: CustomPaint(
               painter: _BackgroundPainter(
@@ -64,7 +59,6 @@ class AuthScreen extends StatelessWidget {
     );
   }
 
-  // ── Logo ─────────────────────────────────────────────────────────────── //
   Widget _buildLogo(BuildContext context, Color cardColor, bool isDark) {
     return Container(
       width: 160,
@@ -97,7 +91,6 @@ class AuthScreen extends StatelessWidget {
     );
   }
 
-  // ── Tarjeta de bienvenida ─────────────────────────────────────────────── //
   Widget _buildWelcomeCard(
     BuildContext context,
     Color primaryColor,
@@ -126,7 +119,6 @@ class AuthScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Título
           Text(
             'Bienvenido a DiappBetes',
             style: TextStyle(
@@ -138,7 +130,6 @@ class AuthScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // Subtítulo
           Text(
             'Raciona tu Diabetes',
             style: TextStyle(
@@ -149,7 +140,6 @@ class AuthScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // Botón Login (.btn-primary)
           SizedBox(
             width: double.infinity,
             height: 50,
@@ -162,7 +152,7 @@ class AuthScreen extends StatelessWidget {
                 elevation: 0,
               ),
               child: Text(
-                'Login',
+                'Iniciar Sesión',
                 style: TextStyle(
                   color: onPrimaryColor,
                   fontSize: 16,
@@ -173,7 +163,6 @@ class AuthScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Botón Registrarse (.btn-secondary — outline)
           SizedBox(
             width: double.infinity,
             height: 50,
@@ -200,10 +189,6 @@ class AuthScreen extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Pintor del fondo: forma azul en la parte superior
-// Equivalente a .background-container > .circulo del SCSS
-// ---------------------------------------------------------------------------
 class _BackgroundPainter extends CustomPainter {
   final Color color;
 
@@ -212,9 +197,6 @@ class _BackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = color;
-
-    // La forma ocupa el 80% de alto y empieza desplazado -30% arriba,
-    // con esquinas redondeadas en la parte inferior (equiv. border-bottom-*-radius: 25px)
     final rect = RRect.fromLTRBAndCorners(
       0,
       -size.height * 0.30,

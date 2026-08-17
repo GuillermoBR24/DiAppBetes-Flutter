@@ -1,4 +1,3 @@
-// lib/screens/home_screen.dart
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:diappbetes/widgets/custom_appbar.dart';
@@ -32,13 +31,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int    _todayMealCount     = 0;
   int    _tirPercentage      = 0;
   String _tipContent         = '';
-  Uint8List? _avatarBytes;  // ← NUEVO: avatar del usuario
+  Uint8List? _avatarBytes;
 
-  // ── Estado para navegación ───────────────────────────────────────────── //
   bool _isAdmin = false;
   int _selectedTab = 1;
 
-  // Estado granular de carga
   bool _loadingProfile  = true;
   bool _loadingGlucose  = true;
   bool _loadingMeals    = true;
@@ -61,13 +58,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ── Verificar rol de administrador ───────────────────────────────────── //
   Future<void> _checkAdminRole() async {
     final isAdmin = await AdminNavHelper.getIsAdmin();
     if (mounted) setState(() => _isAdmin = isAdmin);
   }
 
-  // ── Carga en paralelo ────────────────────────────────────────────────── //
   Future<void> _loadAll() async {
     if (!mounted) return;
     setState(() {
@@ -97,7 +92,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ? profile!['username'] as String
           : (_authService.currentUser?.email?.split('@').first ?? '');
       
-      // ✅ NUEVO: Decodificar avatar si existe
       Uint8List? avatarBytes;
       final avatarBase64 = profile?['avatar_base64'] as String?;
       if (avatarBase64 != null && avatarBase64.isNotEmpty) {
@@ -111,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _username = username;
-          _avatarBytes = avatarBytes;  // ← NUEVO
+          _avatarBytes = avatarBytes;
           _loadingProfile = false;
         });
       }
@@ -156,7 +150,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ── Manejo de tabs con AdminNavHelper ────────────────────────────────── //
   void _onTabTapped(int index) {
     AdminNavHelper.handleTabTap(
       context: context,
@@ -167,7 +160,6 @@ class _HomeScreenState extends State<HomeScreen> {
         switch (validIndex) {
           case 0: Navigator.pushReplacementNamed(context, '/historial'); break;
           case 2: Navigator.pushReplacementNamed(context, '/add-meal'); break;
-          // case 1 (Home) no hace nada
         }
       },
     );
@@ -221,12 +213,10 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Profile card CON AVATAR ──────────────────────────────────────────── //
   Widget _buildProfileCard() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // ✅ AVATAR: muestra imagen si existe, sino icono
         Container(
           width: 46, height: 46,
           decoration: BoxDecoration(
@@ -255,22 +245,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Tarjeta TIR ───────────────────────────────────────────────────────── //
   Widget _buildTirCard() {
     return _Card(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.start, // antes: .center
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           const SizedBox(height: 12),
           Text('Tiempo en Rango',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
               textAlign: TextAlign.center),
-          const SizedBox(height: 32), // antes: 32
+          const SizedBox(height: 32),
           _loadingTir
               ? SizedBox(height: 130, child: Center(
                   child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)))
               : TirProgressRing(percentage: _tirPercentage),
-          const SizedBox(height: 24), // reemplaza el "if" roto: espacio fijo y consistente
+          const SizedBox(height: 24),
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -296,7 +285,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Tarjeta Comidas de hoy ────────────────────────────────────────────── //
   Widget _buildMealsCard() {
     return _Card(
       child: Column(
@@ -321,7 +309,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ── Tarjeta Consejo ───────────────────────────────────────────────────── //
   Widget _buildTipCard() {
     return _Card(
       child: Column(

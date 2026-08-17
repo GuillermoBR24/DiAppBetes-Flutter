@@ -24,7 +24,6 @@ class _AdminScreenState extends State<AdminScreen> {
     _checkAdminRole();
   }
 
-  /// Verifica si el usuario tiene rol de administrador en Firestore
   Future<void> _checkAdminRole() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -82,11 +81,9 @@ class _AdminScreenState extends State<AdminScreen> {
     }
   }
 
-  /// Redirige al usuario no autorizado
   void _redirect() {
     if (!mounted) return;
     
-    // Pequeño delay para mostrar mensaje de error si existe
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/settings');
@@ -102,7 +99,6 @@ class _AdminScreenState extends State<AdminScreen> {
     final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Mientras verifica permisos
     if (_loading) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -126,7 +122,6 @@ class _AdminScreenState extends State<AdminScreen> {
       );
     }
 
-    // Si no está autorizado, muestra pantalla de acceso denegado
     if (!_isAuthorized) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -189,7 +184,6 @@ class _AdminScreenState extends State<AdminScreen> {
       );
     }
 
-    // ✅ Usuario autorizado: muestra el panel de administración (vacío por ahora)
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -206,7 +200,6 @@ class _AdminScreenState extends State<AdminScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          // Opcional: mostrar info del admin
           FutureBuilder<DocumentSnapshot>(
             future: FirebaseFirestore.instance
                 .collection('profiles')
@@ -232,7 +225,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  /// Contenido del panel de administración (placeholder para futuras funcionalidades)
   Widget _buildAdminContent(
     Color primaryColor, 
     Color onPrimaryColor, 
@@ -245,13 +237,12 @@ class _AdminScreenState extends State<AdminScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: isDark
-                    ? [AppColors.azulFondo, const Color(0xFF2E5C8A)]  // ← Cambiado: más claro
+                    ? [AppColors.azulFondo, const Color(0xFF2E5C8A)]
                     : [AppColors.azulFondo, const Color(0xFF4A90E2)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -270,27 +261,27 @@ class _AdminScreenState extends State<AdminScreen> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),  // ← Cambiado: blanco fijo para mejor contraste
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.admin_panel_settings,  // ← Cambiado: const
-                      color: Colors.white, size: 32),  // ← Cambiado: blanco fijo
+                  child: const Icon(Icons.admin_panel_settings,
+                      color: Colors.white, size: 32),
                 ),
                 const SizedBox(width: 16),
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Bienvenido, Administrador',  // ← Cambiado: const
+                      Text('Bienvenido, Administrador',
                           style: TextStyle(
-                            color: Colors.white,  // ← Cambiado: blanco fijo
+                            color: Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           )),
                       SizedBox(height: 4),
-                      Text('Gestiona usuarios, contenido y configuración',  // ← Cambiado: const
+                      Text('Gestiona usuarios, contenido y configuración',
                           style: TextStyle(
-                            color: Colors.white70,  // ← Cambiado: blanco con opacidad
+                            color: Colors.white70,
                             fontSize: 13,
                             fontWeight: FontWeight.w300,
                           )),
@@ -303,7 +294,6 @@ class _AdminScreenState extends State<AdminScreen> {
 
           const SizedBox(height: 24),
 
-          // Sección: Funcionalidades (placeholder)
           Text('Funcionalidades',
               style: TextStyle(
                 fontSize: 20,
@@ -312,7 +302,6 @@ class _AdminScreenState extends State<AdminScreen> {
               )),
           const SizedBox(height: 16),
 
-          // Tarjeta placeholder para futuras opciones
           _buildPlaceholderCard(
             icon: Icons.people_outline,
             title: 'Gestión de Usuarios',
@@ -369,7 +358,6 @@ class _AdminScreenState extends State<AdminScreen> {
 
           const SizedBox(height: 32),
 
-          // Nota informativa
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -398,7 +386,6 @@ class _AdminScreenState extends State<AdminScreen> {
     );
   }
 
-  /// Widget auxiliar para tarjetas placeholder
   Widget _buildPlaceholderCard({
     required IconData icon,
     required String title,
@@ -409,9 +396,9 @@ class _AdminScreenState extends State<AdminScreen> {
     required bool isDark,
     VoidCallback? onTap,
   }) {
-    return InkWell(  // ← AÑADE ESTO
-      onTap: onTap,  // ← AÑADE ESTO
-      borderRadius: BorderRadius.circular(16),  // ← Para el efecto ripple
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

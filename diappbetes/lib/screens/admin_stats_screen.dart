@@ -1,4 +1,3 @@
-// lib/screens/admin_stats_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -16,21 +15,17 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
   
   bool _loading = true;
   
-  // Estadísticas generales
   int _totalUsers = 0;
   int _totalAdmins = 0;
   int _totalMeals = 0;
   int _totalGlucoseReadings = 0;
   int _newUsersThisWeek = 0;
   
-  // Estadísticas de uso
   double _avgMealsPerUser = 0;
   double _avgGlucosePerUser = 0;
   
-  // Distribución por tipo de comida
   Map<String, int> _mealsByType = {};
   
-  // Actividad semanal
   Map<String, int> _weeklyActivity = {};
 
   @override
@@ -188,14 +183,13 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Cards de estadísticas principales - CORREGIDO
                     GridView.count(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       crossAxisCount: 2,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
-                      childAspectRatio: 1.3, // ← AJUSTADO: era 1.5
+                      childAspectRatio: 1.3,
                       children: [
                         _statCard(
                           icon: Icons.people,
@@ -229,8 +223,6 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
                     ),
 
                     const SizedBox(height: 24),
-
-                    // Gráfico de actividad semanal
                     Text(
                       'Actividad Semanal',
                       style: TextStyle(
@@ -336,7 +328,6 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
 
                     const SizedBox(height: 24),
 
-                    // Distribución de comidas por tipo
                     Text(
                       'Distribución de Comidas',
                       style: TextStyle(
@@ -425,7 +416,6 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
     );
   }
 
-  // Widget de tarjeta CORREGIDO
   Widget _statCard({
     required IconData icon,
     required String title,
@@ -437,7 +427,7 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
     final textSmallColor = Theme.of(context).textTheme.bodySmall?.color;
     
     return Container(
-      padding: const EdgeInsets.all(12), // ← REDUCIDO: era 16
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
@@ -453,44 +443,44 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween, // ← AÑADIDO
-        mainAxisSize: MainAxisSize.min, // ← AÑADIDO
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 24), // ← REDUCIDO: era 28
-          const SizedBox(height: 6), // ← REDUCIDO: era 8
-          Flexible( // ← AÑADIDO: Flexible para el valor
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 6),
+          Flexible(
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 22, // ← REDUCIDO: era 24
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).textTheme.bodyLarge?.color,
               ),
-              overflow: TextOverflow.ellipsis, // ← AÑADIDO
-              maxLines: 1, // ← AÑADIDO
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
           const SizedBox(height: 2),
-          Flexible( // ← AÑADIDO: Flexible para el título
+          Flexible(
             child: Text(
               title,
               style: TextStyle(
-                fontSize: 10, // ← REDUCIDO: era 11
+                fontSize: 10,
                 color: textSmallColor,
               ),
-              overflow: TextOverflow.ellipsis, // ← AÑADIDO
-              maxLines: 1, // ← AÑADIDO
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
           Text(
             subtitle,
             style: TextStyle(
-              fontSize: 9, // ← REDUCIDO: era 10
+              fontSize: 9,
               color: color,
               fontWeight: FontWeight.w500,
             ),
-            overflow: TextOverflow.ellipsis, // ← AÑADIDO
-            maxLines: 1, // ← AÑADIDO
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ],
       ),

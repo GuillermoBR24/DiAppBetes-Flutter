@@ -1,17 +1,8 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'food_service.dart';
 
-// ---------------------------------------------------------------------------
-// CustomFoodService — alimentos personales del usuario.
-//
-// IMPORTANTE: estos alimentos NUNCA se guardan en Firestore/backend.
-// Viven solo en este dispositivo, en SharedPreferences, bajo una clave
-// scoped al uid del usuario (para no mezclar datos si el dispositivo
-// se comparte entre cuentas, p.ej. con login biométrico).
-// ---------------------------------------------------------------------------
 class CustomFoodService {
   static final CustomFoodService _instance = CustomFoodService._internal();
   factory CustomFoodService() => _instance;
@@ -22,7 +13,6 @@ class CustomFoodService {
   String? get _uid => _auth.currentUser?.uid;
   String get _storageKey => 'custom_foods_${_uid ?? "anon"}';
 
-  // ── Leer todos los alimentos personales ────────────────────────────── //
   Future<List<Food>> getCustomFoods() async {
     if (_uid == null) return [];
     try {
@@ -35,12 +25,10 @@ class CustomFoodService {
           .map((e) => Food.fromMap(e as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      debugPrint('❌ [CUSTOM_FOOD] Error leyendo alimentos personales: $e');
       return [];
     }
   }
 
-  // ── Buscar entre los alimentos personales ──────────────────────────── //
   Future<List<Food>> searchCustomFoods(String query) async {
     final all = await getCustomFoods();
     final q = query.trim().toLowerCase();
@@ -50,7 +38,6 @@ class CustomFoodService {
         f.category.toLowerCase().contains(q)).toList();
   }
 
-  // ── Añadir un alimento nuevo ────────────────────────────────────────── //
   Future<Food> addCustomFood({
     required String name,
     required String category,
@@ -75,7 +62,6 @@ class CustomFoodService {
     return newFood;
   }
 
-  // ── Editar un alimento existente ────────────────────────────────────── //
   Future<void> updateCustomFood(Food updated) async {
     final foods = await getCustomFoods();
     final index = foods.indexWhere((f) => f.id == updated.id);
@@ -84,7 +70,6 @@ class CustomFoodService {
     await _saveAll(foods);
   }
 
-  // ── Eliminar un alimento ────────────────────────────────────────────── //
   Future<void> deleteCustomFood(String id) async {
     final foods = await getCustomFoods();
     foods.removeWhere((f) => f.id == id);

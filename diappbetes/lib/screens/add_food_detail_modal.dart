@@ -4,9 +4,6 @@ import '../services/profile_service.dart';
 import '../widgets/gluten_indicator.dart';
 import 'add_food_modal.dart' show categoryBg, categoryText;
 
-// ---------------------------------------------------------------------------
-// AddFoodDetailsModal — selecciona cantidad y calcula macros
-// ---------------------------------------------------------------------------
 class AddFoodDetailsModal extends StatefulWidget {
   final Food selectedFood;
   final bool isEditMode;
@@ -40,11 +37,9 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
   final _gramsCtrl    = TextEditingController();
   final _racionesCtrl = TextEditingController();
 
-  // Evita que un campo actualice el otro en bucle
   bool _updatingFromGrams    = false;
   bool _updatingFromRaciones = false;
 
-  // ✅ NUEVO: Modo celíaco
   bool _celiacMode = false;
 
   @override
@@ -62,10 +57,6 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
     _gramsCtrl.text    = _grams.toStringAsFixed(0);
     _racionesCtrl.text = _raciones.toStringAsFixed(1);
     _loadCeliacMode();
-    
-    // ✅ DEBUG: Verificar datos del alimento
-    debugPrint('🔍 [DEBUG] Alimento: ${widget.selectedFood.name}');
-    debugPrint('🔍 [DEBUG] containsGluten: ${widget.selectedFood.containsGluten}');
   }
 
   @override
@@ -77,19 +68,16 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
 
   Future<void> _loadCeliacMode() async {
     final celiac = await ProfileService().getCeliacMode();
-    debugPrint('🔍 [DEBUG] Modo celíaco cargado: $celiac');
     if (mounted) setState(() => _celiacMode = celiac);
   }
 
-  // ── Calcular desde gramos ─────────────────────────────────────────────── //
   void _calcFromGrams() {
     if (_grams < 0) { _grams = 0; }
     _hc       = double.parse((_grams * widget.selectedFood.carbsPer100g / 100).toStringAsFixed(1));
     _calories = double.parse((_grams * widget.selectedFood.caloriesPer100g / 100).toStringAsFixed(0));
-    _raciones = double.parse((_hc / 10).toStringAsFixed(1)); // 1 ración = 10g HC
+    _raciones = double.parse((_hc / 10).toStringAsFixed(1));
   }
 
-  // ── Calcular desde raciones ───────────────────────────────────────────── //
   void _calcFromRaciones() {
     if (_raciones < 0) { _raciones = 0; }
     _hc       = double.parse((_raciones * 10).toStringAsFixed(1));
@@ -132,7 +120,7 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
       'calculated_hc':        _hc,
       'calculated_calories':  _calories,
       'calculated_rations':   _raciones,
-      'contains_gluten':      widget.selectedFood.containsGluten, // ✅ NUEVO
+      'contains_gluten':      widget.selectedFood.containsGluten,
     });
     Navigator.pop(context);
   }
@@ -154,7 +142,6 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Header ────────────────────────────────────────────────── //
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -182,7 +169,6 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ── Chip del alimento ──────────────────────────────── //
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
@@ -212,7 +198,6 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                               Text('${widget.selectedFood.carbsPer100g.toStringAsFixed(1)}g HC  •  '
                                   '${widget.selectedFood.caloriesPer100g.toStringAsFixed(0)} cal/100g',
                                   style: TextStyle(fontSize: 12, color: textSmallColor)),
-                              // ✅ NUEVO: Indicador de gluten (siempre que el modo esté activo)
                               if (_celiacMode) ...[
                                 const SizedBox(height: 6),
                                 GlutenIndicator(
@@ -220,7 +205,6 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                                   size: 12,
                                 ),
                               ],
-                              // ✅ DEBUG: Si no se muestra, mostrar por qué
                               if (!_celiacMode) ...[
                                 const SizedBox(height: 6),
                                 Text(
@@ -236,7 +220,6 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Campos bidireccionales ──────────────────────────── //
                   Row(
                     children: [
                       Expanded(
@@ -270,7 +253,6 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                       textAlign: TextAlign.right),
                   const SizedBox(height: 16),
 
-                  // ── Resumen nutricional ─────────────────────────────── //
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
@@ -293,7 +275,6 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Botón confirmar ─────────────────────────────────── //
                   SizedBox(
                     height: 50,
                     child: ElevatedButton(

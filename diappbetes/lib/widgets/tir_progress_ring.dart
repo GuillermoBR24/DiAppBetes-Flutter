@@ -5,7 +5,6 @@ import '../theme/app_theme.dart';
 class TirProgressRing extends StatelessWidget {
   final int percentage;
 
-  // Tamaño reducido a 130 para que quepa sin scroll en pantallas normales
   const TirProgressRing({super.key, required this.percentage});
 
   Color get _color {

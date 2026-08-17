@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-// ---------------------------------------------------------------------------
-// Modelo de la comida creada (hardcodeado — TODO: recibir del MealService)
-// ---------------------------------------------------------------------------
 class MealSummaryData {
   final String mealType;
-  final String createdAt;   // ISO string
+  final String createdAt;
   final double totalHc;
   final double totalCalories;
   final double totalRations;
   final double totalInsulin;
-  final double glucoseLevel; // TODO: GlucoseByMealService.getGlucoseReadingByMealId()
+  final double glucoseLevel;
 
   const MealSummaryData({
     required this.mealType,
@@ -24,19 +21,10 @@ class MealSummaryData {
   });
 }
 
-// ---------------------------------------------------------------------------
-// AddMealSummaryModal
-// Equivalente a AddMealSummaryModalComponent de Angular/Ionic
-// Se muestra con showDialog() desde AddMealScreen al crear una comida
-// ---------------------------------------------------------------------------
 class AddMealSummaryModal extends StatelessWidget {
-  // Datos hardcodeados — equivalente al mealSummary del .ts + @Input() meal
-  // TODO: reemplazar con datos reales recibidos de MealService.createMeal()
   final MealSummaryData meal;
-
   const AddMealSummaryModal({super.key, required this.meal});
 
-  // ── formatMealDateTime() ─────────────────────────────────────────────── //
   String _formatDateTime(String iso) {
     if (iso.isEmpty) return 'No definido';
     try {
@@ -53,7 +41,6 @@ class AddMealSummaryModal extends StatelessWidget {
     }
   }
 
-  // =========================================================================
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -69,7 +56,6 @@ class AddMealSummaryModal extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Header (equivalente al ion-header) ────────────────────── //
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -88,14 +74,12 @@ class AddMealSummaryModal extends StatelessWidget {
             ),
           ),
 
-          // ── Cuerpo — .summary-card ────────────────────────────────── //
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Título
                   Text(
                     'Resumen de la Comida',
                     style: TextStyle(
@@ -107,7 +91,6 @@ class AddMealSummaryModal extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Filas de datos superiores ─────────────────────── //
                   _detailRow(
                     label: 'Tipo',
                     value: meal.mealType.isNotEmpty
@@ -123,18 +106,16 @@ class AddMealSummaryModal extends StatelessWidget {
                     labelColor: textSmallColor,
                   ),
 
-                  // ── Divider ───────────────────────────────────────── //
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     child: Divider(
                         color: dividerColor, thickness: 2),
                   ),
 
-                  // ── Filas nutricionales ───────────────────────────── //
                   _detailRow(
                     label: 'HC Totales',
                     value: '${meal.totalHc.toStringAsFixed(1)}g',
-                    valueColor: AppColors.verdesuave, // .value-hc (semántico)
+                    valueColor: AppColors.verdesuave,
                     labelColor: textSmallColor,
                   ),
                   _detailRow(
@@ -166,7 +147,6 @@ class AddMealSummaryModal extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // ── Botón Aceptar ─────────────────────────────────── //
                   Center(
                     child: SizedBox(
                       width: double.infinity,
@@ -198,7 +178,6 @@ class AddMealSummaryModal extends StatelessWidget {
     );
   }
 
-  // ── Fila label / value (equivalente a .detail-row) ───────────────────── //
   Widget _detailRow({
     required String label,
     required String value,

@@ -25,7 +25,6 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
   bool _loading = true;
   List<Map<String, dynamic>> _readings = [];
   
-  // Estadísticas
   double _averageGlucose = 0;
   double _minGlucose = 0;
   double _maxGlucose = 0;
@@ -77,7 +76,6 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
         });
       }
     } catch (e) {
-      debugPrint('❌ Error loading data: $e');
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -114,7 +112,6 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
       ),
       body: Column(
         children: [
-          // Filtros de tiempo
           Container(
             padding: const EdgeInsets.all(12),
             color: Theme.of(context).cardColor,
@@ -147,19 +144,15 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Estadísticas resumen
                           _buildStatsCards(primaryColor),
                           const SizedBox(height: 16),
 
-                          // Gráfica de evolución
                           _buildEvolutionChart(primaryColor),
                           const SizedBox(height: 16),
 
-                          // Distribución TIR
                           _buildTirDistribution(primaryColor),
                           const SizedBox(height: 16),
 
-                          // Últimas lecturas
                           _buildRecentReadings(primaryColor),
                         ],
                       ),
@@ -407,7 +400,6 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
                             return touchedSpots.map((spot) {
                               final reading = _readings[spot.x.toInt()];
                               final glucose = (reading['glucose_level'] as num).toDouble();
-                              // ✅ CORREGIDO: Convertir Timestamp a DateTime
                               final timestamp = reading['reading_time'];
                               final date = timestamp is Timestamp 
                                   ? timestamp.toDate() 
@@ -471,7 +463,6 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
           ),
           const SizedBox(height: 16),
           
-          // Gráfica circular
           SizedBox(
             height: 220,
             child: PieChart(
@@ -480,7 +471,6 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
                 centerSpaceRadius: 50,
                 sections: _tirPercentage == 0 
                     ? [
-                        // Estado vacío: todo gris
                         PieChartSectionData(
                           value: 100,
                           title: 'Sin datos',
@@ -523,7 +513,6 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
           
           const SizedBox(height: 8),
           
-          // ✅ Leyenda compacta y bien alineada
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -613,7 +602,6 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
                     final reading = _readings[index];
                     final glucose = (reading['glucose_level'] as num).toDouble();
                     
-                    // ✅ CORREGIDO: Convertir Timestamp a DateTime
                     final timestamp = reading['reading_time'];
                     final date = timestamp is Timestamp 
                         ? timestamp.toDate() 
@@ -660,7 +648,6 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
                         ),
                       ),
                       subtitle: Text(
-                        // ✅ CORREGIDO: Usar date ya convertido
                         DateFormat('dd/MM/yyyy HH:mm').format(date),
                         style: TextStyle(
                           fontSize: 11,

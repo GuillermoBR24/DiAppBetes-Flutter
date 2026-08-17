@@ -2,9 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-// ---------------------------------------------------------------------------
-// AdminUsersScreen — Gestión completa de usuarios
-// ---------------------------------------------------------------------------
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
   @override
@@ -36,7 +33,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     super.dispose();
   }
 
-  // ── Cargar todos los perfiles ─────────────────────────────────────────── //
   Future<void> _loadUsers() async {
     setState(() => _loading = true);
     try {
@@ -68,7 +64,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     setState(() => _filtered = list);
   }
 
-  // ── Editar usuario ────────────────────────────────────────────────────── //
   Future<void> _editUser(Map<String, dynamic> user) async {
     final docId = user['_docId'] as String;
     final usernameCtrl = TextEditingController(text: user['username']?.toString() ?? '');
@@ -91,14 +86,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Email (solo lectura)
               Text('Email:', style: TextStyle(color: textSmallColor, fontSize: 12)),
               const SizedBox(height: 2),
               Text(user['email']?.toString() ?? '—',
                   style: TextStyle(color: primaryColor, fontWeight: FontWeight.w500)),
               const SizedBox(height: 16),
 
-              // Username editable
               TextField(
                 controller: usernameCtrl,
                 style: TextStyle(color: Theme.of(ctx).textTheme.bodyLarge?.color),
@@ -111,7 +104,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Rol
               Text('Rol:', style: TextStyle(color: textSmallColor, fontSize: 12)),
               const SizedBox(height: 8),
               Row(children: [
@@ -151,7 +143,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     }
     usernameCtrl.dispose();
   }
-  // ── Helpers ───────────────────────────────────────────────────────────── //
+  
   Widget _roleChipDialog(String label, String value, String current,
       Function(String) onSelect, BuildContext ctx) {
     final sel = current == value;
@@ -208,7 +200,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     } catch (_) { return '—'; }
   }
 
-  // =========================================================================
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -243,12 +234,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       ),
       body: Column(
         children: [
-          // ── Buscador + filtro ──────────────────────────────────────── //
           Container(
             color: cardBg,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Column(children: [
-              // Buscador
               TextField(
                 controller: _searchCtrl,
                 style: TextStyle(color: textColor, fontSize: 14),
@@ -269,7 +258,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               ),
               const SizedBox(height: 10),
 
-              // Filtros de rol
               Row(children: [
                 Text('Rol:', style: TextStyle(color: textSmallColor, fontSize: 12, fontWeight: FontWeight.w500)),
                 const SizedBox(width: 8),
@@ -299,7 +287,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             ]),
           ),
 
-          // ── Lista de usuarios ─────────────────────────────────────── //
           Expanded(
             child: _loading
                 ? Center(child: CircularProgressIndicator(color: primaryColor))
@@ -340,7 +327,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          // Avatar
           Container(
             width: 44, height: 44,
             decoration: BoxDecoration(
@@ -354,7 +340,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           ),
           const SizedBox(width: 12),
 
-          // Datos básicos
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(user['username']?.toString() ?? '—',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: primaryColor)),
@@ -363,7 +348,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 overflow: TextOverflow.ellipsis),
           ])),
 
-          // Badge de rol
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
@@ -379,7 +363,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         Divider(height: 1, color: dividerColor),
         const SizedBox(height: 10),
 
-        // Datos secundarios
         Row(children: [
           _infoItem(Icons.cake_outlined, 'Nac.', user['birth_date']?.toString() ?? '—', primaryColor, textSmallColor),
           const SizedBox(width: 16),
@@ -389,7 +372,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         ]),
         const SizedBox(height: 12),
 
-        // Acciones
         Row(mainAxisAlignment: MainAxisAlignment.end, children: [
           TextButton.icon(
             onPressed: () => _editUser(user),

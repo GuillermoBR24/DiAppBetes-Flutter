@@ -22,9 +22,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _error = '';
   bool _obscurePassword = true;
   bool _loading = false;
-  bool _registered = false; // true → mostrar pantalla "verifica tu email"
+  bool _registered = false;
   
-  // ── Configuración de contraseña ─────────────────────────────────────────
   bool _requireStrongPassword = true;
   bool _loadingConfig = true;
 
@@ -42,7 +41,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ── Cargar configuración de validación de contraseña ──────────────────── //
   Future<void> _loadPasswordConfig() async {
     final requireStrong = await _passwordValidationService.isStrongPasswordRequired();
     if (mounted) {
@@ -58,7 +56,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _onRegister() async {
     if (!_formKey.currentState!.validate()) return;
     
-    // ✅ Validación de contraseña fuerte ANTES de enviar
     final passwordError = await _passwordValidationService.validatePassword(
       _passwordController.text,
     );
@@ -89,7 +86,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _selectBirthDate() async {
     final now = DateTime.now();
     final minDate = DateTime(1900, 1, 1);
-    final maxDate = now.subtract(const Duration(days: 365 * 12)); // Mínimo 12 años
+    final maxDate = now.subtract(const Duration(days: 365 * 12));
 
     final picked = await showDatePicker(
       context: context,
@@ -107,7 +104,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // Reenviar email de verificación si el usuario no lo recibió
   Future<void> _resendVerification() async {
     setState(() { _error = ''; _loading = true; });
     try {
@@ -130,7 +126,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // ── Indicador visual de fortaleza de contraseña ───────────────────────── //
   Widget _buildPasswordStrengthIndicator(String password) {
     if (password.isEmpty) return const SizedBox.shrink();
     
@@ -258,7 +253,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       SizedBox(height: h * 0.01),
                       _buildLogo(context, cardColor, isDark),
                       const SizedBox(height: 30),
-                      // Cambia entre formulario y pantalla de verificación
                       _registered 
                           ? _buildVerifyCard(
                               context,
@@ -325,7 +319,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ── Formulario de registro ────────────────────────────────────────────── //
   Widget _buildRegisterCard(
     BuildContext context,
     Color primaryColor,
@@ -371,7 +364,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               style: TextStyle(color: textColor, fontSize: 15),
               onChanged: (_) {
                 _clearError();
-                setState(() {}); // ← Actualizar indicador visual
+                setState(() {});
               },
               decoration: _inputDeco('Contraseña', primaryColor, textSmallColor, dividerColor).copyWith(
                 suffixIcon: IconButton(
@@ -401,7 +394,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               },
             ),
             
-            // ✅ Indicador visual de fortaleza
             if (_requireStrongPassword && _passwordController.text.isNotEmpty)
               _buildPasswordStrengthIndicator(_passwordController.text),
             
@@ -462,7 +454,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ── Pantalla post-registro: "verifica tu email" ───────────────────────── //
   Widget _buildVerifyCard(
     BuildContext context,
     Color primaryColor,
@@ -525,7 +516,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 elevation: 0,
               ),
-              child: Text('Ir al Login',
+              child: Text('Ir al Inicio de Sesión',
                   style: TextStyle(
                     color: onPrimaryColor, 
                     fontSize: 15, 

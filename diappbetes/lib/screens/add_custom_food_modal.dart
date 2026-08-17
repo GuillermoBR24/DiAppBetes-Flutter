@@ -3,7 +3,7 @@ import '../services/food_service.dart';
 import '../services/custom_food_service.dart';
 
 class AddCustomFoodModal extends StatefulWidget {
-  final Food? editingFood; // null → crear nuevo; no-null → editar existente
+  final Food? editingFood;
 
   const AddCustomFoodModal({super.key, this.editingFood});
 
@@ -19,7 +19,7 @@ class _AddCustomFoodModalState extends State<AddCustomFoodModal> {
   late TextEditingController _carbsCtrl;
   late TextEditingController _caloriesCtrl;
   String _category = 'plato';
-  bool? _containsGluten; // null = desconocido/no aplica
+  bool? _containsGluten;
 
   bool _saving = false;
 
@@ -168,7 +168,6 @@ class _AddCustomFoodModalState extends State<AddCustomFoodModal> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Categoría
                     DropdownButtonFormField<String>(
                       value: _category,
                       style: TextStyle(color: textColor, fontSize: 14),
@@ -231,7 +230,6 @@ class _AddCustomFoodModalState extends State<AddCustomFoodModal> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Gluten: tri-estado (Sí / No / No lo sé)
                     Text('¿Contiene gluten?', style: TextStyle(fontSize: 13, color: textSmallColor)),
                     const SizedBox(height: 8),
                     Row(

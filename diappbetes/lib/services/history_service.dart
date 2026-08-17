@@ -1,9 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-// ---------------------------------------------------------------------------
-// Modelos
-// ---------------------------------------------------------------------------
 class MealFoodDTO {
   final String name;
   final String category;
@@ -55,9 +52,6 @@ class MealDTO {
   });
 }
 
-// ---------------------------------------------------------------------------
-// HistoryService — carga comidas del usuario desde Firestore
-// ---------------------------------------------------------------------------
 class HistoryService {
   static final HistoryService _i = HistoryService._internal();
   factory HistoryService() => _i;
@@ -68,7 +62,6 @@ class HistoryService {
 
   String? get _uid => _auth.currentUser?.uid;
 
-  // ── Cargar todas las comidas + sus alimentos ──────────────────────────── //
   Future<List<MealDTO>> getMeals() async {
     if (_uid == null) return [];
 
@@ -78,11 +71,9 @@ class HistoryService {
         .orderBy('created_at', descending: true)
         .get();
 
-    // Carga los alimentos de cada comida en paralelo
     final futures = snap.docs.map((doc) async {
       final data = doc.data();
 
-      // Subcolección meal_foods
       final foodsSnap = await doc.reference.collection('meal_foods').get();
       final foods = foodsSnap.docs
           .map((f) => MealFoodDTO.fromMap(f.data()))

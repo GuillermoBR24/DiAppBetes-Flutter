@@ -1,4 +1,3 @@
-// lib/screens/scanner_screen.dart
 import 'dart:convert';
 import 'package:diappbetes/services/hc_ratio_service.dart';
 import 'package:diappbetes/services/profile_service.dart';
@@ -7,9 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-// ---------------------------------------------------------------------------
-// Modelo del producto escaneado
-// ---------------------------------------------------------------------------
 class ScannedProduct {
   final String barcode;
   final String name;
@@ -60,7 +56,6 @@ class ScannedProduct {
   }
   
   static bool? _detectGluten(Map<String, dynamic> product) {
-    // 1. Buscar en allergens_tags (array)
     final allergensTags = product['allergens_tags'] as List?;
     if (allergensTags != null) {
       for (final tag in allergensTags) {
@@ -70,18 +65,15 @@ class ScannedProduct {
           return true;
         }
       }
-      // Si hay tags pero ninguno es gluten, probablemente no tiene
       if (allergensTags.isNotEmpty) return false;
     }
 
-    // 2. Buscar en allergens (texto)
     final allergens = product['allergens']?.toString().toLowerCase() ?? '';
     if (allergens.contains('gluten') || allergens.contains('trigo') ||
         allergens.contains('wheat') || allergens.contains('centeño')) {
       return true;
     }
 
-    // 3. Buscar en ingredients_analysis_tags
     final analysisTags = product['ingredients_analysis_tags'] as List?;
     if (analysisTags != null) {
       for (final tag in analysisTags) {
@@ -90,19 +82,12 @@ class ScannedProduct {
       }
     }
 
-    // Si no hay información, devolver null (desconocido)
     if (allergens.isEmpty && allergensTags == null) return null;
     
-    // Si hay info de alérgenos pero no menciona gluten, probablemente no tiene
     return false;
   }
 }
 
-
-
-// ---------------------------------------------------------------------------
-// ScannerScreen
-// ---------------------------------------------------------------------------
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
 
@@ -138,7 +123,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
     super.dispose();
   }
 
-  // ── Código detectado → buscar en OpenFoodFacts ───────────────────────── //
   Future<void> _onBarcodeDetected(BarcodeCapture capture) async {
     final barcode = capture.barcodes.firstOrNull?.rawValue;
     if (barcode == null || barcode == _lastCode || _loading) return;
@@ -172,7 +156,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
     }
   }
 
-  // ── Consulta OpenFoodFacts por código de barras ───────────────────────── //
   Future<ScannedProduct?> _fetchProduct(String barcode) async {
     final url = Uri.parse(
         'https://world.openfoodfacts.org/api/v2/product/$barcode.json'
@@ -191,11 +174,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     return ScannedProduct.fromOpenFoodFacts(barcode, json);
   }
 
-  // ── Reanuda la cámara ─────────────────────────────────────────────────── //
   void _resumeScanner() {
-    debugPrint('🔄 [SCANNER] Reanudando scanner...');
-    
-    // Detener primero por si acaso
     try {
       _controller.stop();
     } catch (e) {
@@ -205,10 +184,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
     setState(() {
       _scanning = false;
       _lastCode = null;
-      _scannerKey++; // ← Cambiar key para forzar reconstrucción
+      _scannerKey++;
     });
     
-    // Pequeño delay para dar tiempo al sistema a liberar la cámara
     Future.delayed(const Duration(milliseconds: 300), () {
       if (!mounted) return;
       
@@ -216,20 +194,15 @@ class _ScannerScreenState extends State<ScannerScreen> {
         _scanning = true;
       });
       
-      // Iniciar el controlador
       try {
         _controller.start();
-        debugPrint('✅ [SCANNER] Scanner reanudado correctamente');
       } catch (e) {
-        debugPrint('❌ [SCANNER] Error al reanudar: $e');
-        // Si falla, intentar recrear el controlador
         _recreateController();
       }
     });
   }
 
   void _recreateController() {
-    debugPrint('🔧 [SCANNER] Recreando controlador...');
     try {
       _controller.dispose();
     } catch (_) {}
@@ -246,14 +219,13 @@ class _ScannerScreenState extends State<ScannerScreen> {
     });
   }
 
-  // ── Modal con los datos del producto ─────────────────────────────────── //
   void _showProductModal(ScannedProduct product) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      isDismissible: false,  // ← No se puede cerrar tocando fuera
-      enableDrag: false,      // ← No se puede cerrar arrastrando
+      isDismissible: false,
+      enableDrag: false,
       builder: (_) => _ProductModal(
         product: product,
         onRescan: () {
@@ -262,24 +234,20 @@ class _ScannerScreenState extends State<ScannerScreen> {
         },
         onClose: () {
           Navigator.pop(context);
-          // No reanudar scanner, volver a pantalla anterior
           Navigator.pop(context);
         },
       ),
     ).then((_) {
-      // Fallback: si el modal se cierra de forma inesperada, reanudar scanner
       if (mounted && !_scanning) {
-        debugPrint('🔄 [SCANNER] Modal cerrado inesperadamente, reanudando scanner...');
         _resumeScanner();
       }
     });
   }
 
-  // ── Producto no encontrado ────────────────────────────────────────────── //
   void _showNotFound(String barcode) {
     showDialog(
       context: context,
-      barrierDismissible: false,  // ← No se puede cerrar tocando fuera
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(ctx).cardColor,
         title: Text('Producto no encontrado',
@@ -304,7 +272,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
           TextButton(
             onPressed: () { 
               Navigator.pop(context); 
-              _resumeScanner();  // ← Reanudar al cerrar
+              _resumeScanner();
             },
             child: Text('Escanear de nuevo',
                 style: TextStyle(
@@ -315,15 +283,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
         ],
       ),
     ).then((_) {
-      // Fallback: si el diálogo se cierra de forma inesperada, reanudar scanner
       if (mounted && !_scanning) {
-        debugPrint('🔄 [SCANNER] Diálogo cerrado inesperadamente, reanudando scanner...');
         _resumeScanner();
       }
     });
   }
 
-  // =========================================================================
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -347,10 +312,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
       ),
       body: Stack(
         children: [
-          // ✅ USAR KEY para forzar reconstrucción
           if (_scanning)
             MobileScanner(
-              key: ValueKey('scanner_$_scannerKey'), // ← CLAVE IMPORTANTE
+              key: ValueKey('scanner_$_scannerKey'),
               controller: _controller,
               onDetect: _onBarcodeDetected,
             ),
@@ -375,7 +339,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
   }
 
-  // ── Overlay con recuadro guía y linterna ─────────────────────────────── //
   Widget _buildScanOverlay(Color primaryColor) {
     return Stack(
       children: [
@@ -422,9 +385,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Pintor del recuadro de escaneo
-// ---------------------------------------------------------------------------
 class _ScanFramePainter extends CustomPainter {
   final Color borderColor;
 
@@ -482,9 +442,6 @@ class _ScanFramePainter extends CustomPainter {
       oldDelegate.borderColor != borderColor;
 }
 
-// ---------------------------------------------------------------------------
-// Modal del producto escaneado — calculadora de raciones
-// ---------------------------------------------------------------------------
 class _ProductModal extends StatefulWidget {
   final ScannedProduct product;
   final VoidCallback onRescan;
@@ -501,7 +458,6 @@ class _ProductModal extends StatefulWidget {
 }
 
 class _ProductModalState extends State<_ProductModal> {
-  // Cantidad
   final TextEditingController _racionesCtrl = TextEditingController();
   final _gramsCtrl = TextEditingController(text: '100');
   double _grams = 100;
@@ -509,7 +465,6 @@ class _ProductModalState extends State<_ProductModal> {
   double _hc = 0;
   double _calories = 0;
 
-  // ✅ NUEVO: Glucosa e insulina
   final _glucoseCtrl = TextEditingController(text: '100');
   double _glucose = 100;
   double _insulin = 0;
@@ -536,7 +491,6 @@ class _ProductModalState extends State<_ProductModal> {
     super.dispose();
   }
 
-  // ✅ NUEVO: Cargar ratio HC y FSI del usuario
   Future<void> _loadUserData() async {
     final profileService = ProfileService();
     final hcRatioService = HcRatioService();
@@ -576,7 +530,6 @@ class _ProductModalState extends State<_ProductModal> {
     _calcInsulin();
   }
 
-  // ✅ NUEVO: Calcular insulina
   void _calcInsulin() {
     if (_ratioValue > 0 && _fsi > 0) {
       _insulin = double.parse(
@@ -605,7 +558,6 @@ class _ProductModalState extends State<_ProductModal> {
     _editingGrams = true;
   }
 
-  // ✅ NUEVO: Callback para cambio de glucosa
   void _onGlucoseChanged(String v) {
     setState(() {
       _glucose = double.tryParse(v) ?? 0;
@@ -629,7 +581,6 @@ class _ProductModalState extends State<_ProductModal> {
       ),
       child: Column(
         children: [
-          // ── Header ────────────────────────────────────────────────── //
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -667,7 +618,6 @@ class _ProductModalState extends State<_ProductModal> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ── Info del producto ────────────────────────────────── //
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -712,7 +662,6 @@ class _ProductModalState extends State<_ProductModal> {
                               Text('${widget.product.carbsPer100g.toStringAsFixed(1)}g HC · '
                                   '${widget.product.caloriesPer100g.toStringAsFixed(0)} cal/100g',
                                   style: TextStyle(fontSize: 12, color: textSmallColor)),
-                              // ✅ Indicador de gluten
                               if (_celiacMode && widget.product.containsGluten != null) ...[
                                 const SizedBox(height: 6),
                                 GlutenIndicator(
@@ -728,7 +677,6 @@ class _ProductModalState extends State<_ProductModal> {
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Campos bidireccionales ──────────────────────────── //
                   Row(
                     children: [
                       Expanded(
@@ -762,7 +710,6 @@ class _ProductModalState extends State<_ProductModal> {
                       textAlign: TextAlign.right),
                   const SizedBox(height: 20),
 
-                  // ✅ NUEVO: Campo de glucosa
                   _inputField(
                     label: 'Glucosa actual',
                     controller: _glucoseCtrl,
@@ -778,7 +725,6 @@ class _ProductModalState extends State<_ProductModal> {
                       textAlign: TextAlign.right),
                   const SizedBox(height: 20),
 
-                  // ── Resumen nutricional ─────────────────────────────── //
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -808,7 +754,6 @@ class _ProductModalState extends State<_ProductModal> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ✅ NUEVO: Cálculo de insulina destacado
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -862,7 +807,6 @@ class _ProductModalState extends State<_ProductModal> {
                   ),
                   const SizedBox(height: 20),
 
-                  // ── Botones de acción ───────────────────────────────── //
                   SizedBox(
                     height: 50,
                     child: ElevatedButton.icon(

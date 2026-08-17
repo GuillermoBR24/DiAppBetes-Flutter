@@ -3,9 +3,6 @@ import '../theme/app_theme.dart';
 import '../services/history_service.dart';
 import 'add_food_modal.dart' show categoryBg, categoryText;
 
-// ---------------------------------------------------------------------------
-// Colores por tipo de comida (equivalente a getMealBgColor / getMealTextColor)
-// ---------------------------------------------------------------------------
 Color mealBg(BuildContext context, String type) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
   
@@ -54,15 +51,11 @@ Color mealFg(BuildContext context, String type) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// MealDetailsModal
-// ---------------------------------------------------------------------------
 class MealDetailsModal extends StatelessWidget {
   final MealDTO meal;
 
   const MealDetailsModal({super.key, required this.meal});
 
-  // ── Helpers de formato (equivalente a formatMealTimeOnly / DateOnly) ─── //
   String _timeOnly(DateTime dt) =>
       '${dt.hour.toString().padLeft(2,'0')}:${dt.minute.toString().padLeft(2,'0')}';
 
@@ -88,7 +81,6 @@ class MealDetailsModal extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // ── Header ────────────────────────────────────────────────── //
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -110,14 +102,12 @@ class MealDetailsModal extends StatelessWidget {
             ),
           ),
 
-          // ── Cuerpo scrollable ──────────────────────────────────────── //
           Flexible(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ── Fila tipo comida ─────────────────────────────── //
                   _row(
                     label: 'Tipo',
                     labelColor: textSmallColor,
@@ -132,7 +122,6 @@ class MealDetailsModal extends StatelessWidget {
                     ),
                   ),
 
-                  // ── Fecha y hora ─────────────────────────────────── //
                   _row(
                     label: 'Fecha y hora',
                     labelColor: textSmallColor,
@@ -152,7 +141,6 @@ class MealDetailsModal extends StatelessWidget {
                     child: Divider(color: dividerColor, thickness: 2),
                   ),
 
-                  // ── Macros ───────────────────────────────────────── //
                   _row(label: 'HC Totales',
                       labelColor: textSmallColor,
                       child: Text('${meal.totalHc.toStringAsFixed(1)}g',
@@ -185,7 +173,6 @@ class MealDetailsModal extends StatelessWidget {
                     child: Divider(color: dividerColor, thickness: 2),
                   ),
 
-                  // ── Lista de alimentos ────────────────────────────── //
                   Text('Alimentos (${meal.foods.length})',
                       style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: primaryColor)),
                   const SizedBox(height: 10),
@@ -206,7 +193,6 @@ class MealDetailsModal extends StatelessWidget {
     );
   }
 
-  // ── Fila label/value ─────────────────────────────────────────────────── //
   Widget _row({required String label, required Widget child, Color? labelColor}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 8),
     child: Row(
@@ -219,7 +205,6 @@ class MealDetailsModal extends StatelessWidget {
     ),
   );
 
-  // ── Item de alimento ─────────────────────────────────────────────────── //
   Widget _buildFoodItem(BuildContext context, MealFoodDTO food) {
     final bg = categoryBg(context, food.category);
     final fg = categoryText(context, food.category);

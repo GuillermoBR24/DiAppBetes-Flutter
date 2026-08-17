@@ -1,4 +1,3 @@
-// lib/screens/admin_config_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
@@ -16,30 +15,25 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
   bool _loading = true;
   bool _saving = false;
   
-  // Configuración general
   String _appName = 'DiAppBetes';
   String _appVersion = '1.0.0';
   bool _maintenanceMode = false;
   String _maintenanceMessage = '';
   
-  // Valores por defecto para nuevos usuarios
   double _defaultRatio = 10.0;
   double _defaultFsi = 50.0;
   double _defaultGlucoseMin = 70.0;
   double _defaultGlucoseMax = 180.0;
   
-  // Notificaciones
   bool _enableNotifications = true;
   bool _enableMealReminders = true;
   bool _enableGlucoseReminders = true;
   String _mealReminderTime = '08:00';
   String _glucoseReminderTime = '10:00';
   
-  // Seguridad
   bool _requireStrongPassword = true;
   int _sessionTimeoutMinutes = 30;
   
-  // Controllers
   final _appNameCtrl = TextEditingController();
   final _appVersionCtrl = TextEditingController();
   final _maintenanceMsgCtrl = TextEditingController();
@@ -72,7 +66,6 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
     super.dispose();
   }
 
-  // ── Valores por defecto ──────────────────────────────────────────────── //
   Map<String, dynamic> _getDefaultConfig() {
     return {
       'app_name': 'DiAppBetes',
@@ -94,7 +87,6 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
     };
   }
 
-  // ── Cargar configuración (o crear con valores por defecto) ───────────── //
   Future<void> _loadConfig() async {
     setState(() => _loading = true);
     
@@ -104,10 +96,8 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
       Map<String, dynamic> data;
       
       if (doc.exists) {
-        // Documento existe: usar sus datos
         data = doc.data()!;
       } else {
-        // Documento NO existe: crear con valores por defecto
         data = _getDefaultConfig();
         await _db.collection('app_config').doc('global').set(data);
       }
@@ -130,7 +120,6 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
           _requireStrongPassword = data['require_strong_password'] ?? true;
           _sessionTimeoutMinutes = data['session_timeout_minutes'] ?? 30;
           
-          // Actualizar controllers con los valores cargados
           _appNameCtrl.text = _appName;
           _appVersionCtrl.text = _appVersion;
           _maintenanceMsgCtrl.text = _maintenanceMessage;
@@ -287,9 +276,6 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ══════════════════════════════════════════════════════════
-                  // SECCIÓN: INFORMACIÓN DE LA APP
-                  // ══════════════════════════════════════════════════════════
                   _buildSectionTitle('Información de la App', primaryColor),
                   const SizedBox(height: 12),
                   _buildCard(
@@ -314,9 +300,6 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
 
                   const SizedBox(height: 20),
 
-                  // ══════════════════════════════════════════════════════════
-                  // SECCIÓN: MODO MANTENIMIENTO
-                  // ══════════════════════════════════════════════════════════
                   _buildSectionTitle('Modo Mantenimiento', primaryColor),
                   const SizedBox(height: 12),
                   _buildCard(
@@ -347,9 +330,6 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
 
                   const SizedBox(height: 20),
 
-                  // ══════════════════════════════════════════════════════════
-                  // SECCIÓN: VALORES POR DEFECTO
-                  // ══════════════════════════════════════════════════════════
                   _buildSectionTitle('Valores por Defecto (Nuevos Usuarios)', primaryColor),
                   const SizedBox(height: 12),
                   _buildCard(
@@ -420,9 +400,6 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
 
                   const SizedBox(height: 20),
 
-                  // ══════════════════════════════════════════════════════════
-                  // SECCIÓN: NOTIFICACIONES
-                  // ══════════════════════════════════════════════════════════
                   _buildSectionTitle('Notificaciones', primaryColor),
                   const SizedBox(height: 12),
                   _buildCard(
@@ -524,9 +501,6 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
 
                   const SizedBox(height: 20),
 
-                  // ══════════════════════════════════════════════════════════
-                  // SECCIÓN: SEGURIDAD
-                  // ══════════════════════════════════════════════════════════
                   _buildSectionTitle('Seguridad', primaryColor),
                   const SizedBox(height: 12),
                   _buildCard(
@@ -576,9 +550,6 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
 
                   const SizedBox(height: 32),
 
-                  // ══════════════════════════════════════════════════════════
-                  // BOTÓN GUARDAR
-                  // ══════════════════════════════════════════════════════════
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -609,8 +580,6 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
             ),
     );
   }
-
-  // ── Helpers de UI ─────────────────────────────────────────────────────── //
 
   Widget _buildSectionTitle(String title, Color primaryColor) {
     return Text(

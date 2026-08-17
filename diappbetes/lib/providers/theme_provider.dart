@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ---------------------------------------------------------------------------
-// ThemeProvider — gestiona el modo oscuro/claro con persistencia
-// ---------------------------------------------------------------------------
 class ThemeProvider extends ChangeNotifier {
   static const _key = 'theme_mode';
 

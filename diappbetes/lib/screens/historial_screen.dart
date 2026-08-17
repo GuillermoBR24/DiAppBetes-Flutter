@@ -5,9 +5,6 @@ import '../services/history_service.dart';
 import '../utils/admin_nav_helper.dart';
 import 'meal_details_modal.dart';
 
-// ---------------------------------------------------------------------------
-// HistorialScreen — equivalente a HistorialPage de Angular/Ionic
-// ---------------------------------------------------------------------------
 class HistorialScreen extends StatefulWidget {
   const HistorialScreen({super.key});
 
@@ -25,11 +22,9 @@ class _HistorialScreenState extends State<HistorialScreen> {
   DateTime _selectedDate   = DateTime.now();
   String   _selectedType   = 'todas';
   
-  // ── Estado para navegación con AdminNavHelper ────────────────────────── //
   int _selectedTab = 0;
   bool _isAdmin = false;
 
-  // ── Estadísticas del día ──────────────────────────────────────────────── //
   double _totalHc       = 0;
   double _totalCalories = 0;
   double _avgHc         = 0;
@@ -48,13 +43,11 @@ class _HistorialScreenState extends State<HistorialScreen> {
     _checkAdminRole();
   }
 
-  // ── Verificar rol de administrador ───────────────────────────────────── //
   Future<void> _checkAdminRole() async {
     final isAdmin = await AdminNavHelper.getIsAdmin();
     if (mounted) setState(() => _isAdmin = isAdmin);
   }
 
-  // ── Cargar comidas desde Firestore ────────────────────────────────────── //
   Future<void> _loadMeals() async {
     if (!mounted) return;
     setState(() => _loading = true);
@@ -77,7 +70,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
     }
   }
 
-  // ── Filtrar por fecha + tipo (equivalente a filterMealsByDate()) ──────── //
   void _applyFilters() {
     final dateStr = _isoDate(_selectedDate);
 
@@ -93,7 +85,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
     });
   }
 
-  // ── Calcular estadísticas del día ─────────────────────────────────────── //
   void _calcStats(List<MealDTO> meals) {
     if (meals.isEmpty) {
       _totalMeals = 0;
@@ -110,7 +101,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
     _totalMeals    = meals.length;
   }
 
-  // ── Selector de fecha con CalendarDatePicker ──────────────────────────── //
   Future<void> _openCalendar() async {
     final picked = await showDatePicker(
       context: context,
@@ -136,7 +126,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
     }
   }
 
-  // ── Abrir modal de detalles ────────────────────────────────────────────── //
   void _openMealDetails(MealDTO meal) {
     showDialog(
       context: context,
@@ -144,7 +133,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
     );
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────────── //
   String _isoDate(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
 
@@ -162,7 +150,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
     return '${dt.day} ${meses[dt.month]}, ${dt.year} a las $h:$m';
   }
 
-  // ── Manejo de tabs con AdminNavHelper ────────────────────────────────── //
   void _onTabTapped(int index) {
     AdminNavHelper.handleTabTap(
       context: context,
@@ -178,7 +165,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
     );
   }
 
-  // =========================================================================
   @override
   Widget build(BuildContext context) {
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -206,7 +192,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
                         style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: primaryColor)),
                     const SizedBox(height: 10),
 
-                    // ── Selector de fecha ────────────────────────────── //
                     GestureDetector(
                       onTap: _openCalendar,
                       child: Container(
@@ -232,11 +217,9 @@ class _HistorialScreenState extends State<HistorialScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // ── Tarjeta comidas ─────────────────────────────── //
                     _buildMealsCard(),
                     const SizedBox(height: 12),
 
-                    // ── Tarjeta estadísticas ────────────────────────── //
                     _buildStatsCard(),
                   ],
                 ),
@@ -251,7 +234,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
     );
   }
 
-  // ── Tarjeta comidas ───────────────────────────────────────────────────── //
   Widget _buildMealsCard() {
     const tipos = ['todas','desayuno','almuerzo','comida','merienda','cena'];
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -263,7 +245,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header con contador
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -273,7 +254,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
           ),
           const SizedBox(height: 10),
 
-          // Filtro por tipo
           DropdownButtonFormField<String>(
             value: _selectedType,
             style: TextStyle(color: textColor, fontSize: 14),
@@ -292,7 +272,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Lista de comidas
           if (_filteredMeals.isEmpty)
             Center(
               child: Padding(
@@ -308,7 +287,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
     );
   }
 
-  // ── Item de comida (equivalente al .meal-item del HTML) ──────────────── //
   Widget _buildMealItem(int i, MealDTO meal) {
     final bg = mealBg(context, meal.mealType);
     final fg = mealFg(context, meal.mealType);
@@ -327,7 +305,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: nombre tipo + HC
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -347,7 +324,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
             ),
             const SizedBox(height: 6),
 
-            // Fecha
             Row(children: [
               Icon(Icons.access_time, size: 14, color: textSmallColor),
               const SizedBox(width: 4),
@@ -356,7 +332,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
             ]),
             const SizedBox(height: 4),
 
-            // Detalles
             Row(children: [
               Text('${meal.totalCalories.toStringAsFixed(0)} cal',
                   style: TextStyle(fontSize: 12, color: textSmallColor)),
@@ -373,7 +348,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
     );
   }
 
-  // ── Tarjeta estadísticas ──────────────────────────────────────────────── //
   Widget _buildStatsCard() {
     final primaryColor = Theme.of(context).colorScheme.primary;
 
@@ -436,7 +410,6 @@ class _HistorialScreenState extends State<HistorialScreen> {
   }
 }
 
-// ── _Card ────────────────────────────────────────────────────────────────── //
 class _Card extends StatelessWidget {
   final Widget child;
   const _Card({required this.child});

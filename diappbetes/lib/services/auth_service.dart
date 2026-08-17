@@ -1,7 +1,6 @@
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import 'remember_me_service.dart';
 
 class AuthService {
@@ -19,7 +18,6 @@ class AuthService {
   bool get isLoggedIn =>
       _auth.currentUser != null && _auth.currentUser!.emailVerified;
 
-  // ── REGISTER ──────────────────────────────────────────────────────────── //
   Future<void> register({
     required String email,
     required String password,
@@ -36,8 +34,8 @@ class AuthService {
       'username_lower': (username.isNotEmpty ? username : email.split('@').first).toLowerCase(),
       'email': email,
       'birth_date': birthDate.isEmpty ? null : birthDate,
-      'role': 'Usuario',      // la regla exige que sea exactamente esto
-      'fsi': 50.0,             // la regla exige que sea exactamente esto
+      'role': 'Usuario',
+      'fsi': 50.0,
       'avatar_base64': null,
       'email_verified': false,
       'created_at': FieldValue.serverTimestamp(),
@@ -47,10 +45,6 @@ class AuthService {
     await _auth.signOut();
   }
 
-    // ── LOGIN ─────────────────────────────────────────────────────────────── //
-    // [rememberMe]: si es true, la sesión persiste indefinidamente en este
-    // dispositivo. Si es false, expirará tras RememberMeService.sessionTimeout
-    // de inactividad (gestionado por _AuthWrapper en main.dart).
     Future<UserCredential> login({
       required String identifier,
       required String password,
@@ -58,13 +52,12 @@ class AuthService {
     }) async {
       String email = identifier;
       if (!identifier.contains('@')) {
-        final cleanIdentifier = identifier.trim().toLowerCase(); // 🟢 Limpiamos y pasamos a minúsculas
-        debugPrint('🔎 Buscando usuario: $cleanIdentifier');
+        final cleanIdentifier = identifier.trim().toLowerCase();
         
         try {
           final query = await _db
               .collection('profiles')
-              .where('username_lower', isEqualTo: cleanIdentifier) // 🟢 Buscamos en el campo de minúsculas
+              .where('username_lower', isEqualTo: cleanIdentifier)
               .limit(1)
               .get();
 
@@ -77,14 +70,10 @@ class AuthService {
 
           final userData = query.docs.first.data();
           email = userData['email'] as String;
-          debugPrint('✅ Usuario encontrado: $email');
         } catch (e) {
-          debugPrint('❌ Error buscando en Firestore: $e');
           rethrow;
         }
       }
-      debugPrint('🔑 Intentando login con email: $email');
-
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -110,7 +99,6 @@ class AuthService {
       return credential;
     }
 
-  // ── REENVIAR EMAIL DE VERIFICACIÓN ───────────────────────────────────── //
   Future<void> resendVerificationEmail({
     required String email,
     required String password,
@@ -123,18 +111,15 @@ class AuthService {
     await _auth.signOut();
   }
 
-  // ── LOGOUT ────────────────────────────────────────────────────────────── //
   Future<void> logout() async {
     await _rememberMeService.clear();
     await _auth.signOut();
   }
 
-  // ── RESET PASSWORD ────────────────────────────────────────────────────── //
   Future<void> sendPasswordResetEmail(String email) async {
     await _auth.sendPasswordResetEmail(email: email);
   }
 
-  // ── PERFIL ────────────────────────────────────────────────────────────── //
   Future<Map<String, dynamic>?> getMyProfile() async {
     final uid = currentUser?.uid;
     if (uid == null) return null;
@@ -158,7 +143,6 @@ class AuthService {
     await currentUser!.delete();
   }
 
-  // ── TRADUCIR ERRORES ──────────────────────────────────────────────────── //
   static String translateError(FirebaseAuthException e) {
     switch (e.code) {
       case 'email-not-verified':
