@@ -24,7 +24,7 @@ class _AddCustomFoodModalState extends State<AddCustomFoodModal> {
   bool _saving = false;
 
   static const _categories = [
-    'cereales', 'carnes', 'pescados', 'mariscos', 'verduras', 'lacteos',
+    'cereales', 'proteicos', 'pescados', 'mariscos', 'verduras', 'lacteos',
     'frutas', 'legumbres', 'frutos_secos', 'bolleria', 'dulces', 'bebidas', 'plato',
   ];
 

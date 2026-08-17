@@ -16,7 +16,7 @@ Color categoryBg(BuildContext context, String cat) {
   if (isDark) {
     const map = {
       'frutas':       Color(0xFF3E2723),
-      'carnes':       Color(0xFF3E1414),
+      'proteicos':       Color(0xFF3E1414),
       'pescados':     Color(0xFF1A237E),
       'mariscos':     Color(0xFF004D40),
       'verduras':     Color(0xFF1B3A1B),
@@ -33,7 +33,7 @@ Color categoryBg(BuildContext context, String cat) {
   } else {
     const map = {
       'frutas':       Color(0xFFFFF3E0),
-      'carnes':       Color(0xFFFFEBEE),
+      'proteicos':       Color(0xFFFFEBEE),
       'pescados':     Color(0xFFE3F2FD),
       'mariscos':     Color(0xFFE0F7FA),
       'verduras':     Color(0xFFE8F5E9),
@@ -56,7 +56,7 @@ Color categoryText(BuildContext context, String cat) {
   if (isDark) {
     const map = {
       'frutas':       Color(0xFFFFB74D),
-      'carnes':       Color(0xFFEF5350),
+      'proteicos':       Color(0xFFEF5350),
       'pescados':     Color(0xFF64B5F6),
       'mariscos':     Color(0xFF4DD0E1),
       'verduras':     Color(0xFF81C784),
@@ -73,7 +73,7 @@ Color categoryText(BuildContext context, String cat) {
   } else {
     const map = {
       'frutas':       Color(0xFFE65100),
-      'carnes':       Color(0xFFB71C1C),
+      'proteicos':       Color(0xFFB71C1C),
       'pescados':     Color(0xFF0D47A1),
       'mariscos':     Color(0xFF006064),
       'verduras':     Color(0xFF1B5E20),
