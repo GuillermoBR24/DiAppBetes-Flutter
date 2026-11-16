@@ -29,7 +29,7 @@ class ReportService {
           'Usuario': userEmail,
           'UID': userId,
         }),
-      );
+      ).timeout(const Duration(seconds: 15));
 
       return response.statusCode == 200;
     } catch (e) {

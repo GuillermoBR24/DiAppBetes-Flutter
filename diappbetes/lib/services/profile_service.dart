@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
+import 'biometric_service.dart';
+import 'username_service.dart';
 
 class ProfileService {
   static final ProfileService _instance = ProfileService._internal();
@@ -10,6 +11,7 @@ class ProfileService {
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final _usernames = UsernameService();
 
   String? get _uid => _auth.currentUser?.uid;
 
@@ -72,12 +74,37 @@ class ProfileService {
       await _auth.currentUser!.verifyBeforeUpdateEmail(email);
     }
 
-    await _db.collection('profiles').doc(_uid).update({
-      'username':   username,
-      'email':      email,
-      'birth_date': birthDate,
-      'updated_at': FieldValue.serverTimestamp(),
+    final uid = _uid!;
+    final newName = username.trim();
+
+    // El nombre de usuario debe ser único.
+    if (!await _usernames.isAvailable(newName, uid: uid)) {
+      throw FirebaseAuthException(
+        code: 'username-already-in-use',
+        message: 'Ese nombre de usuario ya está en uso.',
+      );
+    }
+
+    final profileRef = _db.collection('profiles').doc(uid);
+    final previous = (await profileRef.get()).data()?['username']?.toString();
+
+    final batch = _db.batch();
+    batch.update(profileRef, {
+      'username':       newName,
+      'username_lower': UsernameService.normalize(newName),
+      'email':          email,
+      'birth_date':     birthDate,
+      'updated_at':     FieldValue.serverTimestamp(),
     });
+    // El índice usa SIEMPRE el email actual de Auth (el nuevo aún está pendiente de verificar).
+    _usernames.writeClaim(
+      batch,
+      uid: uid,
+      email: currentEmail,
+      username: newName,
+      previousUsername: previous,
+    );
+    await batch.commit();
   }
 
   Future<void> updateFsi(double fsi) async {
@@ -114,14 +141,11 @@ class ProfileService {
   Future<void> deleteAvatar() async {
     if (_uid == null) return;
 
-    try {
-      await _db.collection('profiles').doc(_uid).update({
-        'avatar_base64': null,
-        'updated_at': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      debugPrint('❌ [AVATAR] Error al eliminar avatar: $e');
-    }
+    // Si falla, la excepción sube a la pantalla, que avisa al usuario.
+    await _db.collection('profiles').doc(_uid).update({
+      'avatar_base64': null,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> deleteAccount() async {
@@ -130,6 +154,17 @@ class ProfileService {
     final batch = _db.batch();
 
     batch.delete(_db.collection('profiles').doc(uid));
+
+    // Libera también su nombre de usuario en el índice.
+    final profile = await _db.collection('profiles').doc(uid).get();
+    final username = profile.data()?['username']?.toString() ?? '';
+    if (username.trim().isNotEmpty) {
+      final nameRef = _db.collection('usernames').doc(UsernameService.normalize(username));
+      final nameDoc = await nameRef.get();
+      if (nameDoc.exists && nameDoc.data()?['uid'] == uid) {
+        batch.delete(nameRef);
+      }
+    }
 
     final ratios = await _db
         .collection('hc_ratios')
@@ -169,6 +204,8 @@ class ProfileService {
 
     await batch.commit();
     await _auth.currentUser!.delete();
+    // Las credenciales guardadas para huella/biometría ya no sirven.
+    await BiometricService().disable();
   }
 
   Future<void> updateCeliacMode(bool enabled) async {
@@ -195,10 +232,5 @@ class ProfileService {
   Future<bool> isBiometricLoginEnabled() async {
     final profile = await getMyProfile();
     return profile?['biometric_login_enabled'] == true;
-  }
-
-  Future<double> getUserFsi() async {
-    final profile = await getMyProfile();
-    return (profile?['fsi'] as num?)?.toDouble() ?? 50.0;
   }
 }

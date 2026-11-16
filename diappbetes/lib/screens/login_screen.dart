@@ -1,6 +1,7 @@
 import 'package:diappbetes/services/biometric_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:diappbetes/widgets/app_feedback.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/maintenance_service.dart';
@@ -40,14 +41,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
   
-  void _showSnack(String msg, {bool isError = false}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: isError ? AppColors.rojoSuave : AppColors.verdesuave,
-    ));
-  }
-
   void _clearError() => setState(() => _error = '');
 
   Future<void> _onLogin() async {
@@ -77,7 +70,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = AuthService.translateError(e));
       
     } catch (e) {
-      setState(() => _error = 'Error: ${e.toString()}');
+      setState(() => _error = friendlyError(e));
       
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -111,15 +104,17 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (!authenticated) {
+        // El usuario canceló la huella: no es un error, se queda en el formulario.
         setState(() => _loading = false);
-        _showSnack('Autenticación cancelada', isError: true);
         return;
       }
 
       final creds = await _biometricService.getCredentials();
       if (creds == null || creds['email'] == null || creds['password'] == null) {
-        setState(() => _loading = false);
-        _showSnack('No hay credenciales guardadas para huella', isError: true);
+        setState(() {
+          _loading = false;
+          _error = 'No hay credenciales guardadas para la huella. Inicia sesión con tu contraseña y vuelve a activarla en Ajustes.';
+        });
         return;
       }
 
@@ -144,13 +139,17 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        setState(() => _loading = false);
-        _showSnack(AuthService.translateError(e), isError: true);
+        setState(() {
+          _loading = false;
+          _error = AuthService.translateError(e);
+        });
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _loading = false);
-        _showSnack('Error en autenticación: $e', isError: true);
+        setState(() {
+          _loading = false;
+          _error = friendlyError(e);
+        });
       }
     }
   }

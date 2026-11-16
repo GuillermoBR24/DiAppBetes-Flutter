@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:diappbetes/widgets/app_feedback.dart';
 import '../theme/app_theme.dart';
 
 class AdminConfigScreen extends StatefulWidget {
@@ -137,12 +138,7 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar configuración: $e'),
-            backgroundColor: AppColors.rojoSuave,
-          ),
-        );
+        AppToast.error(context, 'No se pudo cargar la configuración. ${friendlyError(e)}');
       }
     }
   }
@@ -172,21 +168,15 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
       
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Configuración guardada correctamente'),
-            backgroundColor: AppColors.verdesuave,
-          ),
-        );
+        AppToast.success(context, 'Configuración guardada correctamente');
       }
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al guardar: $e'),
-            backgroundColor: AppColors.rojoSuave,
-          ),
+        AppDialog.error(
+          context,
+          title: 'No se ha guardado la configuración',
+          message: friendlyError(e),
         );
       }
     }
@@ -231,12 +221,7 @@ class _AdminConfigScreenState extends State<AdminConfigScreen> {
         _sessionTimeoutCtrl.text = '30';
       });
       
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Valores restablecidos'),
-          backgroundColor: AppColors.verdesuave,
-        ),
-      );
+      AppToast.info(context, 'Valores restablecidos (pulsa Guardar para aplicarlos)');
     }
   }
 

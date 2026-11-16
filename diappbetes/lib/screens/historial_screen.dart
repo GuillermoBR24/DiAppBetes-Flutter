@@ -1,6 +1,8 @@
 import 'package:diappbetes/widgets/custom_appbar.dart';
 import 'package:flutter/material.dart';
-import '../theme/app_theme.dart';
+import 'package:diappbetes/widgets/app_feedback.dart';
+import 'package:diappbetes/widgets/empty_state.dart';
+import 'package:diappbetes/widgets/skeleton.dart';
 import '../services/history_service.dart';
 import '../utils/admin_nav_helper.dart';
 import 'meal_details_modal.dart';
@@ -62,10 +64,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error al cargar: ${e.toString()}'),
-          backgroundColor: AppColors.rojoSuave,
-        ));
+        AppToast.error(context, 'No se pudo cargar el historial. ${friendlyError(e)}');
       }
     }
   }
@@ -175,7 +174,10 @@ class _HistorialScreenState extends State<HistorialScreen> {
         title: 'DiAppBetes',
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator(color: primaryColor))
+          ? const SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 100),
+              child: SkeletonList(count: 4),
+            )
           : RefreshIndicator(
               color: primaryColor,
               onRefresh: () async {
@@ -273,12 +275,18 @@ class _HistorialScreenState extends State<HistorialScreen> {
           const SizedBox(height: 12),
 
           if (_filteredMeals.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Text('No se han registrado comidas aún.',
-                    style: TextStyle(color: textColor, fontSize: 14)),
-              ),
+            EmptyState(
+              icon: Icons.restaurant_menu,
+              title: _selectedType == 'todas'
+                  ? 'No hay comidas este día'
+                  : 'No hay comidas de este tipo',
+              message: _selectedType == 'todas'
+                  ? 'Cuando registres una comida aparecerá aquí con su insulina y sus hidratos.'
+                  : 'Prueba con otro tipo de comida o con otro día.',
+              actionLabel: _selectedType == 'todas' ? 'Añadir comida' : null,
+              onAction: _selectedType == 'todas'
+                  ? () => Navigator.pushReplacementNamed(context, '/add-meal')
+                  : null,
             )
           else
             ..._filteredMeals.asMap().entries.map((e) => _buildMealItem(e.key, e.value)),
@@ -317,7 +325,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
                   children: [
                     Text('${meal.totalHc.toStringAsFixed(1)}g',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: fg)),
-                    Text('HC', style: TextStyle(fontSize: 11, color: textSmallColor)),
+                    Text('HC', style: TextStyle(fontSize: 12, color: textSmallColor)),
                   ],
                 ),
               ],
@@ -398,7 +406,7 @@ class _HistorialScreenState extends State<HistorialScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(label, style: TextStyle(fontSize: 10, color: textSmallColor)),
+              Text(label, style: TextStyle(fontSize: 12, color: textSmallColor)),
               Text(value,
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: primaryColor),
                   overflow: TextOverflow.ellipsis),

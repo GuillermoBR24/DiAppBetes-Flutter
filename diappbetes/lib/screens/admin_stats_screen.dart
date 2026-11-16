@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:diappbetes/utils/admin_nav_helper.dart';
+import 'package:diappbetes/widgets/app_feedback.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../theme/app_theme.dart';
 
@@ -51,12 +53,7 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar estadísticas: $e'),
-            backgroundColor: AppColors.rojoSuave,
-          ),
-        );
+        AppToast.error(context, 'No se pudieron cargar las estadísticas. ${friendlyError(e)}');
       }
     }
   }
@@ -68,7 +65,7 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
     _totalUsers = users.length;
     _totalAdmins = users.where((u) {
       final role = u.data()['role']?.toString().toLowerCase() ?? '';
-      return role == 'administrador' || role == 'admin';
+      return AdminNavHelper.isAdminRole(role);
     }).length;
     
     final now = DateTime.now();
@@ -268,7 +265,7 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
                                       getTooltipItem: (group, groupIndex, rod, rodIndex) {
                                         return BarTooltipItem(
                                           rod.toY.round().toString(),
-                                          const TextStyle(color: Colors.white, fontSize: 11),
+                                          const TextStyle(color: Colors.white, fontSize: 12),
                                         );
                                       },
                                     ),
@@ -285,7 +282,7 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
                                               padding: const EdgeInsets.only(top: 8),
                                               child: Text(
                                                 labels[value.toInt()],
-                                                style: TextStyle(fontSize: 10, color: textSmallColor),
+                                                style: TextStyle(fontSize: 12, color: textSmallColor),
                                               ),
                                             );
                                           }
@@ -465,7 +462,7 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
             child: Text(
               title,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 12,
                 color: textSmallColor,
               ),
               overflow: TextOverflow.ellipsis,
@@ -475,7 +472,7 @@ class _AdminStatsScreenState extends State<AdminStatsScreen> {
           Text(
             subtitle,
             style: TextStyle(
-              fontSize: 9,
+              fontSize: 12,
               color: color,
               fontWeight: FontWeight.w500,
             ),

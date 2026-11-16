@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/food_service.dart';
 import '../services/profile_service.dart';
 import '../widgets/gluten_indicator.dart';
+import '../widgets/ration_bar.dart';
 import 'add_food_modal.dart' show categoryBg, categoryText;
 
 class AddFoodDetailsModal extends StatefulWidget {
@@ -156,6 +157,7 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                       style: TextStyle(color: onPrimaryColor, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
                 IconButton(
+                  tooltip: 'Cerrar',
                   icon: Icon(Icons.close, color: onPrimaryColor),
                   onPressed: () => Navigator.pop(context),
                 ),
@@ -208,8 +210,8 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                               if (!_celiacMode) ...[
                                 const SizedBox(height: 6),
                                 Text(
-                                  'ℹ️ Activa el modo celíaco en Settings para ver esta información',
-                                  style: TextStyle(fontSize: 11, color: textSmallColor, fontStyle: FontStyle.italic),
+                                  'ℹ️ Activa el modo celíaco en Ajustes para ver esta información',
+                                  style: TextStyle(fontSize: 12, color: textSmallColor, fontStyle: FontStyle.italic),
                                 ),
                               ],
                             ],
@@ -249,8 +251,10 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
                   ),
                   const SizedBox(height: 4),
                   Text('1 ración = 10g de HC',
-                      style: TextStyle(fontSize: 11, color: textSmallColor),
+                      style: TextStyle(fontSize: 12, color: textSmallColor),
                       textAlign: TextAlign.right),
+                  const SizedBox(height: 12),
+                  RationBar(raciones: _raciones, hc: _hc, color: fg),
                   const SizedBox(height: 16),
 
                   Container(
@@ -329,7 +333,7 @@ class _AddFoodDetailsModalState extends State<AddFoodDetailsModal> {
   Widget _summaryItem(String label, String value, Color fg, Color? labelColor) => Column(
     children: [
       Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: fg)),
-      Text(label, style: TextStyle(fontSize: 11, color: labelColor)),
+      Text(label, style: TextStyle(fontSize: 12, color: labelColor)),
     ],
   );
 }

@@ -2,6 +2,8 @@ import 'package:diappbetes/screens/admin_config_screen.dart';
 import 'package:diappbetes/screens/admin_stats_screen.dart';
 import 'package:diappbetes/screens/admin_user_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:diappbetes/utils/admin_nav_helper.dart';
+import 'package:diappbetes/widgets/app_feedback.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
@@ -59,7 +61,7 @@ class _AdminScreenState extends State<AdminScreen> {
       
       setState(() {
         _loading = false;
-        _isAuthorized = role == 'administrador' || role == 'admin';
+        _isAuthorized = AdminNavHelper.isAdminRole(role);
         if (!_isAuthorized) {
           _errorMessage = 'Acceso denegado: Se requieren permisos de administrador';
         }
@@ -74,7 +76,7 @@ class _AdminScreenState extends State<AdminScreen> {
         setState(() {
           _loading = false;
           _isAuthorized = false;
-          _errorMessage = 'Error al verificar permisos: ${e.toString()}';
+          _errorMessage = 'No se pudieron verificar tus permisos. ${friendlyError(e)}';
         });
         _redirect();
       }

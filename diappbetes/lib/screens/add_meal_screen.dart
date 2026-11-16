@@ -1,9 +1,13 @@
 import 'package:diappbetes/screens/add_food_detail_modal.dart';
 import 'package:diappbetes/services/profile_service.dart';
+import 'package:diappbetes/widgets/app_feedback.dart';
+import 'package:diappbetes/widgets/empty_state.dart';
+import 'package:diappbetes/widgets/setup_wizard.dart';
 import 'package:diappbetes/widgets/custom_appbar.dart';
 import 'package:diappbetes/widgets/gluten_indicator.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/dose_service.dart';
 import '../services/food_service.dart';
 import '../services/meal_create_service.dart';
 import '../utils/admin_nav_helper.dart';
@@ -54,8 +58,10 @@ class _AddMealScreenState extends State<AddMealScreen> {
   String _mealType    = '';
   String _glucemiaText = '';
 
-  double _ratioValue = 10.0;
-  double _fsi        = 50.0;
+  DoseSettings? _dose;
+  String? _doseError;
+  bool _doseNeedsSetup = false;
+  bool _loadingDose = true;
 
   final List<AddedFood> _addedFoods = [];
   bool _saving = false;
@@ -97,9 +103,15 @@ class _AddMealScreenState extends State<AddMealScreen> {
   }
 
   Future<void> _loadUserData() async {
-    final ratio = await _mealService.getCurrentHcRatio();
-    final fsi   = await _mealService.getUserFsi();
-    if (mounted) setState(() { _ratioValue = ratio; _fsi = fsi; });
+    if (mounted) setState(() => _loadingDose = true);
+    final res = await DoseService().load(at: _selectedDateTime);
+    if (!mounted) return;
+    setState(() {
+      _dose = res.settings;
+      _doseError = res.error;
+      _doseNeedsSetup = res.needsSetup;
+      _loadingDose = false;
+    });
   }
 
   void _setNow() {
@@ -154,8 +166,9 @@ class _AddMealScreenState extends State<AddMealScreen> {
   }
 
   bool get _isFormValid =>
+      _dose != null &&
       _mealType.isNotEmpty &&
-      (double.tryParse(_glucemiaText) ?? 0) > 0 &&
+      (double.tryParse(_glucemiaText.replaceAll(',', '.')) ?? 0) > 0 &&
       _addedFoods.isNotEmpty;
 
   double get _totalHc       => _addedFoods.fold(0, (s, f) => s + f.calculatedHc);
@@ -220,13 +233,62 @@ class _AddMealScreenState extends State<AddMealScreen> {
   Future<void> _createMeal() async {
     if (!_isFormValid || _saving) return;
 
-    final glucemia = double.tryParse(_glucemiaText) ?? 0;
-    double calculatedInsulin = 0;
-    if (_ratioValue > 0 && _fsi > 0) {
-      calculatedInsulin = double.parse(
-          ((_totalHc / _ratioValue) + ((glucemia - 110) / _fsi)).toStringAsFixed(1));
+    final glucemia = double.tryParse(_glucemiaText.replaceAll(',', '.')) ?? 0;
+
+    // Seguridad: valores imposibles se rechazan; una hipoglucemia exige confirmar.
+    switch (DoseService.checkGlucose(glucemia)) {
+      case GlucoseCheck.implausible:
+        await AppDialog.error(
+          context,
+          title: 'Revisa la glucemia',
+          message:
+              '${glucemia.toStringAsFixed(0)} mg/dL no es un valor posible '
+              '(debe estar entre ${DoseService.minPlausible.toStringAsFixed(0)} y '
+              '${DoseService.maxPlausible.toStringAsFixed(0)}). Vuelve a medirte o corrige el número.',
+        );
+        return;
+      case GlucoseCheck.low:
+        final goOn = await AppDialog.warnConfirm(
+          context,
+          title: 'Glucemia baja (${glucemia.toStringAsFixed(0)} mg/dL)',
+          message:
+              'Con menos de ${DoseService.hypoThreshold.toStringAsFixed(0)} mg/dL hay que tratar primero la '
+              'hipoglucemia (15 g de hidratos de acción rápida) y volver a medir a los 15 minutos. '
+              '¿Quieres calcular la insulina de todos modos?',
+          confirmLabel: 'Continuar',
+          cancelLabel: 'Corregir valor',
+        );
+        if (!goOn || !mounted) return;
+      case GlucoseCheck.ok:
+        break;
     }
-    if (calculatedInsulin < 0) calculatedInsulin = 0;
+
+    // Se vuelve a leer el ratio de la franja horaria de ESTA comida (la hora
+    // puede haberse editado). Sin datos reales no se calcula ninguna dosis.
+    final res = await DoseService().load(at: _selectedDateTime);
+    if (!mounted) return;
+    setState(() {
+      _dose = res.settings;
+      _doseError = res.error;
+    });
+    if (!res.isOk) {
+      await AppDialog.error(
+        context,
+        title: 'No se puede calcular la insulina',
+        message: res.error!,
+      );
+      if (res.needsSetup && mounted) {
+        final ok = await SetupWizard.show(context);
+        if (ok && mounted) _loadUserData();
+      }
+      return;
+    }
+
+    final calculatedInsulin = DoseService.calculate(
+      totalHc: _totalHc,
+      glucose: glucemia,
+      settings: res.settings!,
+    );
 
     final confirmedInsulin = await showDialog<double>(
       context: context,
@@ -237,6 +299,7 @@ class _AddMealScreenState extends State<AddMealScreen> {
         totalRations: _totalRations,
         glucoseLevel: glucemia,
         calculatedInsulin: calculatedInsulin,
+        settings: res.settings,
       ),
     );
 
@@ -288,10 +351,11 @@ class _AddMealScreenState extends State<AddMealScreen> {
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error al guardar: ${e.toString()}'),
-          backgroundColor: AppColors.rojoSuave,
-        ));
+        await AppDialog.error(
+          context,
+          title: 'No se ha guardado la comida',
+          message: friendlyError(e),
+        );
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -426,8 +490,31 @@ class _AddMealScreenState extends State<AddMealScreen> {
           ),
 
           const SizedBox(height: 8),
-          Text('Ratio HC: ${_ratioValue.toStringAsFixed(1)} g/U  •  FSI: ${_fsi.toStringAsFixed(0)} mg/dL/U',
-              style: TextStyle(fontSize: 11, color: textSmallColor)),
+          if (_loadingDose)
+            Text('Cargando ratio y FSI…',
+                style: TextStyle(fontSize: 12, color: textSmallColor))
+          else if (_dose != null)
+            Text('Ratio HC: ${_dose!.ratio.toStringAsFixed(1)} g/U  •  FSI: ${_dose!.fsi.toStringAsFixed(0)} mg/dL/U',
+                style: TextStyle(fontSize: 12, color: textSmallColor))
+          else
+            Row(children: [
+              const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.rojoSuave),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(_doseError ?? 'No se pudo calcular la dosis.',
+                    style: const TextStyle(fontSize: 12, color: AppColors.rojoSuave)),
+              ),
+              if (_doseNeedsSetup)
+                TextButton(
+                  onPressed: () async {
+                    final ok = await SetupWizard.show(context);
+                    if (ok && mounted) _loadUserData();
+                  },
+                  child: const Text('Configurar'),
+                )
+              else
+                TextButton(onPressed: _loadUserData, child: const Text('Reintentar')),
+            ]),
         ],
       ),
     );
@@ -436,7 +523,6 @@ class _AddMealScreenState extends State<AddMealScreen> {
   Widget _buildFoodsCard() {
     final primaryColor = Theme.of(context).colorScheme.primary;
     final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
-    final textColor = Theme.of(context).textTheme.bodyMedium?.color;
     final dividerColor = Theme.of(context).dividerColor;
 
     return _Card(
@@ -463,12 +549,12 @@ class _AddMealScreenState extends State<AddMealScreen> {
           const SizedBox(height: 12),
 
           if (_addedFoods.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text('Pulsa + para añadir alimentos',
-                    style: TextStyle(color: textColor, fontSize: 14)),
-              ),
+            EmptyState(
+              icon: Icons.restaurant_menu,
+              title: 'Aún no has añadido alimentos',
+              message: 'Busca un alimento o escanea un envase para calcular tus hidratos.',
+              actionLabel: 'Añadir alimento',
+              onAction: _openAddFoodModal,
             )
           else ...[
             ..._addedFoods.asMap().entries.map((e) => _buildFoodItem(e.key, e.value)),
@@ -546,12 +632,12 @@ class _AddMealScreenState extends State<AddMealScreen> {
   }
 
   Widget _infoChip(String text) =>
-      Text(text, style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color));
+      Text(text, style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color));
 
   Widget _totalChip(String label, String value, Color color) => Column(
     children: [
       Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
-      Text(label, style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
+      Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color)),
     ],
   );
 }

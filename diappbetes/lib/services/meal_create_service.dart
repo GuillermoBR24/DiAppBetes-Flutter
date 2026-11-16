@@ -84,45 +84,4 @@ class MealCreateService {
     };
   }
 
-  Future<double> getCurrentHcRatio() async {
-    if (_uid == null) return 10.0;
-    try {
-      final now      = DateTime.now();
-      final nowMins  = now.hour * 60 + now.minute;
-
-      final snap = await _db
-          .collection('hc_ratios')
-          .where('user_id', isEqualTo: _uid)
-          .get();
-
-      for (final doc in snap.docs) {
-        final start = doc.data()['start_time'] as String? ?? '00:00';
-        final end   = doc.data()['end_time']   as String? ?? '23:59';
-        final startMins = _toMins(start);
-        final endMins   = _toMins(end);
-
-        if (nowMins >= startMins && nowMins <= endMins) {
-          return (doc.data()['ratio_value'] as num?)?.toDouble() ?? 10.0;
-        }
-      }
-      return 10.0;
-    } catch (_) {
-      return 10.0;
-    }
-  }
-
-  Future<double> getUserFsi() async {
-    if (_uid == null) return 50.0;
-    try {
-      final doc = await _db.collection('profiles').doc(_uid).get();
-      return (doc.data()?['fsi'] as num?)?.toDouble() ?? 50.0;
-    } catch (_) {
-      return 50.0;
-    }
-  }
-
-  int _toMins(String t) {
-    final p = t.split(':');
-    return int.parse(p[0]) * 60 + int.parse(p[1]);
-  }
 }

@@ -1,0 +1,164 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ───────────────────────── Helpers ───────────────────────── //
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // El rol se lee SIEMPRE del servidor (profiles/{uid}.role).
+    function isAdmin() {
+      return signedIn()
+          && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+          && get(/databases/$(database)/documents/profiles/$(request.auth.uid))
+               .data.get('role', '') in ['administrador', 'admin', 'Administrador'];
+    }
+
+    // ───────────────────────── Perfiles ───────────────────────── //
+    // Ya NO son de lectura pública: el login por nombre de usuario se resuelve
+    // con el índice `usernames` (ver más abajo), sin Cloud Functions.
+    match /profiles/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow create: if isOwner(userId)
+                    && request.resource.data.role == 'Usuario'
+                    && request.resource.data.fsi == 50.0
+                    && request.resource.data.email == request.auth.token.email;
+
+      // Un usuario normal NO puede cambiar su rol ni su id;
+      // el FSI, si se cambia, debe ser un número positivo.
+      allow update: if (
+            isOwner(userId)
+            && request.resource.data.get('role', null) == resource.data.get('role', null)
+            && request.resource.data.get('id', null) == resource.data.get('id', null)
+            && request.resource.data.get('fsi', 50) is number
+            && request.resource.data.get('fsi', 50) > 0
+            && request.resource.data.get('fsi', 50) <= 500
+          )
+          || isAdmin();
+
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // ───────────────────── Índice de nombres de usuario ───────────────────── //
+    // El id del documento es el nombre en minúsculas. `get` es público (hace falta
+    // para iniciar sesión por nombre antes de autenticarse); `list` está prohibido
+    // para que nadie pueda volcar todos los emails.
+    match /usernames/{name} {
+      allow get: if true;
+      allow list: if false;
+
+      allow create: if name == name.lower()
+                    && request.resource.data.username_lower == name
+                    && (
+                      (isOwner(request.resource.data.uid)
+                        && request.resource.data.email == request.auth.token.email)
+                      || isAdmin()
+                    );
+
+      allow update: if name == name.lower()
+                    && request.resource.data.username_lower == name
+                    && request.resource.data.uid == resource.data.uid
+                    && (
+                      (isOwner(resource.data.uid)
+                        && request.resource.data.email == request.auth.token.email)
+                      || isAdmin()
+                    );
+
+      allow delete: if isOwner(resource.data.uid) || isAdmin();
+    }
+
+    // ───────────────────────── Configuración ───────────────────────── //
+    // Lectura pública necesaria antes del login (mantenimiento, política de contraseñas).
+    match /app_config/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ───────────────────────── Ratios H.C. ───────────────────────── //
+    match /hc_ratios/{ratioId} {
+      allow read, delete: if signedIn() && resource.data.user_id == request.auth.uid;
+
+      allow create: if signedIn()
+                    && request.resource.data.user_id == request.auth.uid
+                    && request.resource.data.ratio_value is number
+                    && request.resource.data.ratio_value > 0
+                    && request.resource.data.ratio_value <= 200;
+
+      allow update: if signedIn()
+                    && resource.data.user_id == request.auth.uid
+                    && request.resource.data.user_id == request.auth.uid
+                    && request.resource.data.ratio_value is number
+                    && request.resource.data.ratio_value > 0
+                    && request.resource.data.ratio_value <= 200;
+    }
+
+    // ───────────────────────── Comidas ───────────────────────── //
+    match /meals/{mealId} {
+      allow read: if signedIn() && (resource.data.user_id == request.auth.uid || isAdmin());
+
+      allow create: if signedIn()
+                    && request.resource.data.user_id == request.auth.uid
+                    && request.resource.data.total_insulin is number
+                    && request.resource.data.total_insulin >= 0
+                    && request.resource.data.total_insulin <= 100;
+
+      allow update: if signedIn()
+                    && resource.data.user_id == request.auth.uid
+                    && request.resource.data.user_id == request.auth.uid;
+
+      allow delete: if signedIn() && resource.data.user_id == request.auth.uid;
+
+      match /meal_foods/{foodId} {
+        allow read: if signedIn()
+                    && (get(/databases/$(database)/documents/meals/$(mealId)).data.user_id == request.auth.uid
+                        || isAdmin());
+
+        // getAfter: la comida se crea en el mismo batch que sus alimentos.
+        allow create, update: if signedIn()
+            && getAfter(/databases/$(database)/documents/meals/$(mealId)).data.user_id == request.auth.uid;
+
+        allow delete: if signedIn()
+            && get(/databases/$(database)/documents/meals/$(mealId)).data.user_id == request.auth.uid;
+      }
+    }
+
+    // ───────────────────────── Glucemias ───────────────────────── //
+    match /glucose_readings/{readingId} {
+      allow read: if signedIn() && (resource.data.user_id == request.auth.uid || isAdmin());
+
+      allow create: if signedIn()
+                    && request.resource.data.user_id == request.auth.uid
+                    && request.resource.data.glucose_level is number
+                    && request.resource.data.glucose_level > 0
+                    && request.resource.data.glucose_level <= 1000;
+
+      allow update: if signedIn()
+                    && resource.data.user_id == request.auth.uid
+                    && request.resource.data.user_id == request.auth.uid;
+
+      allow delete: if signedIn() && resource.data.user_id == request.auth.uid;
+    }
+
+    // ───────────────────────── Consejos ───────────────────────── //
+    match /user_tips/{tipId} {
+      allow read, update, delete: if signedIn() && resource.data.user_id == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.user_id == request.auth.uid;
+    }
+
+    match /foods/{foodId} {
+      allow read: if signedIn();
+    }
+
+    match /daily_tips/{tipId} {
+      allow read: if signedIn();
+    }
+
+    // Todo lo demás: denegado por defecto.
+  }
+}

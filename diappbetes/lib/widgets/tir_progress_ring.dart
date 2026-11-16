@@ -4,8 +4,9 @@ import '../theme/app_theme.dart';
 
 class TirProgressRing extends StatelessWidget {
   final int percentage;
+  final double size;
 
-  const TirProgressRing({super.key, required this.percentage});
+  const TirProgressRing({super.key, required this.percentage, this.size = 130});
 
   Color get _color {
     if (percentage < 33) return AppColors.rojoSuave;
@@ -15,15 +16,21 @@ class TirProgressRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 130,
-      height: 130,
+    // El anillo se dibuja con un radio mayor que `size` (≈ 15 % por lado):
+    // se reserva ese margen para que no pise a los textos vecinos.
+    return Padding(
+      padding: EdgeInsets.all(size * 0.15),
+      child: Semantics(
+      label: 'Tiempo en rango: $percentage por ciento',
+      child: ExcludeSemantics(child: SizedBox(
+      width: size,
+      height: size,
       child: Stack(
         alignment: Alignment.center,
         children: [
           SizedBox(
-            width: 130,
-            height: 130,
+            width: size,
+            height: size,
             child: CustomPaint(
               painter: _RingPainter(
                 percentage: percentage,
@@ -35,14 +42,14 @@ class TirProgressRing extends StatelessWidget {
           Text(
             '$percentage%',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: size * 0.185,
               fontWeight: FontWeight.bold,
               color: _color,
             ),
           ),
         ],
       ),
-    );
+    ))));
   }
 }
 
@@ -59,7 +66,7 @@ class _RingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const strokeWidth = 16.0;
+    final strokeWidth = size.width * 0.12;
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 1.5;
 
@@ -89,5 +96,5 @@ class _RingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _RingPainter oldDelegate) =>
-      oldDelegate.percentage != percentage;
+      oldDelegate.percentage != percentage || oldDelegate.progressColor != progressColor;
 }

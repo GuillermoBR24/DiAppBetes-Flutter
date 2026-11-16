@@ -3,6 +3,7 @@ import 'package:diappbetes/screens/add_custom_food_modal.dart';
 import 'package:diappbetes/screens/add_food_detail_modal.dart';
 import 'package:diappbetes/services/custom_food_service.dart';
 import 'package:diappbetes/services/profile_service.dart';
+import 'package:diappbetes/services/recent_foods_service.dart';
 import 'package:diappbetes/theme/app_theme.dart';
 import 'package:diappbetes/widgets/gluten_indicator.dart';
 import 'package:flutter/material.dart';
@@ -106,6 +107,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
   bool _celiacMode   = false;
 
   List<Food> _foods      = [];
+  List<Food> _recent     = [];
   String     _searchTerm = '';
 
   bool _scanning = false;
@@ -154,9 +156,11 @@ class _AddFoodModalState extends State<AddFoodModal> {
 
   Future<void> _loadFoods() async {
     final custom = await _customFoodService.getCustomFoods();
+    final recent = await RecentFoodsService().getRecent();
     if (mounted) {
       setState(() {
         _foods = [...custom, ..._foodService.getLocalFoods()];
+        _recent = recent;
       });
     }
   }
@@ -188,7 +192,10 @@ class _AddFoodModalState extends State<AddFoodModal> {
       context: context,
       builder: (_) => AddFoodDetailsModal(
         selectedFood: food,
-        onConfirm: (data) => widget.onFoodAdded?.call(data),
+        onConfirm: (data) {
+          RecentFoodsService().add(food);
+          widget.onFoodAdded?.call(data);
+        },
       ),
     );
   }
@@ -235,7 +242,10 @@ class _AddFoodModalState extends State<AddFoodModal> {
           context: context,
           builder: (_) => AddFoodDetailsModal(
             selectedFood: food,
-            onConfirm: (data) => widget.onFoodAdded?.call(data),
+            onConfirm: (data) {
+              RecentFoodsService().add(food);
+              widget.onFoodAdded?.call(data);
+            },
           ),
         );
       } else {
@@ -449,6 +459,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
                   onPressed: _openAddCustomFood,
                 ),
                 IconButton(
+                  tooltip: 'Cerrar',
                   icon: Icon(Icons.close, color: onPrimaryColor),
                   onPressed: () => Navigator.pop(context),
                 ),
@@ -514,6 +525,8 @@ class _AddFoodModalState extends State<AddFoodModal> {
           ),
         ),
 
+        if (_searchTerm.isEmpty && _recent.isNotEmpty) _buildRecentRow(primaryColor, textSmallColor),
+
         Expanded(
           child: _foods.isEmpty
               ? _buildEmptyState(primaryColor, onPrimaryColor: Theme.of(context).colorScheme.onPrimary,
@@ -527,6 +540,60 @@ class _AddFoodModalState extends State<AddFoodModal> {
                 ),
         ),
       ],
+    );
+  }
+
+  Widget _buildRecentRow(Color primaryColor, Color? textSmallColor) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+            child: Row(
+              children: [
+                Icon(Icons.history, size: 16, color: textSmallColor),
+                const SizedBox(width: 6),
+                Text('Recientes',
+                    style: TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.bold, color: textSmallColor)),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: 44,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _recent.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                final f = _recent[i];
+                return Semantics(
+                  button: true,
+                  label: 'Añadir ${f.name}, ${f.carbsPer100g.toStringAsFixed(1)} gramos de hidratos por 100 gramos',
+                  child: ActionChip(
+                    onPressed: () => _selectFood(f),
+                    backgroundColor: primaryColor.withValues(alpha: 0.10),
+                    side: BorderSide(color: primaryColor.withValues(alpha: 0.35)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                    avatar: Icon(Icons.add, size: 16, color: primaryColor),
+                    label: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 160),
+                      child: Text(f.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600, color: primaryColor)),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -678,7 +745,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
                           color: primaryColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: Text('Personal', style: TextStyle(fontSize: 9, color: primaryColor, fontWeight: FontWeight.bold)),
+                        child: Text('Personal', style: TextStyle(fontSize: 12, color: primaryColor, fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ],
@@ -695,7 +762,7 @@ class _AddFoodModalState extends State<AddFoodModal> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
-            child: Text(food.category, style: TextStyle(fontSize: 10, color: fg, fontWeight: FontWeight.w500)),
+            child: Text(food.category, style: TextStyle(fontSize: 12, color: fg, fontWeight: FontWeight.w500)),
           ),
           const SizedBox(width: 6),
 
@@ -706,25 +773,38 @@ class _AddFoodModalState extends State<AddFoodModal> {
 
           if (food.isCustom) ...[
             IconButton(
-              padding: EdgeInsets.zero, constraints: const BoxConstraints(),
-              icon: Icon(Icons.edit, size: 16, color: textSmallColor),
+              tooltip: 'Editar ${food.name}',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              icon: Icon(Icons.edit, size: 18, color: textSmallColor),
               onPressed: () => _openAddCustomFood(editing: food),
             ),
-            const SizedBox(width: 4),
             IconButton(
-              padding: EdgeInsets.zero, constraints: const BoxConstraints(),
-              icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.rojoSuave),
+              tooltip: 'Eliminar ${food.name}',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+              icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.rojoSuave),
               onPressed: () => _deleteCustomFood(food),
             ),
-            const SizedBox(width: 4),
           ],
 
-          GestureDetector(
-            onTap: () => _selectFood(food),
-            child: Container(
-              width: 30, height: 30,
-              decoration: BoxDecoration(color: primaryColor, shape: BoxShape.circle),
-              child: Icon(Icons.add, color: onPrimaryColor, size: 18),
+          // Zona táctil de 44 px (mínimo recomendado) con el círculo de 32 dentro.
+          Semantics(
+            button: true,
+            label: 'Añadir ${food.name}',
+            child: InkResponse(
+              onTap: () => _selectFood(food),
+              radius: 24,
+              child: SizedBox(
+                width: 44, height: 44,
+                child: Center(
+                  child: Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(color: primaryColor, shape: BoxShape.circle),
+                    child: Icon(Icons.add, color: onPrimaryColor, size: 20),
+                  ),
+                ),
+              ),
             ),
           ),
         ],

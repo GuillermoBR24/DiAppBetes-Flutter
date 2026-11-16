@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../services/username_service.dart';
+import '../widgets/app_feedback.dart';
+import '../utils/admin_nav_helper.dart';
 import '../theme/app_theme.dart';
 
 class AdminUsersScreen extends StatefulWidget {
@@ -45,7 +48,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       _applyFilters();
     } catch (e) {
       setState(() => _loading = false);
-      _snack('Error al cargar usuarios: $e', isError: true);
+      _snack('No se pudieron cargar los usuarios. ${friendlyError(e)}', isError: true);
     }
   }
 
@@ -131,15 +134,40 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     if (saved != true) return;
 
     try {
-      await _db.collection('profiles').doc(docId).update({
-        'username': usernameCtrl.text.trim(),
+      final newName = usernameCtrl.text.trim();
+      final oldName = user['username']?.toString() ?? '';
+      final targetEmail = user['email']?.toString() ?? '';
+      final nameChanged = newName.isNotEmpty &&
+          UsernameService.normalize(newName) != UsernameService.normalize(oldName);
+
+      if (nameChanged &&
+          !await UsernameService().isAvailable(newName, uid: docId)) {
+        _snack('Ese nombre de usuario ya está en uso', isError: true);
+        usernameCtrl.dispose();
+        return;
+      }
+
+      final batch = _db.batch();
+      batch.update(_db.collection('profiles').doc(docId), {
+        'username': newName,
+        'username_lower': UsernameService.normalize(newName),
         'role':     selectedRole == 'administrador' ? 'administrador' : 'Usuario',
         'updated_at': FieldValue.serverTimestamp(),
       });
+      if (nameChanged && targetEmail.isNotEmpty) {
+        UsernameService().writeClaim(
+          batch,
+          uid: docId,
+          email: targetEmail,
+          username: newName,
+          previousUsername: oldName,
+        );
+      }
+      await batch.commit();
       _snack('Usuario actualizado');
       _loadUsers();
     } catch (e) {
-      _snack('Error al actualizar: $e', isError: true);
+      _snack('No se pudo actualizar el usuario. ${friendlyError(e)}', isError: true);
     }
     usernameCtrl.dispose();
   }
@@ -172,21 +200,22 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
 
   void _snack(String msg, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: isError ? AppColors.rojoSuave : AppColors.verdesuave,
-    ));
+    if (isError) {
+      AppToast.error(context, msg);
+    } else {
+      AppToast.success(context, msg);
+    }
   }
 
   Color _roleColor(String? role, Color primaryColor) {
-    if (role?.toLowerCase() == 'administrador' || role?.toLowerCase() == 'admin') {
+    if (AdminNavHelper.isAdminRole(role)) {
       return AppColors.ambarSuave;
     }
     return primaryColor;
   }
 
   Color _roleBg(String? role, Color primaryColor) {
-    if (role?.toLowerCase() == 'administrador' || role?.toLowerCase() == 'admin') {
+    if (AdminNavHelper.isAdminRole(role)) {
       return AppColors.ambarSuave.withValues(alpha: 0.15);
     }
     return primaryColor.withValues(alpha: 0.1);
@@ -274,7 +303,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                       ),
                       child: Text(r[0].toUpperCase() + r.substring(1),
                           style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 12,
                               color: _filterRole == r ? onPrimaryColor : textSmallColor,
                               fontWeight: _filterRole == r ? FontWeight.bold : FontWeight.normal)),
                     ),
@@ -282,7 +311,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 )),
                 const Spacer(),
                 Text('${_filtered.length} usuarios',
-                    style: TextStyle(fontSize: 11, color: textSmallColor)),
+                    style: TextStyle(fontSize: 12, color: textSmallColor)),
               ]),
             ]),
           ),
@@ -356,7 +385,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               border: Border.all(color: _roleColor(role, primaryColor).withValues(alpha: 0.4)),
             ),
             child: Text(role[0].toUpperCase() + role.substring(1),
-                style: TextStyle(fontSize: 10, color: _roleColor(role, primaryColor), fontWeight: FontWeight.bold)),
+                style: TextStyle(fontSize: 12, color: _roleColor(role, primaryColor), fontWeight: FontWeight.bold)),
           ),
         ]),
         const SizedBox(height: 10),
@@ -390,8 +419,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       Icon(icon, size: 13, color: textSmallColor),
       const SizedBox(width: 4),
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: TextStyle(fontSize: 9, color: textSmallColor)),
-        Text(value, style: TextStyle(fontSize: 11, color: primaryColor, fontWeight: FontWeight.w500)),
+        Text(label, style: TextStyle(fontSize: 12, color: textSmallColor)),
+        Text(value, style: TextStyle(fontSize: 12, color: primaryColor, fontWeight: FontWeight.w500)),
       ]),
     ],
   );

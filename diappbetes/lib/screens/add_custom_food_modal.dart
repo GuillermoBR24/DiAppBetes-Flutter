@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:diappbetes/widgets/app_feedback.dart';
 import '../services/food_service.dart';
 import '../services/custom_food_service.dart';
 
@@ -80,8 +81,10 @@ class _AddCustomFoodModalState extends State<AddCustomFoodModal> {
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar: $e')),
+        AppDialog.error(
+          context,
+          title: 'No se ha guardado el alimento',
+          message: friendlyError(e),
         );
       }
     }
@@ -148,7 +151,7 @@ class _AddCustomFoodModalState extends State<AddCustomFoodModal> {
                             Expanded(
                               child: Text(
                                 'Este alimento se guardará solo en tu dispositivo, no se sube a ningún servidor.',
-                                style: TextStyle(fontSize: 11, color: textSmallColor),
+                                style: TextStyle(fontSize: 12, color: textSmallColor),
                               ),
                             ),
                           ],

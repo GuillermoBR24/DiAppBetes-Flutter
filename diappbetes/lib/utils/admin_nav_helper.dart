@@ -3,6 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminNavHelper {
+  /// Única definición de "es administrador" (sin distinguir mayúsculas).
+  /// Es solo para la interfaz: la seguridad real la aplican firestore.rules.
+  static bool isAdminRole(Object? role) {
+    final r = role?.toString().trim().toLowerCase() ?? '';
+    return r == 'administrador' || r == 'admin';
+  }
+
   static Future<bool> getIsAdmin() async {
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
@@ -13,8 +20,7 @@ class AdminNavHelper {
           .doc(uid)
           .get();
       
-      final role = (doc.data()?['role'] as String?)?.toLowerCase() ?? '';
-      return role == 'administrador' || role == 'admin';
+      return isAdminRole(doc.data()?['role']);
     } catch (_) {
       return false;
     }

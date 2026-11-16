@@ -4,13 +4,15 @@ import 'package:diappbetes/providers/theme_provider.dart';
 import 'package:diappbetes/services/biometric_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:diappbetes/widgets/app_feedback.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/medical_disclaimer.dart';
+import 'legal_screen.dart';
 import '../services/profile_service.dart';
 import '../services/hc_ratio_service.dart';
 import '../services/auth_service.dart';
-import '../screens/report_issue_screen.dart';
 
 class HcRatio {
   String id;
@@ -142,8 +144,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (avatarBase64 != null && avatarBase64.isNotEmpty) {
         try {
           avatarBytes = base64Decode(avatarBase64);
-        } catch (e) {
-          debugPrint('❌ [AVATAR] Error decodificando avatar: $e');
+        } catch (_) {
+          // Avatar corrupto: se muestra el icono por defecto.
         }
       }
 
@@ -174,7 +176,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       });
     } catch (e) {
-      if (mounted) _showSnack('Error al cargar: $e', isError: true);
+      if (mounted) _showSnack('No se pudo cargar tu perfil. ${friendlyError(e)}', isError: true);
     } finally {
       if (mounted) setState(() => _loadingProfile = false);
     }
@@ -213,7 +215,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final password = await _askPasswordForBiometric();
       
       if (password == null || password.isEmpty) {
-        _showSnack('Se requiere contraseña para activar la huella', isError: true);
+        // Cancelar el diálogo de contraseña no es un error: simplemente no se activa.
         return;
       }
       
@@ -346,12 +348,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _celiacMode = value;
           _savingCeliac = false;
         });
-        _showSnack(value ? 'Modo celíaco activado' : 'Modo celíaco desactivado');
+        // El propio interruptor ya refleja el cambio: no hace falta aviso.
       }
     } catch (e) {
       if (mounted) {
         setState(() => _savingCeliac = false);
-        _showSnack('Error al guardar', isError: true);
+        _showSnack('No se pudo guardar el modo celíaco', isError: true);
       }
     }
   }
@@ -396,7 +398,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final duration = last.endMins - last.startMins;
 
       if (duration < 2) {
-        _showSnack('No hay espacio para añadir otro tramo', isError: true);
+        AppToast.info(context, 'No hay espacio para añadir otro tramo horario');
         return;
       }
 
@@ -585,12 +587,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _showSnack('Foto de perfil actualizada');
       } else {
         setState(() => _uploadingAvatar = false);
-        _showSnack('Error al guardar la imagen', isError: true);
+        _showSnack('No se pudo guardar la imagen (puede ser demasiado grande)', isError: true);
       }
     } catch (e) {
       if (mounted) {
         setState(() => _uploadingAvatar = false);
-        _showSnack('Error: $e', isError: true);
+        _showSnack('No se pudo guardar la imagen. ${friendlyError(e)}', isError: true);
       }
     }
   }
@@ -637,7 +639,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _uploadingAvatar = false);
-        _showSnack('Error al eliminar: $e', isError: true);
+        _showSnack('No se pudo eliminar la foto. ${friendlyError(e)}', isError: true);
       }
     }
   }
@@ -666,9 +668,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _profileService.deleteAccount();
       if (mounted) Navigator.pushNamedAndRemoveUntil(context, '/auth', (_) => false);
     } on FirebaseAuthException catch (e) {
-      _showSnack(AuthService.translateError(e), isError: true);
+      if (!mounted) return;
+      await AppDialog.error(
+        context,
+        title: 'No se ha eliminado la cuenta',
+        message: AuthService.translateError(e),
+      );
     } catch (e) {
-      _showSnack('Error: $e', isError: true);
+      if (!mounted) return;
+      await AppDialog.error(
+        context,
+        title: 'No se ha eliminado la cuenta',
+        message: friendlyError(e),
+      );
     }
   }
 
@@ -747,10 +759,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? AppColors.rojoSuave : AppColors.verdesuave,
-      ));
+      if (isError) {
+        AppToast.error(context, msg);
+      } else {
+        AppToast.success(context, msg);
+      }
     });
   }
 
@@ -771,19 +784,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: Theme.of(context).appBarTheme.foregroundColor,
               fontWeight: FontWeight.bold,
             )),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.report_problem_outlined,
-                color: Theme.of(context).appBarTheme.foregroundColor),
-            tooltip: 'Reportar incidencia',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ReportIssueScreen()),
-              );
-            },
-          ),
-        ],
       ),
       body: _loadingProfile
           ? Center(child: CircularProgressIndicator(
@@ -811,6 +811,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildBiometricCard(),
                   const SizedBox(height: 12),
                   _buildDiabetesCard(),
+                  const SizedBox(height: 20),
+                  const MedicalDisclaimer(),
+                  TextButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LegalScreen()),
+                    ),
+                    icon: const Icon(Icons.privacy_tip_outlined, size: 18),
+                    label: const Text('Aviso legal y privacidad'),
+                  ),
                 ],
               ),
             ),
@@ -1155,7 +1165,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 4),
               Text(label,
                   style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     color: isSelected 
                         ? Theme.of(context).colorScheme.onPrimary 
@@ -1314,7 +1324,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               contentPadding: EdgeInsets.zero,
               suffixText: 'g/U', 
               suffixStyle: TextStyle(
-                fontSize: 11, 
+                fontSize: 12, 
                 color: Theme.of(context).textTheme.bodySmall?.color,
               ),
             ),

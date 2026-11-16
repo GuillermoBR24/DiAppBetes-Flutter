@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import '../services/dose_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/medical_disclaimer.dart';
+import '../widgets/ration_bar.dart';
 
 class ConfirmInsulinModal extends StatefulWidget {
   final double totalHc;
@@ -7,6 +11,9 @@ class ConfirmInsulinModal extends StatefulWidget {
   final double glucoseLevel;
   final double calculatedInsulin;
 
+  /// Si se pasa, se muestra el desglose de cómo se ha calculado la dosis.
+  final DoseSettings? settings;
+
   const ConfirmInsulinModal({
     super.key,
     required this.totalHc,
@@ -14,6 +21,7 @@ class ConfirmInsulinModal extends StatefulWidget {
     required this.totalRations,
     required this.glucoseLevel,
     required this.calculatedInsulin,
+    this.settings,
   });
 
   @override
@@ -24,6 +32,9 @@ class _ConfirmInsulinModalState extends State<ConfirmInsulinModal> {
   late final TextEditingController _insulinCtrl;
   late double _insulinValue;
   bool _wasModified = false;
+
+  // Debe coincidir con el tope de total_insulin en firestore.rules.
+  static const double _maxDose = 100;
 
   @override
   void initState() {
@@ -123,7 +134,19 @@ class _ConfirmInsulinModalState extends State<ConfirmInsulinModal> {
                     style: TextStyle(fontSize: 13, color: textSmallColor, height: 1.4),
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 12),
+
+                  RationBar(
+                    raciones: widget.totalRations,
+                    hc: widget.totalHc,
+                    color: primaryColor,
+                  ),
                   const SizedBox(height: 16),
+
+                  if (widget.settings != null) ...[
+                    _buildBreakdown(textColor, textSmallColor, dividerColor),
+                    const SizedBox(height: 16),
+                  ],
 
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -181,7 +204,33 @@ class _ConfirmInsulinModalState extends State<ConfirmInsulinModal> {
                           textAlign: TextAlign.center),
                     ),
 
-                  const SizedBox(height: 20),
+                  if (_insulinValue > DoseService.highDoseWarning)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, size: 18, color: AppColors.rojoSuave),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              _insulinValue > _maxDose
+                                  ? 'La dosis supera el máximo permitido (${_maxDose.toStringAsFixed(0)} U).'
+                                  : 'Dosis alta (más de ${DoseService.highDoseWarning.toStringAsFixed(0)} U). Revísala antes de confirmar.',
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.rojoSuave,
+                                  fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 14),
+                  const MedicalDisclaimer(compact: true),
+                  const SizedBox(height: 16),
 
                   Row(
                     children: [
@@ -200,7 +249,7 @@ class _ConfirmInsulinModalState extends State<ConfirmInsulinModal> {
                       Expanded(
                         flex: 2,
                         child: ElevatedButton(
-                          onPressed: _confirm,
+                          onPressed: _insulinValue > _maxDose ? null : _confirm,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryColor,
                             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -221,10 +270,84 @@ class _ConfirmInsulinModalState extends State<ConfirmInsulinModal> {
     );
   }
 
+  String _num(double v) => v.toStringAsFixed(1);
+
+  Widget _buildBreakdown(Color? textColor, Color? textSmallColor, Color dividerColor) {
+    final s = widget.settings!;
+    final b = DoseService.breakdown(
+      totalHc: widget.totalHc,
+      glucose: widget.glucoseLevel,
+      settings: s,
+    );
+    final target = DoseService.targetGlucose.toStringAsFixed(0);
+    final corrSign = b.correctionUnits >= 0 ? '+' : '−';
+    final summary =
+        'Comida ${_num(b.mealUnits)} unidades, corrección ${_num(b.correctionUnits)} unidades, '
+        'total ${_num(b.total)} unidades';
+
+    Widget row(String label, String formula, String result, {bool bold = false}) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: bold ? FontWeight.bold : FontWeight.w600,
+                        color: textColor)),
+                if (formula.isNotEmpty)
+                  Text(formula, style: TextStyle(fontSize: 12, color: textSmallColor)),
+              ],
+            ),
+          ),
+          Text(result,
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: textColor)),
+        ],
+      ),
+    );
+
+    return Semantics(
+      container: true,
+      label: summary,
+      child: ExcludeSemantics(
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            border: Border.all(color: dividerColor),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Cómo se calcula',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textSmallColor)),
+              const SizedBox(height: 4),
+              row('Comida',
+                  '${widget.totalHc.toStringAsFixed(1)} g ÷ ${_num(s.ratio)} g/U',
+                  '${_num(b.mealUnits)} U'),
+              row('Corrección',
+                  '(${widget.glucoseLevel.toStringAsFixed(0)} − $target) ÷ ${s.fsi.toStringAsFixed(0)} mg/dL/U',
+                  '$corrSign${_num(b.correctionUnits.abs())} U'),
+              Divider(height: 12, color: dividerColor),
+              row('Total calculado', 'Redondeado a 0,1 · nunca menor que 0', '${_num(b.total)} U', bold: true),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _miniStat(String label, String value, Color? valueColor, Color? labelColor) => Column(
     children: [
       Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: valueColor, fontSize: 14)),
-      Text(label, style: TextStyle(fontSize: 10, color: labelColor)),
+      Text(label, style: TextStyle(fontSize: 12, color: labelColor)),
     ],
   );
 }

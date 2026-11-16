@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -93,16 +92,6 @@ class BiometricService {
     if (email == null || password == null) return null;
     
     return {'email': email, 'password': password};
-  }
-
-  Future<void> updateCredentialsIfEnabled(String userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final enabled = prefs.getBool(_biometricEnabledKey) ?? false;
-    final savedUserId = prefs.getString(_biometricUserIdKey);
-    
-    if (enabled && savedUserId == userId) {
-      debugPrint('🔄 [BIOMETRIC] Actualizando credenciales para userId: $userId');
-    }
   }
 
   Future<bool> isCurrentUserBiometricEnabled(String userId) async {

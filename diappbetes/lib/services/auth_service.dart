@@ -1,7 +1,7 @@
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'remember_me_service.dart';
+import 'username_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -11,6 +11,7 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _rememberMeService = RememberMeService();
+  final _usernames = UsernameService();
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -24,14 +25,58 @@ class AuthService {
     String username = '',
     String birthDate = '',
   }) async {
-    final credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
-    await credential.user!.sendEmailVerification();
+    // Se reserva un nombre libre ANTES de crear la cuenta de Auth.
+    final String finalUsername;
+    if (username.isNotEmpty) {
+      if (!await _usernames.isAvailable(username)) {
+        throw FirebaseAuthException(
+          code: 'username-already-in-use',
+          message: 'Ese nombre de usuario ya está en uso.',
+        );
+      }
+      finalUsername = username.trim();
+    } else {
+      finalUsername = await _usernames.suggestAvailable(email.split('@').first);
+    }
 
-    final uid = credential.user!.uid;
-    await FirebaseFirestore.instance.collection('profiles').doc(uid).set({
+    final credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+    final newUser = credential.user!;
+
+    try {
+      await _createProfileBatch(
+        uid: newUser.uid,
+        email: email,
+        username: finalUsername,
+        birthDate: birthDate,
+      );
+      await newUser.sendEmailVerification();
+    } catch (_) {
+      // Si falla el perfil no se deja una cuenta de Auth huérfana
+      // (no podría iniciar sesión ni volver a registrarse con ese email).
+      try {
+        await newUser.delete();
+      } catch (_) {
+        await _auth.signOut();
+      }
+      rethrow;
+    }
+
+    await _auth.signOut();
+  }
+
+  Future<void> _createProfileBatch({
+    required String uid,
+    required String email,
+    required String username,
+    required String birthDate,
+  }) async {
+    final finalUsername = username;
+    final batch = _db.batch();
+    _usernames.writeClaim(batch, uid: uid, email: email, username: finalUsername);
+    batch.set(_db.collection('profiles').doc(uid), {
       'id': uid,
-      'username': username.isNotEmpty ? username : email.split('@').first,
-      'username_lower': (username.isNotEmpty ? username : email.split('@').first).toLowerCase(),
+      'username': finalUsername,
+      'username_lower': UsernameService.normalize(finalUsername),
       'email': email,
       'birth_date': birthDate.isEmpty ? null : birthDate,
       'role': 'Usuario',
@@ -41,8 +86,7 @@ class AuthService {
       'created_at': FieldValue.serverTimestamp(),
       'updated_at': FieldValue.serverTimestamp(),
     });
-
-    await _auth.signOut();
+    await batch.commit();
   }
 
     Future<UserCredential> login({
@@ -50,29 +94,17 @@ class AuthService {
       required String password,
       bool rememberMe = false,
     }) async {
-      String email = identifier;
-      if (!identifier.contains('@')) {
-        final cleanIdentifier = identifier.trim().toLowerCase();
-        
-        try {
-          final query = await _db
-              .collection('profiles')
-              .where('username_lower', isEqualTo: cleanIdentifier)
-              .limit(1)
-              .get();
-
-          if (query.docs.isEmpty) {
-            throw FirebaseAuthException(
-              code: 'user-not-found',
-              message: 'No se encontró ningún usuario con ese nombre.',
-            );
-          }
-
-          final userData = query.docs.first.data();
-          email = userData['email'] as String;
-        } catch (e) {
-          rethrow;
+      final cleanIdentifier = identifier.trim();
+      String email = cleanIdentifier.toLowerCase();
+      if (!cleanIdentifier.contains('@')) {
+        final found = await _usernames.lookupEmail(cleanIdentifier);
+        if (found == null) {
+          throw FirebaseAuthException(
+            code: 'user-not-found',
+            message: 'No se encontró ningún usuario con ese nombre.',
+          );
         }
+        email = found;
       }
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -136,13 +168,6 @@ class AuthService {
     });
   }
 
-  Future<void> deleteAccount() async {
-    final uid = currentUser?.uid;
-    if (uid == null) return;
-    await _db.collection('profiles').doc(uid).delete();
-    await currentUser!.delete();
-  }
-
   static String translateError(FirebaseAuthException e) {
     switch (e.code) {
       case 'email-not-verified':
@@ -152,6 +177,8 @@ class AuthService {
       case 'wrong-password':
       case 'invalid-credential':
         return 'Credenciales incorrectas.';
+      case 'username-already-in-use':
+        return 'Ese nombre de usuario ya está en uso.';
       case 'email-already-in-use':
         return 'Este email ya está registrado.';
       case 'invalid-email':

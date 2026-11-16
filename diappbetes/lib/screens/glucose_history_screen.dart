@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/skeleton.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
@@ -134,7 +136,10 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
 
           Expanded(
             child: _loading
-                ? Center(child: CircularProgressIndicator(color: primaryColor))
+                ? const SingleChildScrollView(
+                    padding: EdgeInsets.all(16),
+                    child: SkeletonList(count: 3),
+                  )
                 : RefreshIndicator(
                     color: primaryColor,
                     onRefresh: _loadData,
@@ -244,7 +249,7 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               color: Theme.of(context).textTheme.bodySmall?.color,
             ),
           ),
@@ -284,11 +289,10 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
           SizedBox(
             height: 250,
             child: _readings.isEmpty
-                ? Center(
-                    child: Text(
-                      'No hay lecturas en este período',
-                      style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
-                    ),
+                ? const EmptyState(
+                    icon: Icons.show_chart,
+                    title: 'No hay lecturas en este período',
+                    message: 'Prueba con otro rango de fechas o registra una glucemia desde el inicio.',
                   )
                 : LineChart(
                     LineChartData(
@@ -321,7 +325,7 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
                                 child: Text(
                                   '${date.day}/${date.month}',
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 12,
                                     color: Theme.of(context).textTheme.bodySmall?.color,
                                   ),
                                 ),
@@ -337,7 +341,7 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
                               return Text(
                                 value.toInt().toString(),
                                 style: TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 12,
                                   color: Theme.of(context).textTheme.bodySmall?.color,
                                 ),
                               );
@@ -589,9 +593,10 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
           ),
           const SizedBox(height: 12),
           _readings.isEmpty
-              ? Text(
-                  'No hay lecturas registradas',
-                  style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
+              ? const EmptyState(
+                  icon: Icons.water_drop_outlined,
+                  title: 'No hay lecturas registradas',
+                  message: 'Tus glucemias aparecerán aquí cuando las registres.',
                 )
               : ListView.separated(
                   shrinkWrap: true,
@@ -650,7 +655,7 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
                       subtitle: Text(
                         DateFormat('dd/MM/yyyy HH:mm').format(date),
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 12,
                           color: Theme.of(context).textTheme.bodySmall?.color,
                         ),
                       ),
@@ -663,7 +668,7 @@ class _GlucoseHistoryScreenState extends State<GlucoseHistoryScreen> {
                         child: Text(
                           statusText,
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: statusColor,
                           ),

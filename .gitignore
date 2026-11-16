@@ -1,0 +1,6 @@
+# Volcados de fallos de la JVM / Gradle
+hs_err_pid*.log
+replay_pid*.log
+
+# Dependencias de Node (no se versionan)
+node_modules/

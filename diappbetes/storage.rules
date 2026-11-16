@@ -1,0 +1,11 @@
+// Reglas de Firebase Storage (archivo SEPARADO de firestore.rules).
+// La app guarda los avatares en base64 dentro de profiles, no usa Storage,
+// así que se deniega todo. Las reglas antiguas permitían escribir en cualquier ruta.
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

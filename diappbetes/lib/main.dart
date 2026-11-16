@@ -8,6 +8,7 @@ import 'package:diappbetes/screens/register_screen.dart';
 import 'package:diappbetes/screens/remember_password_screen.dart';
 import 'package:diappbetes/screens/scanner_screen.dart';
 import 'package:diappbetes/services/remember_me_service.dart';
+import 'package:diappbetes/services/username_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:diappbetes/screens/historial_screen.dart';
 import 'package:diappbetes/screens/settings_screen.dart';
@@ -43,6 +44,13 @@ class DiAppBetes extends StatelessWidget {
       darkTheme:  AppTheme.dark,
       themeMode:  themeProvider.mode,
       debugShowCheckedModeBanner: false,
+      // Respeta el tamaño de texto del sistema (hasta 150 %) para que la app
+      // sea legible sin romper los diseños.
+      builder: (context, child) => MediaQuery.withClampedTextScaling(
+        minScaleFactor: 1.0,
+        maxScaleFactor: 1.5,
+        child: child ?? const SizedBox.shrink(),
+      ),
       home: const _AuthWrapper(),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -81,6 +89,22 @@ class _AuthWrapper extends StatefulWidget {
 class _AuthWrapperState extends State<_AuthWrapper> with WidgetsBindingObserver {
   final _rememberMeService = RememberMeService();
 
+  // Se calcula una sola vez por sesión: antes un FutureBuilder nuevo se creaba
+  // en cada reconstrucción y volvía a consultar el almacenamiento.
+  Future<bool>? _expireFuture;
+  String? _expireFutureUid;
+
+  Future<bool> _expireCheckFor(String uid) {
+    if (_expireFutureUid != uid || _expireFuture == null) {
+      _expireFutureUid = uid;
+      _expireFuture = _rememberMeService.shouldExpireSession().then((expired) {
+        if (!expired) UsernameService().ensureForCurrentUser();
+        return expired;
+      });
+    }
+    return _expireFuture!;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -115,7 +139,7 @@ class _AuthWrapperState extends State<_AuthWrapper> with WidgetsBindingObserver 
 
         if (snapshot.hasData && snapshot.data != null) {
           return FutureBuilder<bool>(
-            future: _rememberMeService.shouldExpireSession(),
+            future: _expireCheckFor(snapshot.data!.uid),
             builder: (context, expireSnap) {
               if (!expireSnap.hasData) {
                 return const Scaffold(
@@ -126,6 +150,8 @@ class _AuthWrapperState extends State<_AuthWrapper> with WidgetsBindingObserver 
               }
 
               if (expireSnap.data == true) {
+                _expireFuture = null;
+                _expireFutureUid = null;
                 FirebaseAuth.instance.signOut();
                 _rememberMeService.clear();
                 return const AuthScreen();

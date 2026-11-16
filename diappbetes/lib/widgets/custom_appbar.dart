@@ -20,11 +20,14 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isNarrow = screenWidth < 360;
+
     return FutureBuilder<bool>(
       future: AdminNavHelper.getIsAdmin(),
       builder: (context, snapshot) {
         final isAdmin = snapshot.data ?? false;
-        
+
         return AppBar(
           automaticallyImplyLeading: showBackButton,
           backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
@@ -33,10 +36,10 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(width: 16),
+              SizedBox(width: isNarrow ? 8 : 16),
               Container(
-                width: 42,
-                height: 42,
+                width: isNarrow ? 34 : 42,
+                height: isNarrow ? 34 : 42,
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(8),
@@ -52,22 +55,24 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                   borderRadius: BorderRadius.circular(8),
                   child: Image.asset(
                     'assets/favicon.png',
-                    width: 42,
-                    height: 42,
                     fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => 
-                        Icon(Icons.image_not_supported, 
+                    errorBuilder: (context, error, stackTrace) =>
+                        Icon(Icons.image_not_supported,
                             color: Theme.of(context).colorScheme.primary, size: 20),
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Text(title,
-                  style: TextStyle(
-                    color: Theme.of(context).appBarTheme.foregroundColor, 
-                    fontWeight: FontWeight.bold, 
-                    fontSize: 20,
-                  )),
+              SizedBox(width: isNarrow ? 8 : 12),
+              Flexible(
+                child: Text(title,
+                    style: TextStyle(
+                      color: Theme.of(context).appBarTheme.foregroundColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: isNarrow ? 17 : 20,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1),
+              ),
             ],
           ),
           actions: [
@@ -77,25 +82,25 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             if (actions == null)
               IconButton(
-                icon: Icon(Icons.qr_code_scanner, 
+                icon: Icon(Icons.qr_code_scanner,
                     color: Theme.of(context).appBarTheme.foregroundColor),
                 onPressed: () => Navigator.pushNamed(context, '/scanner'),
               ),
-            
+
             if (isAdmin && actions == null)
               IconButton(
-                icon: Icon(Icons.admin_panel_settings, 
+                icon: Icon(Icons.admin_panel_settings,
                     color: Theme.of(context).appBarTheme.foregroundColor),
                 onPressed: () => Navigator.pushNamed(context, '/admin'),
               ),
-            
+
             if (actions == null)
               IconButton(
-                icon: Icon(Icons.settings, 
+                icon: Icon(Icons.settings,
                     color: Theme.of(context).appBarTheme.foregroundColor),
                 onPressed: onSettingsPressed ?? () => Navigator.pushNamed(context, '/settings'),
               ),
-            
+
             if (actions != null) ...actions!,
           ],
         );

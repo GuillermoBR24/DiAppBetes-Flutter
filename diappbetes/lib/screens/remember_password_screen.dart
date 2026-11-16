@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:diappbetes/widgets/app_feedback.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 
@@ -50,12 +51,7 @@ class _RememberPasswordScreenState extends State<RememberPasswordScreen> {
         _emailController.text.trim(),
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Correo reenviado'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
+        AppToast.success(context, 'Te hemos enviado el correo para restablecer la contraseña');
       }
     } on FirebaseAuthException catch (e) {
       setState(() => _error = AuthService.translateError(e));

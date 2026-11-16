@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../utils/admin_nav_helper.dart';
 
 class MaintenanceService {
   final _db = FirebaseFirestore.instance;
@@ -44,7 +45,7 @@ class MaintenanceService {
       
       final role = profileData['role']?.toString().toLowerCase() ?? '';
       
-      final isAdmin = role == 'administrador' || role == 'admin';
+      final isAdmin = AdminNavHelper.isAdminRole(role);
       
       if (isAdmin) {
         return null;

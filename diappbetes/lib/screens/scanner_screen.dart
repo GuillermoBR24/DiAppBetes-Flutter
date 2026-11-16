@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:diappbetes/services/hc_ratio_service.dart';
+import 'package:diappbetes/services/dose_service.dart';
 import 'package:diappbetes/services/profile_service.dart';
 import 'package:diappbetes/widgets/gluten_indicator.dart';
 import 'package:flutter/material.dart';
@@ -131,8 +131,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
     
     try {
       await _controller.stop();
-    } catch (e) {
-      debugPrint('⚠️ [SCANNER] Error al detener tras detección: $e');
+    } catch (_) {
+      // Si la cámara ya estaba parada no pasa nada.
     }
     
     if (!mounted) return;
@@ -177,8 +177,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
   void _resumeScanner() {
     try {
       _controller.stop();
-    } catch (e) {
-      debugPrint('⚠️ [SCANNER] Error al detener: $e');
+    } catch (_) {
+      // Si la cámara ya estaba parada no pasa nada.
     }
     
     setState(() {
@@ -468,8 +468,8 @@ class _ProductModalState extends State<_ProductModal> {
   final _glucoseCtrl = TextEditingController(text: '100');
   double _glucose = 100;
   double _insulin = 0;
-  double _ratioValue = 10.0;
-  double _fsi = 50.0;
+  DoseSettings? _dose;
+  String? _doseError;
 
   bool _editingGrams = true;
   bool _celiacMode = false;
@@ -492,16 +492,11 @@ class _ProductModalState extends State<_ProductModal> {
   }
 
   Future<void> _loadUserData() async {
-    final profileService = ProfileService();
-    final hcRatioService = HcRatioService();
-    
-    final ratio = await hcRatioService.getCurrentHcRatio();
-    final fsi = await profileService.getUserFsi();
-    
+    final res = await DoseService().load();
     if (mounted) {
       setState(() {
-        _ratioValue = ratio;
-        _fsi = fsi;
+        _dose = res.settings;
+        _doseError = res.error;
         _calcInsulin();
       });
     }
@@ -531,12 +526,10 @@ class _ProductModalState extends State<_ProductModal> {
   }
 
   void _calcInsulin() {
-    if (_ratioValue > 0 && _fsi > 0) {
-      _insulin = double.parse(
-        ((_hc / _ratioValue) + ((_glucose - 110) / _fsi)).toStringAsFixed(1)
-      );
-      if (_insulin < 0) _insulin = 0;
-    }
+    final dose = _dose;
+    _insulin = dose == null
+        ? 0
+        : DoseService.calculate(totalHc: _hc, glucose: _glucose, settings: dose);
   }
 
   void _onGramsChanged(String v) {
@@ -706,7 +699,7 @@ class _ProductModalState extends State<_ProductModal> {
                   ),
                   const SizedBox(height: 4),
                   Text('1 ración = 10g de HC',
-                      style: TextStyle(fontSize: 11, color: textSmallColor),
+                      style: TextStyle(fontSize: 12, color: textSmallColor),
                       textAlign: TextAlign.right),
                   const SizedBox(height: 20),
 
@@ -721,7 +714,7 @@ class _ProductModalState extends State<_ProductModal> {
                   ),
                   const SizedBox(height: 4),
                   Text('Objetivo: 110 mg/dL',
-                      style: TextStyle(fontSize: 11, color: textSmallColor),
+                      style: TextStyle(fontSize: 12, color: textSmallColor),
                       textAlign: TextAlign.right),
                   const SizedBox(height: 20),
 
@@ -790,17 +783,19 @@ class _ProductModalState extends State<_ProductModal> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        Text('${_insulin.toStringAsFixed(1)} U',
+                        Text(_dose == null ? '— U' : '${_insulin.toStringAsFixed(1)} U',
                             style: TextStyle(
                               color: onPrimaryColor,
                               fontSize: 42,
                               fontWeight: FontWeight.bold,
                             )),
                         const SizedBox(height: 8),
-                        Text('Ratio: ${_ratioValue.toStringAsFixed(1)} g/U  •  FSI: ${_fsi.toStringAsFixed(0)}',
+                        Text(_dose == null
+                              ? (_doseError ?? 'No se pudo calcular la dosis.')
+                              : 'Ratio: ${_dose!.ratio.toStringAsFixed(1)} g/U  •  FSI: ${_dose!.fsi.toStringAsFixed(0)}',
                             style: TextStyle(
                               color: onPrimaryColor.withValues(alpha: 0.8),
-                              fontSize: 11,
+                              fontSize: 12,
                             )),
                       ],
                     ),
@@ -871,7 +866,7 @@ class _ProductModalState extends State<_ProductModal> {
             )),
         Text(label,
             style: TextStyle(
-              fontSize: 11, 
+              fontSize: 12, 
               color: Theme.of(context).textTheme.bodySmall?.color,
             )),
       ],

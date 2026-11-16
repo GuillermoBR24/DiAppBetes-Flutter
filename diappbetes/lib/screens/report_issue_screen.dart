@@ -1,5 +1,6 @@
 import 'package:diappbetes/services/report_service.dart';
 import 'package:flutter/material.dart';
+import 'package:diappbetes/widgets/app_feedback.dart';
 import '../theme/app_theme.dart';
 
 enum IssueType { bug, error, suggestion, other }
@@ -67,10 +68,8 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
     if (mounted) {
       setState(() => _sending = false);
       if (ok) {
+        AppToast.success(context, 'Incidencia enviada correctamente');
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Incidencia enviada correctamente')),
-        );
       } else {
         setState(() => _error = 'No se pudo enviar. Inténtalo de nuevo más tarde.');
       }

@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:diappbetes/widgets/app_feedback.dart';
 import '../theme/app_theme.dart';
+import 'legal_screen.dart';
 import '../services/auth_service.dart';
 import '../services/password_validation_service.dart';
 
@@ -112,12 +114,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Correo de verificación reenviado'),
-            backgroundColor: AppColors.verdesuave,
-          ),
-        );
+        AppToast.success(context, 'Correo de verificación reenviado');
       }
     } on FirebaseAuthException catch (e) {
       setState(() => _error = AuthService.translateError(e));
@@ -194,12 +191,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
           children: [
             Text(
               label,
-              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+              style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
             ),
             if (strength < 5)
               Text(
                 _getMissingRequirements(password),
-                style: TextStyle(color: textSmallColor, fontSize: 10),
+                style: TextStyle(color: textSmallColor, fontSize: 12),
               ),
           ],
         ),
@@ -282,6 +279,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500)),
                         ),
+                      TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LegalScreen()),
+                        ),
+                        child: Text('Aviso legal y privacidad',
+                            style: TextStyle(color: primaryColor, fontSize: 12)),
+                      ),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -379,7 +384,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         : 'Mínimo 6 caracteres'),
                 helperStyle: TextStyle(
                   color: primaryColor,
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
               ),
